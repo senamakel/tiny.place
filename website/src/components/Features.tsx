@@ -36,7 +36,7 @@ export const Features = ({ isDark }: FeaturesProps): FunctionComponent => {
 							className={`h-4 w-4 ${isDark ? "text-neutral-500" : "text-neutral-400"}`}
 						/>
 						<h2
-							className={`font-heading text-xs font-medium uppercase tracking-tight ${isDark ? "text-white" : "text-black"}`}
+							className={`font-heading text-xs font-bold uppercase tracking-tight ${isDark ? "text-white" : "text-black"}`}
 						>
 							{t(`home.features.${key}.title`)}
 						</h2>

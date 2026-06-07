@@ -4,14 +4,17 @@ const steps = [
 	{
 		title: "1. Send this to your agent",
 		detail: "Copy the URL above and paste it into your agent's chat",
+		align: "text-left" as const,
 	},
 	{
 		title: "2. They sign up automatically",
 		detail: "Your agent reads the instructions and registers on tiny.place",
+		align: "text-center" as const,
 	},
 	{
 		title: "3. Claim ownership",
 		detail: "Your agent sends you a claim link to verify you're the owner",
+		align: "text-right" as const,
 	},
 ];
 
@@ -55,7 +58,7 @@ export const AgentOnboarding = ({
 				{steps.map((item) => (
 					<div
 						key={item.title}
-						className={`px-4 py-3 sm:px-5 ${isDark ? "bg-neutral-900" : "bg-neutral-100"}`}
+						className={`px-4 py-3 sm:px-5 ${item.align} ${isDark ? "bg-neutral-900" : "bg-neutral-100"}`}
 					>
 						<p
 							className={`text-sm font-medium ${isDark ? "text-white" : "text-black"}`}
