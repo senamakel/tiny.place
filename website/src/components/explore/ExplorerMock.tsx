@@ -15,14 +15,78 @@ type Transaction = {
 type FilterType = "All" | "Transfer" | "Fee" | "Settlement";
 
 const transactions: Array<Transaction> = [
-	{ hash: "0x8a3f...c2d1", type: "Transfer", from: "@atlas", to: "@cipher", amount: "0.842 ETH", block: 184203, time: "2m ago" },
-	{ hash: "0x1b7e...a4f8", type: "Fee", from: "@nova", to: "network", amount: "0.003 ETH", block: 184202, time: "4m ago" },
-	{ hash: "0xd42c...91b3", type: "Settlement", from: "@meridian", to: "@sage", amount: "12.5 ETH", block: 184201, time: "7m ago" },
-	{ hash: "0x6f91...e7a2", type: "Transfer", from: "@flux", to: "@echo", amount: "1.204 ETH", block: 184199, time: "12m ago" },
-	{ hash: "0x3c84...b5d9", type: "Fee", from: "@drift", to: "network", amount: "0.007 ETH", block: 184198, time: "15m ago" },
-	{ hash: "0xa27d...f3c6", type: "Transfer", from: "@helix", to: "@prism", amount: "0.531 ETH", block: 184196, time: "21m ago" },
-	{ hash: "0xe519...d8a4", type: "Settlement", from: "@cipher", to: "@atlas", amount: "8.72 ETH", block: 184195, time: "28m ago" },
-	{ hash: "0x7f3b...c1e5", type: "Transfer", from: "@sage", to: "@nova", amount: "2.15 ETH", block: 184193, time: "35m ago" },
+	{
+		hash: "0x8a3f...c2d1",
+		type: "Transfer",
+		from: "@atlas",
+		to: "@cipher",
+		amount: "0.842 ETH",
+		block: 184203,
+		time: "2m ago",
+	},
+	{
+		hash: "0x1b7e...a4f8",
+		type: "Fee",
+		from: "@nova",
+		to: "network",
+		amount: "0.003 ETH",
+		block: 184202,
+		time: "4m ago",
+	},
+	{
+		hash: "0xd42c...91b3",
+		type: "Settlement",
+		from: "@meridian",
+		to: "@sage",
+		amount: "12.5 ETH",
+		block: 184201,
+		time: "7m ago",
+	},
+	{
+		hash: "0x6f91...e7a2",
+		type: "Transfer",
+		from: "@flux",
+		to: "@echo",
+		amount: "1.204 ETH",
+		block: 184199,
+		time: "12m ago",
+	},
+	{
+		hash: "0x3c84...b5d9",
+		type: "Fee",
+		from: "@drift",
+		to: "network",
+		amount: "0.007 ETH",
+		block: 184198,
+		time: "15m ago",
+	},
+	{
+		hash: "0xa27d...f3c6",
+		type: "Transfer",
+		from: "@helix",
+		to: "@prism",
+		amount: "0.531 ETH",
+		block: 184196,
+		time: "21m ago",
+	},
+	{
+		hash: "0xe519...d8a4",
+		type: "Settlement",
+		from: "@cipher",
+		to: "@atlas",
+		amount: "8.72 ETH",
+		block: 184195,
+		time: "28m ago",
+	},
+	{
+		hash: "0x7f3b...c1e5",
+		type: "Transfer",
+		from: "@sage",
+		to: "@nova",
+		amount: "2.15 ETH",
+		block: 184193,
+		time: "35m ago",
+	},
 ];
 
 const typeColors: Record<Transaction["type"], string> = {
@@ -31,7 +95,12 @@ const typeColors: Record<Transaction["type"], string> = {
 	Settlement: "bg-emerald-500/15 text-emerald-500",
 };
 
-const filterOptions: Array<FilterType> = ["All", "Transfer", "Fee", "Settlement"];
+const filterOptions: Array<FilterType> = [
+	"All",
+	"Transfer",
+	"Fee",
+	"Settlement",
+];
 
 type ExplorerMockProperties = {
 	isDark: boolean;
@@ -44,7 +113,8 @@ export const ExplorerMock = ({
 	const [activeFilter, setActiveFilter] = useState<FilterType>("All");
 
 	const filteredTransactions = transactions.filter((transaction) => {
-		if (activeFilter !== "All" && transaction.type !== activeFilter) return false;
+		if (activeFilter !== "All" && transaction.type !== activeFilter)
+			return false;
 		if (searchQuery) {
 			const query = searchQuery.toLowerCase();
 			return (
@@ -113,11 +183,7 @@ export const ExplorerMock = ({
 			>
 				<table className="w-full">
 					<thead>
-						<tr
-							className={
-								isDark ? "bg-neutral-900" : "bg-neutral-100"
-							}
-						>
+						<tr className={isDark ? "bg-neutral-900" : "bg-neutral-100"}>
 							<th
 								className={`px-3 py-2 text-left text-xs font-medium ${
 									isDark ? "text-neutral-500" : "text-neutral-400"
@@ -191,7 +257,11 @@ export const ExplorerMock = ({
 										className={`text-xs ${isDark ? "text-neutral-500" : "text-neutral-400"}`}
 									>
 										{transaction.from}{" "}
-										<span className={isDark ? "text-neutral-600" : "text-neutral-300"}>
+										<span
+											className={
+												isDark ? "text-neutral-600" : "text-neutral-300"
+											}
+										>
 											→
 										</span>{" "}
 										{transaction.to}

@@ -50,14 +50,18 @@ export const CryptoIdentityMock = ({
 
 	const handleRotate = (): void => {
 		setIsRotating(true);
-		setTimeout(() => { setIsRotating(false); }, 1500);
+		setTimeout(() => {
+			setIsRotating(false);
+		}, 1500);
 	};
 
 	return (
 		<div className="space-y-3">
 			<div className={`rounded-lg border p-3 ${cardClass}`}>
 				<div className="flex items-center justify-between">
-					<h3 className={`text-xs font-semibold uppercase tracking-wider ${secondaryClass}`}>
+					<h3
+						className={`text-xs font-semibold uppercase tracking-wider ${secondaryClass}`}
+					>
 						Identity Keypair
 					</h3>
 					<span className={`rounded-full px-2 py-0.5 text-xs ${tagClass}`}>
@@ -82,7 +86,9 @@ export const CryptoIdentityMock = ({
 
 			<div className={`rounded-lg border p-3 ${cardClass}`}>
 				<div className="flex items-center justify-between">
-					<h3 className={`text-xs font-semibold uppercase tracking-wider ${secondaryClass}`}>
+					<h3
+						className={`text-xs font-semibold uppercase tracking-wider ${secondaryClass}`}
+					>
 						Pre-Key Bundle
 					</h3>
 					<button
@@ -120,7 +126,9 @@ export const CryptoIdentityMock = ({
 			</div>
 
 			<div className={`rounded-lg border p-3 ${cardClass}`}>
-				<h3 className={`text-xs font-semibold uppercase tracking-wider ${secondaryClass}`}>
+				<h3
+					className={`text-xs font-semibold uppercase tracking-wider ${secondaryClass}`}
+				>
 					Active Sessions
 				</h3>
 				<div className={`mt-1 text-sm font-medium ${headingClass}`}>

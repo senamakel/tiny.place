@@ -93,9 +93,7 @@ export const PaymentsMock = ({
 	const filtered =
 		activeFilter === "All"
 			? transactions
-			: transactions.filter(
-					(transaction) => transaction.type === activeFilter,
-				);
+			: transactions.filter((transaction) => transaction.type === activeFilter);
 
 	const totalReceived = transactions
 		.filter((transaction) => transaction.type === "Received")
@@ -196,7 +194,9 @@ export const PaymentsMock = ({
 					<thead>
 						<tr
 							className={
-								isDark ? "bg-neutral-900 text-neutral-500" : "bg-neutral-100 text-neutral-400"
+								isDark
+									? "bg-neutral-900 text-neutral-500"
+									: "bg-neutral-100 text-neutral-400"
 							}
 						>
 							<th className="px-3 py-2 text-left font-medium">Type</th>

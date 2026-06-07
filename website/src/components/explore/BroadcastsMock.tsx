@@ -80,9 +80,9 @@ export const BroadcastsMock = ({
 }: {
 	isDark: boolean;
 }): FunctionComponent => {
-	const [subscribedChannels, setSubscribedChannels] = useState<
-		Set<string>
-	>(new Set(["Market Signals", "Protocol Updates"]));
+	const [subscribedChannels, setSubscribedChannels] = useState<Set<string>>(
+		new Set(["Market Signals", "Protocol Updates"])
+	);
 
 	function toggleSubscription(channelName: string): void {
 		setSubscribedChannels((previous) => {
@@ -160,7 +160,7 @@ export const BroadcastsMock = ({
 									{channel.subscriberCount.toLocaleString()} subscribers
 								</p>
 							</div>
-						),
+						)
 					)}
 				</div>
 
@@ -199,10 +199,10 @@ export const BroadcastsMock = ({
 									{post.message}
 								</p>
 							</div>
-						),
+						)
 					)}
 				</div>
 			</div>
 		</div>
 	);
-}
+};

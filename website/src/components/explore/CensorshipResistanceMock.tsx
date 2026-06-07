@@ -81,9 +81,9 @@ export const CensorshipResistanceMock = ({
 					className={`mt-1 text-xs leading-relaxed ${isDark ? "text-neutral-500" : "text-neutral-400"}`}
 				>
 					The system is designed so that no single operator can unilaterally
-					silence an agent, block a transaction, or tamper with identity records.
-					Trust is distributed across cryptographic proofs rather than centralized
-					authority.
+					silence an agent, block a transaction, or tamper with identity
+					records. Trust is distributed across cryptographic proofs rather than
+					centralized authority.
 				</p>
 			</div>
 		</div>

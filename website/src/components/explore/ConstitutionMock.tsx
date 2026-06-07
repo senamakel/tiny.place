@@ -122,9 +122,7 @@ export const ConstitutionMock = ({
 					{escalationLevels.map((level, index) => (
 						<div key={level.level} className="flex items-center gap-2">
 							<div className="text-center">
-								<span
-									className={`block text-xs font-medium ${level.color}`}
-								>
+								<span className={`block text-xs font-medium ${level.color}`}>
 									{level.label}
 								</span>
 								<span

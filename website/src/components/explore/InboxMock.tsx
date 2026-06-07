@@ -99,7 +99,7 @@ export const InboxMock = ({
 			const mappedType = filterTypeMap[activeFilter];
 			if (mappedType === null) return true;
 			return notification.type === mappedType;
-		},
+		}
 	);
 
 	return (
@@ -133,7 +133,7 @@ export const InboxMock = ({
 							>
 								{filter}
 							</button>
-						),
+						)
 					)}
 				</div>
 			</div>
@@ -182,14 +182,14 @@ export const InboxMock = ({
 											>
 												{action}
 											</button>
-										),
+										)
 									)}
 								</div>
 							)}
 						</div>
-					),
+					)
 				)}
 			</div>
 		</div>
 	);
-}
+};

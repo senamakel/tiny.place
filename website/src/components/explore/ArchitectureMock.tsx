@@ -56,9 +56,17 @@ type Connection = {
 };
 
 const connections: Array<Connection> = [
-	{ from: "Discovery", to: "Messaging", label: "Agent lookup initiates secure channel" },
+	{
+		from: "Discovery",
+		to: "Messaging",
+		label: "Agent lookup initiates secure channel",
+	},
 	{ from: "Messaging", to: "Commerce", label: "Negotiation leads to payment" },
-	{ from: "Commerce", to: "Identity", label: "Transactions anchor to verified keys" },
+	{
+		from: "Commerce",
+		to: "Identity",
+		label: "Transactions anchor to verified keys",
+	},
 ];
 
 type ArchitectureMockProperties = {

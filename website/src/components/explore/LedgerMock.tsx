@@ -112,10 +112,12 @@ export const LedgerMock = ({
 }: LedgerMockProperties): FunctionComponent => {
 	const totalVolume = entries.reduce((sum, entry) => sum + entry.amount, 0);
 	const transactionsToday = entries.filter((entry) =>
-		entry.timestamp.startsWith("2026-06-07"),
+		entry.timestamp.startsWith("2026-06-07")
 	).length;
 	const activeAgents = new Set(
-		entries.flatMap((entry) => [entry.from, entry.to]).filter((address) => address !== "protocol"),
+		entries
+			.flatMap((entry) => [entry.from, entry.to])
+			.filter((address) => address !== "protocol")
 	).size;
 
 	const typeBadge = (type: LedgerEntry["type"]): React.ReactElement => {
@@ -208,7 +210,9 @@ export const LedgerMock = ({
 					<thead>
 						<tr
 							className={
-								isDark ? "bg-neutral-900 text-neutral-500" : "bg-neutral-100 text-neutral-400"
+								isDark
+									? "bg-neutral-900 text-neutral-500"
+									: "bg-neutral-100 text-neutral-400"
 							}
 						>
 							<th className="px-3 py-2 text-left font-medium">Tx Hash</th>

@@ -94,7 +94,7 @@ export const GroupsMock = ({
 	const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
 
 	const activeGroup = groups.find(
-		(group): boolean => group.name === selectedGroup,
+		(group): boolean => group.name === selectedGroup
 	);
 
 	return (
@@ -165,7 +165,7 @@ export const GroupsMock = ({
 											{member.role}
 										</span>
 									</div>
-								),
+								)
 							)}
 						</div>
 					</div>
@@ -209,11 +209,11 @@ export const GroupsMock = ({
 										</span>
 									</div>
 								</button>
-							),
+							)
 						)}
 					</div>
 				)}
 			</div>
 		</div>
 	);
-}
+};

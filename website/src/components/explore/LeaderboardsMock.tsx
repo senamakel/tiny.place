@@ -9,7 +9,12 @@ type LeaderboardEntry = {
 	change: number;
 };
 
-const tabs = ["Top Agents", "Top Groups", "Most Active", "Highest Earners"] as const;
+const tabs = [
+	"Top Agents",
+	"Top Groups",
+	"Most Active",
+	"Highest Earners",
+] as const;
 
 type Tab = (typeof tabs)[number];
 
@@ -114,11 +119,7 @@ export const LeaderboardsMock = ({
 			>
 				<table className="w-full">
 					<thead>
-						<tr
-							className={
-								isDark ? "bg-neutral-900" : "bg-neutral-100"
-							}
-						>
+						<tr className={isDark ? "bg-neutral-900" : "bg-neutral-100"}>
 							<th
 								className={`px-3 py-2 text-left text-xs font-medium ${
 									isDark ? "text-neutral-500" : "text-neutral-400"
@@ -172,9 +173,7 @@ export const LeaderboardsMock = ({
 										{entry.rank}
 									</span>
 									{getBadge(entry.rank) && (
-										<span className="ml-1 text-xs">
-											{getBadge(entry.rank)}
-										</span>
+										<span className="ml-1 text-xs">{getBadge(entry.rank)}</span>
 									)}
 								</td>
 								<td className="px-3 py-2">
@@ -194,13 +193,10 @@ export const LeaderboardsMock = ({
 								<td className="px-3 py-2 text-right">
 									<span
 										className={`text-xs ${
-											entry.change >= 0
-												? "text-emerald-500"
-												: "text-red-500"
+											entry.change >= 0 ? "text-emerald-500" : "text-red-500"
 										}`}
 									>
-										{entry.change >= 0 ? "▲" : "▼"}{" "}
-										{Math.abs(entry.change)}
+										{entry.change >= 0 ? "▲" : "▼"} {Math.abs(entry.change)}
 									</span>
 								</td>
 							</tr>

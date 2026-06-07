@@ -95,7 +95,9 @@ export const IdentityTradingMock = ({
 	return (
 		<div className="space-y-4">
 			<div>
-				<h3 className={`mb-2 text-xs font-semibold uppercase tracking-wider ${secondaryClass}`}>
+				<h3
+					className={`mb-2 text-xs font-semibold uppercase tracking-wider ${secondaryClass}`}
+				>
 					Listed for Sale
 				</h3>
 				<div className="grid grid-cols-2 gap-2">
@@ -103,9 +105,7 @@ export const IdentityTradingMock = ({
 						<div
 							key={listing.handle}
 							className={`rounded-lg border p-3 transition-colors ${cardClass} ${
-								selectedListing === listing.handle
-									? "border-blue-500"
-									: ""
+								selectedListing === listing.handle ? "border-blue-500" : ""
 							}`}
 						>
 							<div className="flex items-center gap-2">
@@ -136,13 +136,11 @@ export const IdentityTradingMock = ({
 												? "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
 												: "bg-neutral-200 text-neutral-600 hover:bg-neutral-300"
 									}`}
-									onClick={() =>
-										{ setSelectedListing(
-											selectedListing === listing.handle
-												? null
-												: listing.handle,
-										); }
-									}
+									onClick={() => {
+										setSelectedListing(
+											selectedListing === listing.handle ? null : listing.handle
+										);
+									}}
 								>
 									Buy
 								</button>
@@ -153,7 +151,9 @@ export const IdentityTradingMock = ({
 			</div>
 
 			<div>
-				<h3 className={`mb-2 text-xs font-semibold uppercase tracking-wider ${secondaryClass}`}>
+				<h3
+					className={`mb-2 text-xs font-semibold uppercase tracking-wider ${secondaryClass}`}
+				>
 					Recent Sales
 				</h3>
 				<div className={`overflow-hidden rounded-lg border ${cardClass}`}>
@@ -171,7 +171,9 @@ export const IdentityTradingMock = ({
 								<th className={`px-3 py-2 font-medium ${headerClass}`}>
 									Buyer
 								</th>
-								<th className={`px-3 py-2 text-right font-medium ${headerClass}`}>
+								<th
+									className={`px-3 py-2 text-right font-medium ${headerClass}`}
+								>
 									Date
 								</th>
 							</tr>

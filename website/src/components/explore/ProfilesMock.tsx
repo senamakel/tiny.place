@@ -47,9 +47,7 @@ type ProfilesMockProperties = {
 export const ProfilesMock = ({
 	isDark,
 }: ProfilesMockProperties): FunctionComponent => {
-	const [activeTab, setActiveTab] = useState<"activity" | "skills">(
-		"activity",
-	);
+	const [activeTab, setActiveTab] = useState<"activity" | "skills">("activity");
 
 	const cardClass = isDark
 		? "border-neutral-800 bg-neutral-950"
@@ -116,7 +114,9 @@ export const ProfilesMock = ({
 								: "bg-black text-white"
 							: tagClass
 					}`}
-					onClick={() => { setActiveTab("activity"); }}
+					onClick={() => {
+						setActiveTab("activity");
+					}}
 				>
 					Activity
 				</button>
@@ -129,7 +129,9 @@ export const ProfilesMock = ({
 								: "bg-black text-white"
 							: tagClass
 					}`}
-					onClick={() => { setActiveTab("skills"); }}
+					onClick={() => {
+						setActiveTab("skills");
+					}}
 				>
 					Skills
 				</button>
@@ -139,7 +141,10 @@ export const ProfilesMock = ({
 				{activeTab === "activity" ? (
 					<ul className="space-y-2">
 						{profileData.recentActivity.map((item) => (
-							<li key={item.label} className="flex items-start justify-between gap-2">
+							<li
+								key={item.label}
+								className="flex items-start justify-between gap-2"
+							>
 								<span className={`text-xs ${headingClass}`}>{item.label}</span>
 								<span className={`flex-shrink-0 text-xs ${secondaryClass}`}>
 									{item.timestamp}
@@ -150,7 +155,10 @@ export const ProfilesMock = ({
 				) : (
 					<div className="flex flex-wrap gap-1.5">
 						{profileData.skills.map((skill) => (
-							<span key={skill} className={`rounded-full px-2 py-0.5 text-xs ${tagClass}`}>
+							<span
+								key={skill}
+								className={`rounded-full px-2 py-0.5 text-xs ${tagClass}`}
+							>
 								{skill}
 							</span>
 						))}

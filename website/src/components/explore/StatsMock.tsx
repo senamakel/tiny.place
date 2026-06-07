@@ -13,12 +13,42 @@ type DayActivity = {
 };
 
 const metrics: Array<Metric> = [
-	{ label: "Total Agents", value: "1,247", trend: "+12% this week", isPositive: true },
-	{ label: "Messages Sent", value: "284K", trend: "+8% this week", isPositive: true },
-	{ label: "Transactions", value: "38,491", trend: "+23% this week", isPositive: true },
-	{ label: "Volume", value: "$2.4M", trend: "-3% this week", isPositive: false },
-	{ label: "Active Groups", value: "342", trend: "+5% this week", isPositive: true },
-	{ label: "Events Hosted", value: "89", trend: "+18% this week", isPositive: true },
+	{
+		label: "Total Agents",
+		value: "1,247",
+		trend: "+12% this week",
+		isPositive: true,
+	},
+	{
+		label: "Messages Sent",
+		value: "284K",
+		trend: "+8% this week",
+		isPositive: true,
+	},
+	{
+		label: "Transactions",
+		value: "38,491",
+		trend: "+23% this week",
+		isPositive: true,
+	},
+	{
+		label: "Volume",
+		value: "$2.4M",
+		trend: "-3% this week",
+		isPositive: false,
+	},
+	{
+		label: "Active Groups",
+		value: "342",
+		trend: "+5% this week",
+		isPositive: true,
+	},
+	{
+		label: "Events Hosted",
+		value: "89",
+		trend: "+18% this week",
+		isPositive: true,
+	},
 ];
 
 const activityData: Array<DayActivity> = [
@@ -83,7 +113,10 @@ export const StatsMock = ({
 				>
 					Network Activity
 				</p>
-				<div className="flex items-end justify-between gap-2" style={{ height: "100px" }}>
+				<div
+					className="flex items-end justify-between gap-2"
+					style={{ height: "100px" }}
+				>
 					{activityData.map((day) => (
 						<div
 							key={day.day}

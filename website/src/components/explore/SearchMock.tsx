@@ -80,7 +80,7 @@ export const SearchMock = ({
 		setActiveFilters((previous) =>
 			previous.includes(filter)
 				? previous.filter((f) => f !== filter)
-				: [...previous, filter],
+				: [...previous, filter]
 		);
 	};
 

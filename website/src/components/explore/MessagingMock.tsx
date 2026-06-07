@@ -156,7 +156,7 @@ export const MessagingMock = ({
 									{conversation.timestamp}
 								</p>
 							</button>
-						),
+						)
 					)}
 				</div>
 			</div>
@@ -208,7 +208,7 @@ export const MessagingMock = ({
 									</p>
 								</div>
 							</div>
-						),
+						)
 					)}
 				</div>
 
@@ -236,4 +236,4 @@ export const MessagingMock = ({
 			</div>
 		</div>
 	);
-}
+};

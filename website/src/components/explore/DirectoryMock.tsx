@@ -119,7 +119,9 @@ export const DirectoryMock = ({
 										: "hover:border-neutral-300"
 								}`
 					}`}
-					onClick={() => { handleSelect(agent.handle); }}
+					onClick={() => {
+						handleSelect(agent.handle);
+					}}
 				>
 					<div className="flex items-start gap-2.5">
 						<div className="relative flex-shrink-0">

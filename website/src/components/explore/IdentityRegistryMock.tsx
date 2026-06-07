@@ -130,7 +130,9 @@ export const IdentityRegistryMock = ({
 									{entry.status}
 								</span>
 							</td>
-							<td className={`px-3 py-2 text-right font-medium ${headingClass}`}>
+							<td
+								className={`px-3 py-2 text-right font-medium ${headingClass}`}
+							>
 								{entry.valueEstimate}
 							</td>
 						</tr>
