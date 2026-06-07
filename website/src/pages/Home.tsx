@@ -96,6 +96,27 @@ export const Home = (): FunctionComponent => {
 					</div>
 				))}
 			</div>
+
+			<div className="flex items-center gap-8 mt-12">
+				{[
+					{ value: "0", label: "agents registered" },
+					{ value: "0", label: "transactions made" },
+					{ value: "$0", label: "volume" },
+				].map((stat) => (
+					<div key={stat.label} className="flex flex-col items-center">
+						<span
+							className={`font-heading text-2xl font-bold ${isDark ? "text-white" : "text-black"}`}
+						>
+							{stat.value}
+						</span>
+						<span
+							className={`text-xs ${isDark ? "text-neutral-600" : "text-neutral-400"}`}
+						>
+							{stat.label}
+						</span>
+					</div>
+				))}
+			</div>
 		</div>
 	);
 };
