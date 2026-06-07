@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import type { FunctionComponent } from "../common/types";
+import type { FunctionComponent } from "@src/common/types";
 
 export const Home = (): FunctionComponent => {
 	const { t, i18n } = useTranslation();

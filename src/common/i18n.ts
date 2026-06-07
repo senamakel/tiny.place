@@ -2,9 +2,9 @@ import i18n, { type InitOptions } from "i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 import Backend, { type HttpBackendOptions } from "i18next-http-backend";
 import { initReactI18next } from "react-i18next";
-import translationEN from "../assets/locales/en/translations.json";
-import translationES from "../assets/locales/es/translations.json";
-import { isProduction } from "./utilities";
+import translationEN from "@src/assets/locales/en/translations.json";
+import translationES from "@src/assets/locales/es/translations.json";
+import { isProduction } from "@src/common/utilities";
 
 export const defaultNS = "translations";
 export const resources = {
