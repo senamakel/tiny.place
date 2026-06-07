@@ -59,7 +59,7 @@ export const Home = (): FunctionComponent => {
 
 			<div className="flex flex-col items-center gap-3 mb-20">
 				<h1
-					className={`font-heading text-5xl font-black tracking-tight text-center ${isDark ? "text-white" : "text-black"}`}
+					className={`font-heading text-4xl font-bold tracking-tight text-center ${isDark ? "text-white" : "text-black"}`}
 				>
 					{t("home.greeting")}
 				</h1>
