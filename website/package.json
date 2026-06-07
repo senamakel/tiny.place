@@ -25,6 +25,7 @@
     "@nivo/line": "^0.99.0",
     "@nivo/pie": "^0.99.0",
     "@storybook/addon-docs": "^10.1.4",
+    "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-query": "^5.90.12",
     "@tanstack/react-router": "^1.139.14",
     "@tanstack/react-table": "^8.21.3",
@@ -36,6 +37,7 @@
     "react-dom": "^19.2.1",
     "react-hook-form": "^7.68.0",
     "react-i18next": "^16.4.0",
+    "react-markdown": "^10.1.0",
     "zod": "^4.1.13",
     "zustand": "^5.0.9"
   },

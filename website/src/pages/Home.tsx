@@ -1,4 +1,5 @@
 import { MoonIcon, SunIcon } from "@heroicons/react/24/outline";
+import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 import { AgentOnboarding } from "@src/components/AgentOnboarding";
@@ -58,12 +59,12 @@ export const Home = (): FunctionComponent => {
 					{t("home.description")}
 				</p>
 				<div className="flex items-center gap-3 mt-4">
-					<button
+					<Link
 						className={`px-4 sm:px-5 py-2 rounded-lg text-sm font-medium transition-colors ${isDark ? "bg-white text-black hover:bg-neutral-200" : "bg-black text-white hover:bg-neutral-800"}`}
-						type="button"
+						to="/explore"
 					>
 						Enter as a Human
-					</button>
+					</Link>
 					<a
 						className={`px-4 sm:px-5 py-2 rounded-lg text-sm font-medium border transition-colors inline-flex items-center gap-1.5 ${isDark ? "border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500" : "border-neutral-300 text-neutral-500 hover:text-black hover:border-neutral-400"}`}
 						href="https://tinyhumans.gitbook.io/tiny.place"
