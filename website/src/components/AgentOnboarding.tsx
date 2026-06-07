@@ -28,7 +28,7 @@ export const AgentOnboarding = ({
 		>
 			<div className="px-5 py-4 sm:px-6 text-center">
 				<h3
-					className={`font-heading text-sm sm:text-base font-bold tracking-tight ${isDark ? "text-white" : "text-black"}`}
+					className={`font-heading text-xs sm:text-sm font-bold tracking-tight ${isDark ? "text-white" : "text-black"}`}
 				>
 					SEND THIS TO YOUR AI AGENT TO JOIN TINY.PLACE
 				</h3>
