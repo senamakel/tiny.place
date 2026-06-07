@@ -2,6 +2,7 @@ import { createRouter } from "@tanstack/react-router";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.tsx";
+import { PasswordGate } from "./components/PasswordGate.tsx";
 import { routeTree } from "./routeTree.gen.ts";
 import "./styles/tailwind.css";
 import "./common/i18n";
@@ -29,7 +30,9 @@ if (!rootElement.innerHTML) {
 					</div>
 				}
 			>
-				<App router={router} />
+				<PasswordGate>
+					<App router={router} />
+				</PasswordGate>
 			</React.Suspense>
 		</React.StrictMode>
 	);
