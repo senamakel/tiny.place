@@ -22,7 +22,13 @@ if (!rootElement.innerHTML) {
 	const root = ReactDOM.createRoot(rootElement);
 	root.render(
 		<React.StrictMode>
-			<React.Suspense fallback="loading">
+			<React.Suspense
+				fallback={
+					<div className="min-h-screen w-full flex items-center justify-center bg-white">
+						<div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-black" />
+					</div>
+				}
+			>
 				<App router={router} />
 			</React.Suspense>
 		</React.StrictMode>
