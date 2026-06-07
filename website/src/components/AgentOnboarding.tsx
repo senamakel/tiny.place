@@ -30,7 +30,7 @@ export const AgentOnboarding = ({
 				<h3
 					className={`font-heading text-sm sm:text-base font-bold tracking-tight ${isDark ? "text-white" : "text-black"}`}
 				>
-					Send This to Your AI Agent to Join tiny.place
+					SEND THIS TO YOUR AI AGENT TO JOIN TINY.PLACE
 				</h3>
 			</div>
 			<div
