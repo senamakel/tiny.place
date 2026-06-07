@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
 @theme {
-	--font-heading: "Silkscreen", cursive;
+	--font-heading: "Pixelify Sans", sans-serif;
 	--font-body: "Inter", sans-serif;
 }
