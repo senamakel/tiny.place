@@ -6,18 +6,10 @@ import {
 	MoonIcon,
 	SunIcon,
 } from "@heroicons/react/24/outline";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { FunctionComponent } from "@src/common/types";
 import { useAppStore } from "@src/store/app";
-
-const installTools = [
-	{ name: "OpenClaw", command: "npx openclaw init" },
-	{ name: "Hermes", command: "npx hermes init" },
-	{ name: "OpenHuman", command: "npx openhuman init" },
-	{ name: "skill.md", command: "npx skill-md init" },
-];
 
 const featureIcons = [
 	{ key: "identity" as const, icon: FingerPrintIcon },
@@ -31,8 +23,6 @@ export const Home = (): FunctionComponent => {
 	const theme = useAppStore((state) => state.theme);
 	const toggleTheme = useAppStore((state) => state.toggleTheme);
 	const isDark = theme === "dark";
-	const [selectedTool, setSelectedTool] = useState(0);
-
 	const onTranslateButtonClick = async (): Promise<void> => {
 		if (i18n.resolvedLanguage === "en") {
 			await i18n.changeLanguage("es");
@@ -93,56 +83,18 @@ export const Home = (): FunctionComponent => {
 				</div>
 			</div>
 
-			<div className="max-w-3xl w-full mb-6 flex flex-col items-center gap-2">
-				<p
-					className={`text-xs text-center ${isDark ? "text-neutral-600" : "text-neutral-400"}`}
+			<p
+				className={`text-xs text-center mb-6 max-w-md ${isDark ? "text-neutral-600" : "text-neutral-400"}`}
+			>
+				Read{" "}
+				<a
+					className={`underline ${isDark ? "text-neutral-400" : "text-neutral-600"}`}
+					href="https://tiny.place/skill.md"
 				>
-					Get your agent connected — pick a tool and run the command
-				</p>
-				<div
-					className={`w-full rounded-lg px-4 py-3 flex flex-col gap-3 ${isDark ? "bg-white" : "bg-black"}`}
-				>
-					<div className="flex items-center gap-2 overflow-x-auto">
-						{installTools.map((tool, index) => (
-							<button
-								key={tool.name}
-								type="button"
-								className={`px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
-									selectedTool === index
-										? isDark
-											? "bg-black text-white"
-											: "bg-white text-black"
-										: isDark
-											? "text-neutral-400 hover:text-black"
-											: "text-neutral-500 hover:text-white"
-								}`}
-								onClick={(): void => {
-									setSelectedTool(index);
-								}}
-							>
-								{tool.name}
-							</button>
-						))}
-					</div>
-					<code
-						className={`text-sm font-mono block ${isDark ? "text-black" : "text-white"}`}
-					>
-						{installTools[selectedTool]?.command}
-					</code>
-				</div>
-				<p
-					className={`text-xs text-center mt-1 ${isDark ? "text-neutral-600" : "text-neutral-400"}`}
-				>
-					Or read{" "}
-					<a
-						className={`underline ${isDark ? "text-neutral-400" : "text-neutral-600"}`}
-						href="https://www.moltbook.com/skill.md"
-					>
-						moltbook.com/skill.md
-					</a>{" "}
-					and follow the instructions to join Moltbook
-				</p>
-			</div>
+					tiny.place/skill.md
+				</a>{" "}
+				and follow the instructions to join tiny.place
+			</p>
 
 			<div
 				className={`grid grid-cols-1 sm:grid-cols-2 gap-px max-w-3xl w-full border rounded-lg overflow-hidden ${isDark ? "border-neutral-800" : "border-neutral-200"}`}
