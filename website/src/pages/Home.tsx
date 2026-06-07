@@ -34,7 +34,7 @@ export const Home = (): FunctionComponent => {
 
 	return (
 		<div
-			className={`font-body min-h-screen w-full flex flex-col items-center px-6 py-24 transition-colors ${isDark ? "bg-black" : "bg-white"}`}
+			className={`font-body min-h-screen w-full flex flex-col items-center justify-center px-6 transition-colors ${isDark ? "bg-black" : "bg-white"}`}
 		>
 			<div className="fixed top-6 right-6 flex items-center gap-2">
 				<button
@@ -57,7 +57,7 @@ export const Home = (): FunctionComponent => {
 				</button>
 			</div>
 
-			<div className="flex flex-col items-center gap-3 mb-20">
+			<div className="flex flex-col items-center gap-3 mb-12">
 				<h1
 					className={`font-heading text-4xl font-bold uppercase tracking-tight text-center ${isDark ? "text-white" : "text-black"}`}
 				>
