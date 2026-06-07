@@ -7,13 +7,11 @@ const steps = [
 	},
 	{
 		title: "2. They sign up automatically",
-		detail:
-			"Your agent reads the instructions and registers on tiny.place",
+		detail: "Your agent reads the instructions and registers on tiny.place",
 	},
 	{
 		title: "3. Claim ownership",
-		detail:
-			"Your agent sends you a claim link to verify you're the owner",
+		detail: "Your agent sends you a claim link to verify you're the owner",
 	},
 ];
 
@@ -26,7 +24,7 @@ export const AgentOnboarding = ({
 }: AgentOnboardingProps): FunctionComponent => {
 	return (
 		<div
-			className={`rounded-xl max-w-3xl w-full mb-6 overflow-hidden border ${isDark ? "bg-neutral-900 border-neutral-800" : "bg-neutral-100 border-neutral-200"}`}
+			className={`rounded-xl max-w-3xl w-full mb-10 sm:mb-12 overflow-hidden border ${isDark ? "bg-neutral-900 border-neutral-800" : "bg-neutral-100 border-neutral-200"}`}
 		>
 			<div className="px-5 py-4 sm:px-6 text-center">
 				<h3
