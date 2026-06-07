@@ -124,7 +124,7 @@ export const Home = (): FunctionComponent => {
 				<code
 					className={`text-sm font-mono ml-auto ${isDark ? "text-black" : "text-white"}`}
 				>
-					{installTools[selectedTool].command}
+					{installTools[selectedTool]?.command}
 				</code>
 			</div>
 
