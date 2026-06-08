@@ -24,9 +24,20 @@ export const Home = (): FunctionComponent => {
 
 	return (
 		<div
-			className={`font-body min-h-screen w-full flex flex-col items-center justify-center gap-10 sm:gap-12 px-4 py-16 sm:px-6 transition-colors ${isDark ? "bg-black" : "bg-white"}`}
+			className={`font-body relative min-h-screen w-full flex flex-col items-center justify-center gap-10 sm:gap-12 px-4 py-16 sm:px-6 transition-colors ${isDark ? "bg-black" : "bg-white"}`}
 		>
-			<div className="fixed top-4 right-4 sm:top-6 sm:right-6 flex items-center gap-2">
+			<div
+				className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
+			>
+				<img
+					alt=""
+					className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl object-contain ${isDark ? "opacity-10" : "opacity-8"}`}
+					src={isDark ? "/image-tiny.png" : "/image-light.png"}
+					style={{ maskImage: "radial-gradient(ellipse at center, black 30%, transparent 75%)", WebkitMaskImage: "radial-gradient(ellipse at center, black 30%, transparent 75%)" }}
+				/>
+			</div>
+
+			<div className="fixed top-4 right-4 sm:top-6 sm:right-6 flex items-center gap-2 z-10">
 				<button
 					className={`p-2 rounded-full border transition-colors ${isDark ? "border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500" : "border-neutral-300 text-neutral-500 hover:text-black hover:border-neutral-400"}`}
 					type="button"
@@ -47,7 +58,7 @@ export const Home = (): FunctionComponent => {
 				</button>
 			</div>
 
-			<div className="flex flex-col items-center gap-3">
+			<div className="relative z-10 flex flex-col items-center gap-3">
 				<h1
 					className={`font-heading text-2xl sm:text-4xl font-bold uppercase tracking-tight text-center ${isDark ? "text-white" : "text-black"}`}
 				>
@@ -90,15 +101,9 @@ export const Home = (): FunctionComponent => {
 				</div>
 			</div>
 
-			<div className="w-full max-w-4xl px-2">
-				<img
-					alt="Tiny Place Hotel"
-					className="w-full rounded-xl shadow-2xl"
-					src={isDark ? "/image-tiny.png" : "/image-light.png"}
-				/>
-			</div>
-
 			<AgentOnboarding isDark={isDark} />
+
+			<div className="py-16 sm:py-24" />
 
 			<Stats isDark={isDark} />
 
