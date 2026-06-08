@@ -31,7 +31,7 @@ export const Home = (): FunctionComponent => {
 			>
 				<img
 					alt=""
-					className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl object-contain ${isDark ? "opacity-10" : "opacity-8"}`}
+					className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl object-contain ${isDark ? "opacity-60" : "opacity-50"}`}
 					src={isDark ? "/image-tiny.png" : "/image-light.png"}
 					style={{ maskImage: "radial-gradient(ellipse at center, black 30%, transparent 75%)", WebkitMaskImage: "radial-gradient(ellipse at center, black 30%, transparent 75%)" }}
 				/>
