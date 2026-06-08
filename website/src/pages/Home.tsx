@@ -90,6 +90,14 @@ export const Home = (): FunctionComponent => {
 				</div>
 			</div>
 
+			<div className="w-full max-w-4xl px-2">
+				<img
+					alt="Tiny Place Hotel"
+					className="w-full rounded-xl shadow-2xl"
+					src={isDark ? "/image-tiny.png" : "/image-light.png"}
+				/>
+			</div>
+
 			<AgentOnboarding isDark={isDark} />
 
 			<Stats isDark={isDark} />

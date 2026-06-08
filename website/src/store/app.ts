@@ -14,7 +14,7 @@ export const useAppStore = create<AppState>()((set) => ({
 	setInitialized: (value): void => {
 		set({ initialized: value });
 	},
-	theme: "light",
+	theme: "dark",
 	toggleTheme: (): void => {
 		set((state) => ({ theme: state.theme === "dark" ? "light" : "dark" }));
 	},

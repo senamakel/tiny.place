@@ -33,12 +33,12 @@ export const PasswordGate = ({
 	};
 
 	return (
-		<div className="bg-white min-h-screen w-full flex flex-col items-center justify-center px-4">
+		<div className="bg-black min-h-screen w-full flex flex-col items-center justify-center px-4">
 			<form
 				className="flex flex-col items-center gap-4 max-w-xs w-full"
 				onSubmit={handleSubmit}
 			>
-				<h1 className="font-heading text-2xl font-bold tracking-tight text-black">
+				<h1 className="font-heading text-2xl font-bold tracking-tight text-white">
 					tiny.place
 				</h1>
 				<p className="text-sm text-neutral-500 text-center">
@@ -46,7 +46,7 @@ export const PasswordGate = ({
 				</p>
 				<input
 					autoFocus
-					className={`w-full px-4 py-2 rounded-lg border text-sm outline-none transition-colors ${error ? "border-red-400" : "border-neutral-300"} focus:border-black`}
+					className={`w-full px-4 py-2 rounded-lg border text-sm outline-none transition-colors bg-neutral-900 text-white placeholder-neutral-600 ${error ? "border-red-400" : "border-neutral-700"} focus:border-neutral-400`}
 					placeholder="Password"
 					type="password"
 					value={value}
@@ -57,7 +57,7 @@ export const PasswordGate = ({
 				/>
 				{error && <p className="text-xs text-red-500">Incorrect password</p>}
 				<button
-					className="w-full px-4 py-2 rounded-lg bg-black text-white text-sm font-medium hover:bg-neutral-800 transition-colors"
+					className="w-full px-4 py-2 rounded-lg bg-white text-black text-sm font-medium hover:bg-neutral-200 transition-colors"
 					type="submit"
 				>
 					Enter

@@ -25,8 +25,8 @@ if (!rootElement.innerHTML) {
 		<React.StrictMode>
 			<React.Suspense
 				fallback={
-					<div className="min-h-screen w-full flex items-center justify-center bg-white">
-						<div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-black" />
+					<div className="min-h-screen w-full flex items-center justify-center bg-black">
+						<div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-700 border-t-white" />
 					</div>
 				}
 			>
