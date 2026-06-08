@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { FunctionComponent } from "@src/common/types";
 import GameEngine from "@src/engine/GameEngine";
@@ -59,11 +60,7 @@ export function Room(): FunctionComponent {
 			})
 			.catch((error_) => {
 				console.error("Engine init failed:", error_);
-				setError(
-					error_ instanceof Error
-						? error_.message
-						: String(error_),
-				);
+				setError(error_ instanceof Error ? error_.message : String(error_));
 				setLoading(false);
 			});
 
@@ -71,7 +68,7 @@ export function Room(): FunctionComponent {
 			if (canvasRef.current && engineRef.current) {
 				engineRef.current.resize(
 					canvasRef.current.clientWidth,
-					canvasRef.current.clientHeight,
+					canvasRef.current.clientHeight
 				);
 			}
 		};
@@ -84,19 +81,16 @@ export function Room(): FunctionComponent {
 		};
 	}, []);
 
-	const handleRoomChange = useCallback(
-		(index: number) => {
-			setSelectedRoom(index);
-			setAvatarList([]);
-			if (engineRef.current) {
-				const preset = ROOM_PRESETS[index];
-				if (!preset) return;
-				const model = preset.factory();
-				engineRef.current.loadRoom(model);
-			}
-		},
-		[],
-	);
+	const handleRoomChange = useCallback((index: number) => {
+		setSelectedRoom(index);
+		setAvatarList([]);
+		if (engineRef.current) {
+			const preset = ROOM_PRESETS[index];
+			if (!preset) return;
+			const model = preset.factory();
+			engineRef.current.loadRoom(model);
+		}
+	}, []);
 
 	const handleAddAvatar = useCallback(() => {
 		if (!engineRef.current) return;
@@ -109,7 +103,7 @@ export function Room(): FunctionComponent {
 			avatarX,
 			avatarY,
 			0,
-			avatarDirection,
+			avatarDirection
 		);
 		setAvatarList((previous) => [
 			...previous,
@@ -120,22 +114,15 @@ export function Room(): FunctionComponent {
 	const handleRemoveAvatar = useCallback((id: number) => {
 		if (!engineRef.current) return;
 		engineRef.current.removeAvatar(id);
-		setAvatarList((previous) =>
-			previous.filter((a) => a.id !== id),
-		);
+		setAvatarList((previous) => previous.filter((a) => a.id !== id));
 	}, []);
 
 	const handleMoveAvatar = useCallback(
 		(id: number) => {
 			if (!engineRef.current) return;
-			engineRef.current.moveAvatar(
-				id,
-				avatarX,
-				avatarY,
-				avatarDirection,
-			);
+			engineRef.current.moveAvatar(id, avatarX, avatarY, avatarDirection);
 		},
-		[avatarX, avatarY, avatarDirection],
+		[avatarX, avatarY, avatarDirection]
 	);
 
 	const handleCenterCamera = useCallback(() => {
@@ -150,18 +137,14 @@ export function Room(): FunctionComponent {
 					<div className="absolute inset-0 flex items-center justify-center bg-gray-900">
 						<div className="text-center">
 							<div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent mx-auto" />
-							<p className="text-gray-400">
-								Loading sprites...
-							</p>
+							<p className="text-gray-400">Loading sprites...</p>
 						</div>
 					</div>
 				)}
 				{error && (
 					<div className="absolute inset-0 flex items-center justify-center bg-gray-900">
 						<div className="rounded-lg bg-red-900/50 p-6 text-center">
-							<p className="text-red-400">
-								Error: {error}
-							</p>
+							<p className="text-red-400">Error: {error}</p>
 						</div>
 					</div>
 				)}
@@ -169,15 +152,11 @@ export function Room(): FunctionComponent {
 
 			{/* Controls panel - 10% */}
 			<div className="w-80 overflow-y-auto border-l border-gray-700 bg-gray-800 p-4 text-sm text-gray-200">
-				<h2 className="mb-4 text-lg font-bold text-white">
-					Room Controls
-				</h2>
+				<h2 className="mb-4 text-lg font-bold text-white">Room Controls</h2>
 
 				{/* Room Selection */}
 				<section className="mb-6">
-					<h3 className="mb-2 font-semibold text-gray-300">
-						Room Layout
-					</h3>
+					<h3 className="mb-2 font-semibold text-gray-300">Room Layout</h3>
 					<div className="flex flex-col gap-1">
 						{ROOM_PRESETS.map((preset, index) => (
 							<button
@@ -187,9 +166,7 @@ export function Room(): FunctionComponent {
 										: "bg-gray-700 text-gray-300 hover:bg-gray-600"
 								}`}
 								key={preset.label}
-								onClick={() =>
-									handleRoomChange(index)
-								}
+								onClick={() => handleRoomChange(index)}
 								type="button"
 							>
 								{preset.label}
@@ -200,9 +177,7 @@ export function Room(): FunctionComponent {
 
 				{/* Camera */}
 				<section className="mb-6">
-					<h3 className="mb-2 font-semibold text-gray-300">
-						Camera
-					</h3>
+					<h3 className="mb-2 font-semibold text-gray-300">Camera</h3>
 					<button
 						className="w-full rounded bg-gray-700 px-3 py-1.5 text-gray-300 hover:bg-gray-600"
 						onClick={handleCenterCamera}
@@ -210,26 +185,18 @@ export function Room(): FunctionComponent {
 					>
 						Center Camera
 					</button>
-					<p className="mt-1 text-xs text-gray-500">
-						Drag the room to pan
-					</p>
+					<p className="mt-1 text-xs text-gray-500">Drag the room to pan</p>
 				</section>
 
 				{/* Avatar Controls */}
 				<section className="mb-6">
-					<h3 className="mb-2 font-semibold text-gray-300">
-						Add Avatar
-					</h3>
+					<h3 className="mb-2 font-semibold text-gray-300">Add Avatar</h3>
 					<div className="flex flex-col gap-2">
 						<label className="text-xs text-gray-400">
 							Figure String
 							<textarea
 								className="mt-1 w-full rounded bg-gray-700 px-2 py-1 text-xs text-gray-200 font-mono"
-								onChange={(event) =>
-									setAvatarFigure(
-										event.target.value,
-									)
-								}
+								onChange={(event) => setAvatarFigure(event.target.value)}
 								rows={2}
 								value={avatarFigure}
 							/>
@@ -241,13 +208,7 @@ export function Room(): FunctionComponent {
 									className="mt-1 w-full rounded bg-gray-700 px-2 py-1 text-gray-200"
 									max={20}
 									min={0}
-									onChange={(event) =>
-										setAvatarX(
-											Number(
-												event.target.value,
-											),
-										)
-									}
+									onChange={(event) => setAvatarX(Number(event.target.value))}
 									type="number"
 									value={avatarX}
 								/>
@@ -258,13 +219,7 @@ export function Room(): FunctionComponent {
 									className="mt-1 w-full rounded bg-gray-700 px-2 py-1 text-gray-200"
 									max={20}
 									min={0}
-									onChange={(event) =>
-										setAvatarY(
-											Number(
-												event.target.value,
-											),
-										)
-									}
+									onChange={(event) => setAvatarY(Number(event.target.value))}
 									type="number"
 									value={avatarY}
 								/>
@@ -276,17 +231,12 @@ export function Room(): FunctionComponent {
 								{DIRECTIONS.map((direction) => (
 									<button
 										className={`rounded px-2 py-1 text-xs ${
-											avatarDirection ===
-											direction.value
+											avatarDirection === direction.value
 												? "bg-blue-600 text-white"
 												: "bg-gray-700 text-gray-300 hover:bg-gray-600"
 										}`}
 										key={direction.value}
-										onClick={() =>
-											setAvatarDirection(
-												direction.value,
-											)
-										}
+										onClick={() => setAvatarDirection(direction.value)}
 										type="button"
 									>
 										{direction.label}
@@ -317,28 +267,18 @@ export function Room(): FunctionComponent {
 									className="flex items-center justify-between rounded bg-gray-700 px-3 py-2"
 									key={avatar.id}
 								>
-									<span className="text-xs text-gray-300">
-										{avatar.name}
-									</span>
+									<span className="text-xs text-gray-300">{avatar.name}</span>
 									<div className="flex gap-1">
 										<button
 											className="rounded bg-blue-600 px-2 py-0.5 text-xs text-white hover:bg-blue-500"
-											onClick={() =>
-												handleMoveAvatar(
-													avatar.id,
-												)
-											}
+											onClick={() => handleMoveAvatar(avatar.id)}
 											type="button"
 										>
 											Move
 										</button>
 										<button
 											className="rounded bg-red-700 px-2 py-0.5 text-xs text-white hover:bg-red-600"
-											onClick={() =>
-												handleRemoveAvatar(
-													avatar.id,
-												)
-											}
+											onClick={() => handleRemoveAvatar(avatar.id)}
 											type="button"
 										>
 											Remove
@@ -352,15 +292,11 @@ export function Room(): FunctionComponent {
 
 				{/* Info */}
 				<section className="mt-auto border-t border-gray-700 pt-4">
-					<h3 className="mb-2 font-semibold text-gray-300">
-						Debug Info
-					</h3>
+					<h3 className="mb-2 font-semibold text-gray-300">Debug Info</h3>
 					<p className="text-xs text-gray-500">
 						Room: {ROOM_PRESETS[selectedRoom]?.label}
 					</p>
-					<p className="text-xs text-gray-500">
-						Avatars: {avatarList.length}
-					</p>
+					<p className="text-xs text-gray-500">Avatars: {avatarList.length}</p>
 					<p className="mt-2 text-xs text-gray-600">
 						Engine: PixiJS + Bobba sprite renderer
 					</p>

@@ -1,5 +1,5 @@
-// @ts-nocheck — ported from bobba_client AvatarImager, strict index checks deferred
 /* eslint-disable */
+// @ts-nocheck — ported from bobba_client AvatarImager, strict index checks deferred
 import AvatarInfo from "./AvatarInfo";
 import type { Direction, FigurePart } from "./AvatarInfo";
 import AvatarChunk from "./AvatarChunk";
@@ -36,37 +36,30 @@ export default class AvatarImager {
 
 	loadFiles(): Array<Promise<void>> {
 		return [
-			this.fetchJsonAsync(this.resourcesUrl + "map.json").then(
-				(data) => {
-					this.figuremap = data;
-				},
-			),
-			this.fetchJsonAsync(
-				this.resourcesUrl + "figuredata.json",
-			).then((data) => {
-				this.figuredata = data;
+			this.fetchJsonAsync(this.resourcesUrl + "map.json").then((data) => {
+				this.figuremap = data;
 			}),
-			this.fetchJsonAsync(
-				this.resourcesUrl + "partsets.json",
-			).then((data) => {
+			this.fetchJsonAsync(this.resourcesUrl + "figuredata.json").then(
+				(data) => {
+					this.figuredata = data;
+				}
+			),
+			this.fetchJsonAsync(this.resourcesUrl + "partsets.json").then((data) => {
 				this.partsets = data;
 			}),
-			this.fetchJsonAsync(
-				this.resourcesUrl + "draworder.json",
-			).then((data) => {
+			this.fetchJsonAsync(this.resourcesUrl + "draworder.json").then((data) => {
 				this.draworder = data;
 			}),
-			this.fetchJsonAsync(
-				this.resourcesUrl + "animation.json",
-			).then((data) => {
+			this.fetchJsonAsync(this.resourcesUrl + "animation.json").then((data) => {
 				this.animation = data;
 			}),
 		];
 	}
 
 	fetchJsonAsync(url: string): Promise<any> {
-		return fetch(url, { method: "GET", mode: "cors", cache: "default" })
-			.then((response) => response.json());
+		return fetch(url, { method: "GET", mode: "cors", cache: "default" }).then(
+			(response) => response.json()
+		);
 	}
 
 	downloadAtlasAsync(uniqueName: string): Promise<HTMLImageElement> {
@@ -76,7 +69,7 @@ export default class AvatarImager {
 				img.onload = (): void => resolve(img);
 				img.onerror = (): void =>
 					reject(new Error("Could not load image: " + img.src));
-			},
+			}
 		);
 		img.crossOrigin = "anonymous";
 		img.src = this.resourcesUrl + uniqueName + "/atlas.png";
@@ -85,15 +78,13 @@ export default class AvatarImager {
 
 	fetchOffsetAsync(uniqueName: string): Promise<void> {
 		const offsetPromise = this.fetchJsonAsync(
-			this.resourcesUrl + uniqueName + "/offset.json",
+			this.resourcesUrl + uniqueName + "/offset.json"
 		).then((data) => {
 			this.offsets[uniqueName].data = data;
 		});
-		const atlasPromise = this.downloadAtlasAsync(uniqueName).then(
-			(data) => {
-				this.offsets[uniqueName].atlas = data;
-			},
-		);
+		const atlasPromise = this.downloadAtlasAsync(uniqueName).then((data) => {
+			this.offsets[uniqueName].atlas = data;
+		});
 		return Promise.all([offsetPromise, atlasPromise]).then(() => {});
 	}
 
@@ -103,7 +94,15 @@ export default class AvatarImager {
 
 	getTypeColorId(figure: string, part: string): number {
 		const avatarInfo = new AvatarInfo(
-			figure, 0, 0, ["std"], "std", 0, false, false, "d",
+			figure,
+			0,
+			0,
+			["std"],
+			"std",
+			0,
+			false,
+			false,
+			"d"
 		);
 		let color = 0x000000;
 
@@ -126,11 +125,11 @@ export default class AvatarImager {
 
 	generateGeneric(
 		avatarInfo: AvatarInfo,
-		isGhost: boolean,
+		isGhost: boolean
 	): Promise<HTMLCanvasElement> {
 		const activeParts: any = {};
 		activeParts.rect = this.getActivePartSet(
-			avatarInfo.isHeadOnly ? "head" : "figure",
+			avatarInfo.isHeadOnly ? "head" : "figure"
 		);
 		activeParts.head = this.getActivePartSet("head");
 		activeParts.eye = this.getActivePartSet("eye");
@@ -145,7 +144,7 @@ export default class AvatarImager {
 
 		let drawParts = this.getDrawOrder(
 			avatarInfo.drawOrder,
-			avatarInfo.direction,
+			avatarInfo.direction
 		);
 		if (drawParts == null) {
 			drawParts = this.getDrawOrder("std", avatarInfo.direction);
@@ -171,16 +170,10 @@ export default class AvatarImager {
 			const drawableParts = setParts[type];
 			if (drawableParts != null) {
 				for (const drawablePart of drawableParts) {
-					const uniqueName = this.getPartUniqueName(
-						type,
-						drawablePart["id"],
-					);
+					const uniqueName = this.getPartUniqueName(type, drawablePart["id"]);
 					if (uniqueName != null) {
 						if (setParts["hidden"].includes(type)) continue;
-						if (
-							activeParts.head.includes(type) &&
-							avatarInfo.isBodyOnly
-						)
+						if (activeParts.head.includes(type) && avatarInfo.isBodyOnly)
 							continue;
 						if (!activeParts.rect.includes(type)) continue;
 						if (
@@ -197,10 +190,7 @@ export default class AvatarImager {
 							drawAction = avatarInfo.drawAction.body;
 						if (activeParts.head.includes(type))
 							drawDirection = avatarInfo.headDirection;
-						if (
-							activeParts.speak.includes(type) &&
-							avatarInfo.drawAction.speak
-						)
+						if (activeParts.speak.includes(type) && avatarInfo.drawAction.speak)
 							drawAction = avatarInfo.drawAction.speak;
 						if (
 							activeParts.gesture.includes(type) &&
@@ -212,15 +202,9 @@ export default class AvatarImager {
 							if (avatarInfo.drawAction.eye)
 								drawAction = avatarInfo.drawAction.eye;
 						}
-						if (
-							activeParts.walk.includes(type) &&
-							avatarInfo.drawAction.wlk
-						)
+						if (activeParts.walk.includes(type) && avatarInfo.drawAction.wlk)
 							drawAction = avatarInfo.drawAction.wlk;
-						if (
-							activeParts.sit.includes(type) &&
-							avatarInfo.drawAction.sit
-						)
+						if (activeParts.sit.includes(type) && avatarInfo.drawAction.sit)
 							drawAction = avatarInfo.drawAction.sit;
 						if (
 							activeParts.handRight.includes(type) &&
@@ -237,10 +221,7 @@ export default class AvatarImager {
 							avatarInfo.drawAction.handLeft
 						)
 							drawAction = avatarInfo.drawAction.handLeft;
-						if (
-							activeParts.swim.includes(type) &&
-							avatarInfo.drawAction.swm
-						)
+						if (activeParts.swim.includes(type) && avatarInfo.drawAction.swm)
 							drawAction = avatarInfo.drawAction.swm;
 
 						if (drawAction == null) continue;
@@ -252,13 +233,9 @@ export default class AvatarImager {
 								atlas: {},
 							};
 						}
-						offsetsPromises.push(
-							this.offsets[uniqueName].promise,
-						);
+						offsetsPromises.push(this.offsets[uniqueName].promise);
 
-						const color = drawablePart.colorable
-							? drawablePart.color
-							: null;
+						const color = drawablePart.colorable ? drawablePart.color : null;
 						const drawPartChunk = this.getPartResource(
 							uniqueName,
 							drawAction,
@@ -267,7 +244,7 @@ export default class AvatarImager {
 							drawablePart["id"],
 							drawDirection,
 							avatarInfo.frame,
-							color,
+							color
 						);
 						chunks.push(drawPartChunk);
 					}
@@ -282,54 +259,35 @@ export default class AvatarImager {
 				tempCanvas.width = avatarInfo.rectWidth;
 				tempCanvas.height = avatarInfo.rectHeight;
 
-				const chunksPromises: Array<
-					Promise<HTMLImageElement> | null
-				> = [];
+				const chunksPromises: Array<Promise<HTMLImageElement> | null> = [];
 
 				for (const chunk of chunks) {
 					if (
 						this.offsets[chunk.lib].data != null &&
-						this.offsets[chunk.lib].data[
-							chunk.getResourceName()
-						] != null &&
-						!this.offsets[chunk.lib].data[
-							chunk.getResourceName()
-						].flipped
+						this.offsets[chunk.lib].data[chunk.getResourceName()] != null &&
+						!this.offsets[chunk.lib].data[chunk.getResourceName()].flipped
 					) {
-						const atlasData =
-							this.offsets[chunk.lib].data.atlas;
+						const atlasData = this.offsets[chunk.lib].data.atlas;
 						const atlasImg = this.offsets[chunk.lib].atlas;
-						chunksPromises.push(
-							chunk.extractFromAtlas(atlasData, atlasImg),
-						);
+						chunksPromises.push(chunk.extractFromAtlas(atlasData, atlasImg));
 					} else {
 						const flippedType =
-							this.partsets.partSet[chunk.type][
-								"flipped-set-type"
-							];
+							this.partsets.partSet[chunk.type]["flipped-set-type"];
 						if (flippedType !== "") {
 							chunk.resType = flippedType;
 						}
 						if (
 							chunk.action === "std" &&
 							(this.offsets[chunk.lib].data == null ||
-								this.offsets[chunk.lib].data[
-									chunk.getResourceName()
-								] == null ||
-								this.offsets[chunk.lib].data[
-									chunk.getResourceName()
-								].flipped)
+								this.offsets[chunk.lib].data[chunk.getResourceName()] == null ||
+								this.offsets[chunk.lib].data[chunk.getResourceName()].flipped)
 						) {
 							chunk.resAction = "spk";
 						}
 						if (
 							this.offsets[chunk.lib].data == null ||
-							this.offsets[chunk.lib].data[
-								chunk.getResourceName()
-							] == null ||
-							this.offsets[chunk.lib].data[
-								chunk.getResourceName()
-							].flipped
+							this.offsets[chunk.lib].data[chunk.getResourceName()] == null ||
+							this.offsets[chunk.lib].data[chunk.getResourceName()].flipped
 						) {
 							chunk.isFlip = true;
 							chunk.resAction = chunk.action;
@@ -337,53 +295,35 @@ export default class AvatarImager {
 						}
 						if (
 							this.offsets[chunk.lib].data == null ||
-							this.offsets[chunk.lib].data[
-								chunk.getResourceName()
-							] == null ||
-							this.offsets[chunk.lib].data[
-								chunk.getResourceName()
-							].flipped
+							this.offsets[chunk.lib].data[chunk.getResourceName()] == null ||
+							this.offsets[chunk.lib].data[chunk.getResourceName()].flipped
 						) {
 							chunk.resFrame = chunk.frame + 1;
 							chunk.isFlip = false;
 						}
 						if (
 							this.offsets[chunk.lib].data == null ||
-							this.offsets[chunk.lib].data[
-								chunk.getResourceName()
-							] == null ||
-							this.offsets[chunk.lib].data[
-								chunk.getResourceName()
-							].flipped
+							this.offsets[chunk.lib].data[chunk.getResourceName()] == null ||
+							this.offsets[chunk.lib].data[chunk.getResourceName()].flipped
 						) {
 							chunk.isFlip = false;
 							chunk.resFrame = chunk.frame;
 							chunk.resAction = chunk.action;
-							if (chunk.direction === 7)
-								chunk.resDirection = 3;
-							if (chunk.direction === 3)
-								chunk.resDirection = 7;
+							if (chunk.direction === 7) chunk.resDirection = 3;
+							if (chunk.direction === 3) chunk.resDirection = 7;
 						}
 						if (
 							this.offsets[chunk.lib].data == null ||
-							this.offsets[chunk.lib].data[
-								chunk.getResourceName()
-							] == null ||
-							this.offsets[chunk.lib].data[
-								chunk.getResourceName()
-							].flipped
+							this.offsets[chunk.lib].data[chunk.getResourceName()] == null ||
+							this.offsets[chunk.lib].data[chunk.getResourceName()].flipped
 						) {
 							chunk.resFrame = chunk.frame + 1;
 							chunk.isFlip = false;
 						}
 						if (
 							this.offsets[chunk.lib].data == null ||
-							this.offsets[chunk.lib].data[
-								chunk.getResourceName()
-							] == null ||
-							this.offsets[chunk.lib].data[
-								chunk.getResourceName()
-							].flipped
+							this.offsets[chunk.lib].data[chunk.getResourceName()] == null ||
+							this.offsets[chunk.lib].data[chunk.getResourceName()].flipped
 						) {
 							chunk.resAction = chunk.action;
 							chunk.resType = flippedType;
@@ -392,43 +332,28 @@ export default class AvatarImager {
 						if (
 							chunk.action === "std" &&
 							(this.offsets[chunk.lib].data == null ||
-								this.offsets[chunk.lib].data[
-									chunk.getResourceName()
-								] == null ||
-								this.offsets[chunk.lib].data[
-									chunk.getResourceName()
-								].flipped)
+								this.offsets[chunk.lib].data[chunk.getResourceName()] == null ||
+								this.offsets[chunk.lib].data[chunk.getResourceName()].flipped)
 						) {
 							chunk.resAction = "spk";
 							chunk.resType = chunk.type;
 						}
 						if (
 							this.offsets[chunk.lib].data != null &&
-							this.offsets[chunk.lib].data[
-								chunk.getResourceName()
-							] != null &&
-							!this.offsets[chunk.lib].data[
-								chunk.getResourceName()
-							].flipped
+							this.offsets[chunk.lib].data[chunk.getResourceName()] != null &&
+							!this.offsets[chunk.lib].data[chunk.getResourceName()].flipped
 						) {
-							const atlasData =
-								this.offsets[chunk.lib].data.atlas;
-							const atlasImg =
-								this.offsets[chunk.lib].atlas;
-							chunksPromises.push(
-								chunk.extractFromAtlas(
-									atlasData,
-									atlasImg,
-								),
-							);
+							const atlasData = this.offsets[chunk.lib].data.atlas;
+							const atlasImg = this.offsets[chunk.lib].atlas;
+							chunksPromises.push(chunk.extractFromAtlas(atlasData, atlasImg));
 						}
 					}
 				}
 
 				Promise.all(
 					chunksPromises.filter(
-						(p): p is Promise<HTMLImageElement> => p != null,
-					),
+						(p): p is Promise<HTMLImageElement> => p != null
+					)
 				)
 					.catch(() => {
 						reject(new Error("Error downloading chunks"));
@@ -437,32 +362,20 @@ export default class AvatarImager {
 						for (const chunk of chunks) {
 							if (
 								this.offsets[chunk.lib].data != null &&
-								this.offsets[chunk.lib].data[
-									chunk.getResourceName()
-								] != null
+								this.offsets[chunk.lib].data[chunk.getResourceName()] != null
 							) {
 								if (chunk.resource != null) {
 									let positionX =
-										-this.offsets[chunk.lib].data[
-											chunk.getResourceName()
-										].x;
+										-this.offsets[chunk.lib].data[chunk.getResourceName()].x;
 									const positionY =
 										avatarInfo.rectHeight / 2 -
-										this.offsets[chunk.lib].data[
-											chunk.getResourceName()
-										].y +
+										this.offsets[chunk.lib].data[chunk.getResourceName()].y +
 										avatarInfo.rectHeight / 2.5;
 
-									let img:
-										| HTMLCanvasElement
-										| HTMLImageElement
-										| null = chunk.resource;
+									let img: HTMLCanvasElement | HTMLImageElement | null =
+										chunk.resource;
 									if (chunk.color != null) {
-										img = tintSprite(
-											img,
-											chunk.color,
-											isGhost ? 170 : 255,
-										);
+										img = tintSprite(img, chunk.color, isGhost ? 170 : 255);
 									}
 									if (img != null && chunk.isFlip) {
 										positionX = -(
@@ -474,11 +387,7 @@ export default class AvatarImager {
 										img = flipImageCanvas(img);
 									}
 									if (tempContext != null && img != null) {
-										tempContext.drawImage(
-											img,
-											positionX,
-											positionY,
-										);
+										tempContext.drawImage(img, positionX, positionY);
 									}
 								}
 							}
@@ -486,8 +395,7 @@ export default class AvatarImager {
 
 						let result: HTMLCanvasElement = tempCanvas;
 						if (avatarInfo.isDownsampled) {
-							const downsampled =
-								downsampleImage(tempCanvas);
+							const downsampled = downsampleImage(tempCanvas);
 							if (downsampled != null) result = downsampled;
 						}
 
@@ -498,8 +406,7 @@ export default class AvatarImager {
 	}
 
 	getActivePartSet(partSet: string): any {
-		const activeParts =
-			this.partsets["activePartSet"][partSet]["activePart"];
+		const activeParts = this.partsets["activePartSet"][partSet]["activePart"];
 		if (activeParts == null || activeParts.length === 0) return null;
 		return activeParts;
 	}
@@ -528,7 +435,7 @@ export default class AvatarImager {
 					if (part.colorable) {
 						element.color = this.getColorByPaletteId(
 							partSet.paletteid,
-							figure.colors[part.colorindex - 1],
+							figure.colors[part.colorindex - 1]
 						);
 					}
 					if (parts[part.type] == null) {
@@ -543,9 +450,7 @@ export default class AvatarImager {
 				partSet["set"][figure.id] != null &&
 				Array.isArray(partSet["set"][figure.id]["hidden"])
 			) {
-				for (const partType of partSet["set"][figure.id][
-					"hidden"
-				]) {
+				for (const partType of partSet["set"][figure.id]["hidden"]) {
 					parts.hidden.push(partType);
 				}
 			}
@@ -582,7 +487,7 @@ export default class AvatarImager {
 		partId: number,
 		direction: Direction,
 		frame: number,
-		color: string,
+		color: string
 	): AvatarChunk {
 		const partFrame = this.getFrameNumber(type, action, frame);
 		const chunk = new AvatarChunk(
@@ -593,7 +498,7 @@ export default class AvatarImager {
 			partId,
 			direction,
 			partFrame,
-			color,
+			color
 		);
 		const resourceName = chunk.getResourceName();
 		if (
@@ -615,20 +520,13 @@ export default class AvatarImager {
 			spk: "Talk",
 		};
 		if (translations[action] != null) {
-			if (
-				this.animation[translations[action]].part[type] != null
-			) {
-				const count =
-					this.animation[translations[action]].part[type]
-						.length;
+			if (this.animation[translations[action]].part[type] != null) {
+				const count = this.animation[translations[action]].part[type].length;
 				if (
-					this.animation[translations[action]].part[type][
-						frame % count
-					] != null
+					this.animation[translations[action]].part[type][frame % count] != null
 				) {
-					return this.animation[translations[action]].part[
-						type
-					][frame % count].number;
+					return this.animation[translations[action]].part[type][frame % count]
+						.number;
 				}
 			}
 		}
@@ -636,9 +534,7 @@ export default class AvatarImager {
 	}
 }
 
-function hex2rgb(
-	hex: string,
-): { r: number; g: number; b: number } | null {
+function hex2rgb(hex: string): { r: number; g: number; b: number } | null {
 	const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
 	return result
 		? {
@@ -652,7 +548,7 @@ function hex2rgb(
 function tintSprite(
 	img: HTMLCanvasElement | HTMLImageElement,
 	color: string,
-	alpha: number,
+	alpha: number
 ): HTMLCanvasElement | null {
 	const element = document.createElement("canvas");
 	const context = element.getContext("2d");
@@ -677,13 +573,13 @@ function tintSprite(
 			if (pa !== 0) {
 				imageData.data[position - 1] = alpha;
 				imageData.data[position - 2] = Math.round(
-					(rgb.b * imageData.data[position - 2]) / 255,
+					(rgb.b * imageData.data[position - 2]) / 255
 				);
 				imageData.data[position - 3] = Math.round(
-					(rgb.g * imageData.data[position - 3]) / 255,
+					(rgb.g * imageData.data[position - 3]) / 255
 				);
 				imageData.data[position - 4] = Math.round(
-					(rgb.r * imageData.data[position - 4]) / 255,
+					(rgb.r * imageData.data[position - 4]) / 255
 				);
 			}
 		}
@@ -693,7 +589,7 @@ function tintSprite(
 }
 
 function flipImageCanvas(
-	img: HTMLCanvasElement | HTMLImageElement,
+	img: HTMLCanvasElement | HTMLImageElement
 ): HTMLCanvasElement | null {
 	const element = document.createElement("canvas");
 	const context = element.getContext("2d");
@@ -712,7 +608,7 @@ function flipImageCanvas(
 }
 
 function downsampleImage(
-	img: HTMLCanvasElement | HTMLImageElement,
+	img: HTMLCanvasElement | HTMLImageElement
 ): HTMLCanvasElement | null {
 	const element = document.createElement("canvas");
 	const context = element.getContext("2d");
@@ -734,7 +630,7 @@ export function generateSilhouette(
 	img: HTMLImageElement | HTMLCanvasElement,
 	r: number,
 	g: number,
-	b: number,
+	b: number
 ): HTMLCanvasElement | HTMLImageElement {
 	const element = document.createElement("canvas");
 	const context = element.getContext("2d");

@@ -1,5 +1,5 @@
-// @ts-nocheck — ported from bobba_client engine (TS 3.6), strict index checks deferred
 /* eslint-disable */
+// @ts-nocheck — ported from bobba_client engine (TS 3.6), strict index checks deferred
 import {
 	Application,
 	Container,
@@ -60,19 +60,17 @@ function calculateZIndex(
 	x: number,
 	y: number,
 	z: number,
-	priority: number,
+	priority: number
 ): number {
 	return (
-		(x + y) * COMPARABLE_X_Y +
-		z * COMPARABLE_Z +
-		PRIORITY_MULTIPLIER * priority
+		(x + y) * COMPARABLE_X_Y + z * COMPARABLE_Z + PRIORITY_MULTIPLIER * priority
 	);
 }
 
 function tileToLocal(x: number, y: number, z: number): Point {
 	return new Point(
 		(x - y) * ROOM_TILE_WIDTH,
-		(x + y) * ROOM_TILE_HEIGHT - z * ROOM_TILE_HEIGHT * 2,
+		(x + y) * ROOM_TILE_HEIGHT - z * ROOM_TILE_HEIGHT * 2
 	);
 }
 
@@ -127,9 +125,7 @@ export default class GameEngine {
 		this.roomImager.initialize();
 
 		try {
-			this.selectedTileTexture = await Assets.load(
-				SELECTED_TILE_ASSET,
-			);
+			this.selectedTileTexture = await Assets.load(SELECTED_TILE_ASSET);
 		} catch {
 			this.selectedTileTexture = null;
 		}
@@ -181,12 +177,8 @@ export default class GameEngine {
 		view.addEventListener("touchmove", (event: TouchEvent) => {
 			event.preventDefault();
 			if (event.touches.length === 1 && this.isMouseDragging) {
-				const diffX = Math.round(
-					this.lastMouseX - event.touches[0].clientX,
-				);
-				const diffY = Math.round(
-					this.lastMouseY - event.touches[0].clientY,
-				);
+				const diffX = Math.round(this.lastMouseX - event.touches[0].clientX);
+				const diffY = Math.round(this.lastMouseY - event.touches[0].clientY);
 				this.roomContainer.x -= diffX;
 				this.roomContainer.y -= diffY;
 				this.lastMouseX = event.touches[0].clientX;
@@ -205,11 +197,9 @@ export default class GameEngine {
 		const width = this.app.renderer.width;
 		const height = this.app.renderer.height;
 
-		this.roomContainer.x = Math.round(
-			(width - doorCoords.x) / 2,
-		);
+		this.roomContainer.x = Math.round((width - doorCoords.x) / 2);
 		this.roomContainer.y = Math.round(
-			(height - (doorCoords.y + CAMERA_CENTERED_OFFSET_Y)) / 2,
+			(height - (doorCoords.y + CAMERA_CENTERED_OFFSET_Y)) / 2
 		);
 	}
 
@@ -243,31 +233,16 @@ export default class GameEngine {
 		for (let i = 0; i < model.maxX; i++) {
 			for (let j = 0; j < model.maxY; j++) {
 				const tile = model.getTile(i, j);
-				if (
-					(model.doorX !== i || model.doorY !== j) &&
-					tile > 0 &&
-					j <= minY
-				) {
+				if ((model.doorX !== i || model.doorY !== j) && tile > 0 && j <= minY) {
 					if (minY > j) minY = j;
 					const wallTexture = this.roomImager.generateRoomWallR(
-						maxHeight - tile,
+						maxHeight - tile
 					);
 					const wallSprite = new Sprite(wallTexture);
-					const localPosition = tileToLocal(
-						i,
-						j + 1,
-						maxHeight - 1,
-					);
-					wallSprite.x =
-						localPosition.x + ROOM_WALL_R_OFFSET_X;
-					wallSprite.y =
-						localPosition.y + ROOM_WALL_R_OFFSET_Y + 4;
-					wallSprite.zIndex = calculateZIndex(
-						i,
-						j + 1,
-						0,
-						PRIORITY_WALL,
-					);
+					const localPosition = tileToLocal(i, j + 1, maxHeight - 1);
+					wallSprite.x = localPosition.x + ROOM_WALL_R_OFFSET_X;
+					wallSprite.y = localPosition.y + ROOM_WALL_R_OFFSET_Y + 4;
+					wallSprite.zIndex = calculateZIndex(i, j + 1, 0, PRIORITY_WALL);
 					this.roomContainer.addChild(wallSprite);
 				}
 			}
@@ -276,41 +251,22 @@ export default class GameEngine {
 		for (let j = 0; j < model.maxY; j++) {
 			for (let i = 0; i < model.maxX; i++) {
 				const tile = model.getTile(i, j);
-				if (
-					(model.doorX !== i || model.doorY !== j) &&
-					tile > 0
-				) {
+				if ((model.doorX !== i || model.doorY !== j) && tile > 0) {
 					let wallTexture: Texture;
 					if (j === model.doorY) {
-						wallTexture =
-							this.roomImager.generateRoomDoorL();
+						wallTexture = this.roomImager.generateRoomDoorL();
 					} else if (j === model.doorY - 1) {
-						wallTexture =
-							this.roomImager.generateRoomDoorBeforeL(
-								maxHeight - tile,
-							);
+						wallTexture = this.roomImager.generateRoomDoorBeforeL(
+							maxHeight - tile
+						);
 					} else {
-						wallTexture =
-							this.roomImager.generateRoomWallL(
-								maxHeight - tile,
-							);
+						wallTexture = this.roomImager.generateRoomWallL(maxHeight - tile);
 					}
 					const wallSprite = new Sprite(wallTexture);
-					const localPosition = tileToLocal(
-						i,
-						j,
-						maxHeight - 1,
-					);
-					wallSprite.x =
-						localPosition.x + ROOM_WALL_L_OFFSET_X;
-					wallSprite.y =
-						localPosition.y + ROOM_WALL_L_OFFSET_Y + 4;
-					wallSprite.zIndex = calculateZIndex(
-						i,
-						j,
-						0,
-						PRIORITY_WALL,
-					);
+					const localPosition = tileToLocal(i, j, maxHeight - 1);
+					wallSprite.x = localPosition.x + ROOM_WALL_L_OFFSET_X;
+					wallSprite.y = localPosition.y + ROOM_WALL_L_OFFSET_Y + 4;
+					wallSprite.zIndex = calculateZIndex(i, j, 0, PRIORITY_WALL);
 					this.roomContainer.addChild(wallSprite);
 					break;
 				}
@@ -319,11 +275,8 @@ export default class GameEngine {
 	}
 
 	renderFloor(model: RoomModel): void {
-		const {
-			roomTileTexture,
-			roomStairLTexture,
-			roomStairRTexture,
-		} = this.roomImager;
+		const { roomTileTexture, roomStairLTexture, roomStairRTexture } =
+			this.roomImager;
 		if (!roomTileTexture) return;
 
 		for (let i = 0; i < model.maxX; i++) {
@@ -332,10 +285,7 @@ export default class GameEngine {
 				if (tile > 0) {
 					let texture = roomTileTexture;
 
-					if (
-						model.isValidTile(i + 1, j) &&
-						model.getTile(i + 1, j) < tile
-					) {
+					if (model.isValidTile(i + 1, j) && model.getTile(i + 1, j) < tile) {
 						if (roomStairLTexture) texture = roomStairLTexture;
 					} else if (
 						model.isValidTile(i - 1, j) &&
@@ -354,11 +304,7 @@ export default class GameEngine {
 						if (roomStairRTexture) {
 							texture = roomStairRTexture;
 							const floorSprite = new Sprite(texture);
-							const localPosition = tileToLocal(
-								i,
-								j,
-								tile - 1,
-							);
+							const localPosition = tileToLocal(i, j, tile - 1);
 							floorSprite.x = localPosition.x - 34;
 							floorSprite.y = localPosition.y;
 							floorSprite.zIndex = calculateZIndex(
@@ -367,7 +313,7 @@ export default class GameEngine {
 								0,
 								model.doorX === i && model.doorY === j
 									? PRIORITY_DOOR_FLOOR
-									: PRIORITY_FLOOR,
+									: PRIORITY_FLOOR
 							);
 							this.roomContainer.addChild(floorSprite);
 							continue;
@@ -384,7 +330,7 @@ export default class GameEngine {
 						0,
 						model.doorX === i && model.doorY === j
 							? PRIORITY_DOOR_FLOOR
-							: PRIORITY_FLOOR,
+							: PRIORITY_FLOOR
 					);
 					this.roomContainer.addChild(floorSprite);
 				}
@@ -399,7 +345,7 @@ export default class GameEngine {
 		x: number,
 		y: number,
 		z: number,
-		direction: Direction,
+		direction: Direction
 	): Promise<void> {
 		if (this.currentModel == null) return;
 
@@ -413,10 +359,9 @@ export default class GameEngine {
 		container.addChild(bodySprite);
 		container.addChild(headSprite);
 
-		const tileZ =
-			this.currentModel.isValidTile(x, y)
-				? this.currentModel.getTile(x, y) - 1
-				: 0;
+		const tileZ = this.currentModel.isValidTile(x, y)
+			? this.currentModel.getTile(x, y) - 1
+			: 0;
 		const effectiveZ = z + tileZ;
 
 		const avatar: RoomAvatar = {
@@ -456,49 +401,20 @@ export default class GameEngine {
 		const promises: Array<Promise<void>> = [];
 
 		for (const direction of directions) {
-			promises.push(
-				this.loadBodyTexture(avatar, direction, ["std"], 0),
-			);
-			promises.push(
-				this.loadHeadTexture(avatar, direction, "std", 0),
-			);
-			promises.push(
-				this.loadHeadTexture(avatar, direction, "eyb", 0),
-			);
+			promises.push(this.loadBodyTexture(avatar, direction, ["std"], 0));
+			promises.push(this.loadHeadTexture(avatar, direction, "std", 0));
+			promises.push(this.loadHeadTexture(avatar, direction, "eyb", 0));
 			for (let j = 0; j <= 3; j++) {
-				promises.push(
-					this.loadBodyTexture(
-						avatar,
-						direction,
-						["wlk"],
-						j,
-					),
-				);
+				promises.push(this.loadBodyTexture(avatar, direction, ["wlk"], j));
 			}
 			for (let j = 0; j <= 1; j++) {
-				promises.push(
-					this.loadBodyTexture(
-						avatar,
-						direction,
-						["wav"],
-						j,
-					),
-				);
-				promises.push(
-					this.loadHeadTexture(avatar, direction, "spk", j),
-				);
+				promises.push(this.loadBodyTexture(avatar, direction, ["wav"], j));
+				promises.push(this.loadHeadTexture(avatar, direction, "spk", j));
 			}
 		}
 
 		for (let i = 0; i <= 7; i += 2) {
-			promises.push(
-				this.loadBodyTexture(
-					avatar,
-					i as Direction,
-					["sit"],
-					0,
-				),
-			);
+			promises.push(this.loadBodyTexture(avatar, i as Direction, ["sit"], 0));
 		}
 
 		await Promise.all(promises);
@@ -508,7 +424,7 @@ export default class GameEngine {
 		avatar: RoomAvatar,
 		direction: Direction,
 		action: Array<string>,
-		frame: number,
+		frame: number
 	): Promise<void> {
 		const info = new AvatarInfo(
 			avatar.figure,
@@ -519,12 +435,9 @@ export default class GameEngine {
 			frame,
 			false,
 			true,
-			"n",
+			"n"
 		);
-		const image = await this.avatarImager.generateGeneric(
-			info,
-			false,
-		);
+		const image = await this.avatarImager.generateGeneric(info, false);
 		const key = `${direction}_${action.join("-")}_${frame}`;
 		avatar.bodyTextures[key] = Texture.from(image);
 	}
@@ -533,7 +446,7 @@ export default class GameEngine {
 		avatar: RoomAvatar,
 		direction: Direction,
 		gesture: string,
-		frame: number,
+		frame: number
 	): Promise<void> {
 		const info = new AvatarInfo(
 			avatar.figure,
@@ -544,12 +457,9 @@ export default class GameEngine {
 			frame,
 			true,
 			false,
-			"n",
+			"n"
 		);
-		const image = await this.avatarImager.generateGeneric(
-			info,
-			false,
-		);
+		const image = await this.avatarImager.generateGeneric(info, false);
 		const key = `${direction}_${gesture}_${frame}`;
 		avatar.headTextures[key] = Texture.from(image);
 	}
@@ -560,36 +470,28 @@ export default class GameEngine {
 		const bodyKey = `${avatar.direction}_std_0`;
 		const headKey = `${avatar.direction}_std_0`;
 
-		const gesture =
-			avatar.frame % 40 < 2 ? "eyb" : "std";
+		const gesture = avatar.frame % 40 < 2 ? "eyb" : "std";
 		const headGestureKey = `${avatar.direction}_${gesture}_0`;
 
 		if (avatar.bodyTextures[bodyKey]) {
 			avatar.bodySprite.texture = avatar.bodyTextures[bodyKey];
 		}
 		if (avatar.headTextures[headGestureKey]) {
-			avatar.headSprite.texture =
-				avatar.headTextures[headGestureKey];
+			avatar.headSprite.texture = avatar.headTextures[headGestureKey];
 		} else if (avatar.headTextures[headKey]) {
 			avatar.headSprite.texture = avatar.headTextures[headKey];
 		}
 	}
 
 	updateAvatarSpritePosition(avatar: RoomAvatar): void {
-		const localPosition = tileToLocal(
-			avatar.x,
-			avatar.y,
-			avatar.z,
-		);
+		const localPosition = tileToLocal(avatar.x, avatar.y, avatar.z);
 		const offsetX =
-			avatar.direction === 6 ||
-			avatar.direction === 5 ||
-			avatar.direction === 4
+			avatar.direction === 6 || avatar.direction === 5 || avatar.direction === 4
 				? ROOM_USER_SPRITE_OFFSET_X
 				: 0;
 		avatar.container.x = Math.round(localPosition.x + offsetX);
 		avatar.container.y = Math.round(
-			localPosition.y + ROOM_USER_SPRITE_OFFSET_Y,
+			localPosition.y + ROOM_USER_SPRITE_OFFSET_Y
 		);
 
 		const shadowCoords = tileToLocal(avatar.x, avatar.y, avatar.z);
@@ -600,13 +502,13 @@ export default class GameEngine {
 			avatar.x,
 			avatar.y,
 			0,
-			PRIORITY_PLAYER_SHADOW,
+			PRIORITY_PLAYER_SHADOW
 		);
 		avatar.container.zIndex = calculateZIndex(
 			avatar.x,
 			avatar.y,
 			avatar.z,
-			PRIORITY_PLAYER,
+			PRIORITY_PLAYER
 		);
 	}
 

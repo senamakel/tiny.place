@@ -22,7 +22,7 @@ export type Atlas = {
 export function extractImage(
 	atlas: Atlas,
 	image: HTMLImageElement,
-	sourceName: string,
+	sourceName: string
 ): HTMLImageElement | null {
 	const currentImageData = atlas.frames[sourceName];
 	if (currentImageData == null) return null;

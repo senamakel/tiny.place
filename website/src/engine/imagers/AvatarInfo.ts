@@ -1,5 +1,5 @@
-// @ts-nocheck — ported from bobba_client AvatarInfo
 /* eslint-disable */
+// @ts-nocheck — ported from bobba_client AvatarInfo
 export type Direction = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type Scale = "l" | "s" | "d" | "n";
 export interface FigurePart {
@@ -49,7 +49,7 @@ export default class AvatarInfo {
 		frame: number,
 		isHeadOnly: boolean,
 		isBodyOnly: boolean,
-		scale: Scale,
+		scale: Scale
 	) {
 		this.direction = direction;
 		this.headDirection = headDirection;
@@ -128,8 +128,7 @@ export default class AvatarInfo {
 							this.drawAction.gesture = "lay";
 							break;
 						default:
-							this.drawAction.gesture =
-								"l" + this.gesture.slice(0, 2);
+							this.drawAction.gesture = "l" + this.gesture.slice(0, 2);
 							break;
 					}
 					break;
@@ -167,10 +166,7 @@ export default class AvatarInfo {
 					this.direction <= 3
 				) {
 					this.drawOrder += ".rh-up";
-				} else if (
-					this.drawAction.handLeft &&
-					this.direction === 4
-				) {
+				} else if (this.drawAction.handLeft && this.direction === 4) {
 					this.drawOrder += ".lh-up";
 				}
 			} else if (this.drawAction.body === "lay") {

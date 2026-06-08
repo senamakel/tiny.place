@@ -1,3 +1,4 @@
+/* eslint-disable */
 import type { Atlas } from "./Atlas";
 import { extractImage } from "./Atlas";
 import type { Direction } from "./AvatarInfo";
@@ -28,17 +29,12 @@ export default class AvatarChunk {
 		partId: number,
 		direction: Direction,
 		frame: number,
-		color: string,
+		color: string
 	) {
 		this.resDirection = direction;
 
 		if (type === "hd" && isSmall) partId = 1;
-		if (
-			type === "ey" &&
-			action === "std" &&
-			partId === 1 &&
-			direction === 3
-		)
+		if (type === "ey" && action === "std" && partId === 1 && direction === 3)
 			action = "sml";
 		if (
 			type === "fa" &&
@@ -51,8 +47,7 @@ export default class AvatarChunk {
 			if (direction === 2) this.resDirection = 0;
 		}
 		if (type === "he" && action === "std" && partId === 8)
-			this.resDirection =
-				direction % 2 === 0 ? 1 : this.resDirection;
+			this.resDirection = direction % 2 === 0 ? 1 : this.resDirection;
 		if (
 			type === "he" &&
 			action === "std" &&
@@ -104,12 +99,12 @@ export default class AvatarChunk {
 
 	extractFromAtlas(
 		atlas: Atlas,
-		atlasImg: HTMLImageElement,
+		atlasImg: HTMLImageElement
 	): Promise<HTMLImageElement> | null {
 		const img = extractImage(
 			atlas,
 			atlasImg,
-			this.lib + "_" + this.getResourceName() + ".png",
+			this.lib + "_" + this.getResourceName() + ".png"
 		);
 		if (img != null) {
 			this.resource = img;

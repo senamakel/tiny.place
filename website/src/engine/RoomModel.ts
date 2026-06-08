@@ -1,11 +1,11 @@
 export default class RoomModel {
-	maxX: number;
-	maxY: number;
-	doorX: number;
-	doorY: number;
-	heightMap: Array<Array<number>>;
+	public maxX: number;
+	public maxY: number;
+	public doorX: number;
+	public doorY: number;
+	public heightMap: Array<Array<number>>;
 
-	constructor(
+	public constructor(
 		maxX: number,
 		maxY: number,
 		doorX: number,
@@ -19,7 +19,7 @@ export default class RoomModel {
 		this.heightMap = heightMap;
 	}
 
-	isValidTile(x: number, y: number): boolean {
+	public isValidTile(x: number, y: number): boolean {
 		return (
 			x >= 0 &&
 			x < this.maxX &&
@@ -29,7 +29,7 @@ export default class RoomModel {
 		);
 	}
 
-	getTile(x: number, y: number): number {
+	public getTile(x: number, y: number): number {
 		return this.heightMap[x]?.[y] ?? 0;
 	}
 }

@@ -1,5 +1,5 @@
-// @ts-nocheck — ported from bobba_client RoomImager
 /* eslint-disable */
+// @ts-nocheck — ported from bobba_client RoomImager
 import { Texture } from "pixi.js";
 
 export default class RoomImager {
@@ -40,7 +40,7 @@ export default class RoomImager {
 			"#838357",
 			"#676744",
 			"#6F6F49",
-			false,
+			false
 		);
 	}
 
@@ -53,8 +53,8 @@ export default class RoomImager {
 				"#6F6F49",
 				"#7A7A51",
 				"#838357",
-				true,
-			),
+				true
+			)
 		);
 	}
 
@@ -65,7 +65,7 @@ export default class RoomImager {
 		leftColor: string,
 		rightColorStroke: string,
 		rightColor: string,
-		rightSide: boolean,
+		rightSide: boolean
 	): HTMLCanvasElement {
 		const tempCanvas = document.createElement("canvas");
 		const context = tempCanvas.getContext("2d");
@@ -105,22 +105,16 @@ export default class RoomImager {
 			context.strokeStyle = leftColorStroke;
 			context.fillStyle = leftColor;
 			context.beginPath();
-			context.moveTo(
-				topFloorPoints[1].x - 0.5,
-				topFloorPoints[1].y,
-			);
+			context.moveTo(topFloorPoints[1].x - 0.5, topFloorPoints[1].y);
 			context.lineTo(
 				topFloorPoints[1].x - 0.5,
-				topFloorPoints[1].y + thickness,
+				topFloorPoints[1].y + thickness
 			);
 			context.lineTo(
 				topFloorPoints[2].x - 0.5,
-				topFloorPoints[2].y + thickness,
+				topFloorPoints[2].y + thickness
 			);
-			context.lineTo(
-				topFloorPoints[2].x - 0.5,
-				topFloorPoints[2].y,
-			);
+			context.lineTo(topFloorPoints[2].x - 0.5, topFloorPoints[2].y);
 			context.closePath();
 			context.stroke();
 			context.fill();
@@ -128,22 +122,16 @@ export default class RoomImager {
 			context.strokeStyle = rightColorStroke;
 			context.fillStyle = rightColor;
 			context.beginPath();
-			context.moveTo(
-				topFloorPoints[3].x + 0.5,
-				topFloorPoints[3].y,
-			);
+			context.moveTo(topFloorPoints[3].x + 0.5, topFloorPoints[3].y);
 			context.lineTo(
 				topFloorPoints[3].x + 0.5,
-				topFloorPoints[3].y + thickness,
+				topFloorPoints[3].y + thickness
 			);
 			context.lineTo(
 				topFloorPoints[2].x + 0.5,
-				topFloorPoints[2].y + thickness,
+				topFloorPoints[2].y + thickness
 			);
-			context.lineTo(
-				topFloorPoints[2].x + 0.5,
-				topFloorPoints[2].y,
-			);
+			context.lineTo(topFloorPoints[2].x + 0.5, topFloorPoints[2].y);
 			context.closePath();
 			context.stroke();
 			context.fill();
@@ -159,26 +147,11 @@ export default class RoomImager {
 				context.strokeStyle = strokeColor;
 				context.fillStyle = floorColor;
 				context.beginPath();
-				context.moveTo(
-					stairPoints[0].x + offsetX,
-					stairPoints[0].y + offsetY,
-				);
-				context.lineTo(
-					stairPoints[1].x + offsetX,
-					stairPoints[1].y + offsetY,
-				);
-				context.lineTo(
-					stairPoints[2].x + offsetX,
-					stairPoints[2].y + offsetY,
-				);
-				context.lineTo(
-					stairPoints[3].x + offsetX,
-					stairPoints[3].y + offsetY,
-				);
-				context.lineTo(
-					stairPoints[0].x + offsetX,
-					stairPoints[0].y + offsetY,
-				);
+				context.moveTo(stairPoints[0].x + offsetX, stairPoints[0].y + offsetY);
+				context.lineTo(stairPoints[1].x + offsetX, stairPoints[1].y + offsetY);
+				context.lineTo(stairPoints[2].x + offsetX, stairPoints[2].y + offsetY);
+				context.lineTo(stairPoints[3].x + offsetX, stairPoints[3].y + offsetY);
+				context.lineTo(stairPoints[0].x + offsetX, stairPoints[0].y + offsetY);
 				context.closePath();
 				context.stroke();
 				context.fill();
@@ -188,19 +161,19 @@ export default class RoomImager {
 				context.beginPath();
 				context.moveTo(
 					stairPoints[1].x - 0.5 + offsetX,
-					stairPoints[1].y + offsetY,
+					stairPoints[1].y + offsetY
 				);
 				context.lineTo(
 					stairPoints[1].x - 0.5 + offsetX,
-					stairPoints[1].y + fixedThickness + offsetY,
+					stairPoints[1].y + fixedThickness + offsetY
 				);
 				context.lineTo(
 					stairPoints[2].x - 0.5 + offsetX,
-					stairPoints[2].y + fixedThickness + offsetY,
+					stairPoints[2].y + fixedThickness + offsetY
 				);
 				context.lineTo(
 					stairPoints[2].x - 0.5 + offsetX,
-					stairPoints[2].y + offsetY,
+					stairPoints[2].y + offsetY
 				);
 				context.closePath();
 				context.stroke();
@@ -211,19 +184,19 @@ export default class RoomImager {
 				context.beginPath();
 				context.moveTo(
 					stairPoints[3].x + 0.5 + offsetX,
-					stairPoints[3].y + offsetY,
+					stairPoints[3].y + offsetY
 				);
 				context.lineTo(
 					stairPoints[3].x + 0.5 + offsetX,
-					stairPoints[3].y + fixedThickness + offsetY,
+					stairPoints[3].y + fixedThickness + offsetY
 				);
 				context.lineTo(
 					stairPoints[2].x + 0.5 + offsetX,
-					stairPoints[2].y + fixedThickness + offsetY,
+					stairPoints[2].y + fixedThickness + offsetY
 				);
 				context.lineTo(
 					stairPoints[2].x + 0.5 + offsetX,
-					stairPoints[2].y + offsetY,
+					stairPoints[2].y + offsetY
 				);
 				context.closePath();
 				context.stroke();
@@ -272,14 +245,8 @@ export default class RoomImager {
 				context.fillStyle = "#838357";
 				context.beginPath();
 				context.moveTo(points[1].x - 0.5, points[1].y);
-				context.lineTo(
-					points[1].x - 0.5,
-					points[1].y + thickness,
-				);
-				context.lineTo(
-					points[2].x - 0.5,
-					points[2].y + thickness,
-				);
+				context.lineTo(points[1].x - 0.5, points[1].y + thickness);
+				context.lineTo(points[2].x - 0.5, points[2].y + thickness);
 				context.lineTo(points[2].x - 0.5, points[2].y);
 				context.closePath();
 				context.stroke();
@@ -289,14 +256,8 @@ export default class RoomImager {
 				context.fillStyle = "#6F6F49";
 				context.beginPath();
 				context.moveTo(points[3].x + 0.5, points[3].y);
-				context.lineTo(
-					points[3].x + 0.5,
-					points[3].y + thickness,
-				);
-				context.lineTo(
-					points[2].x + 0.5,
-					points[2].y + thickness,
-				);
+				context.lineTo(points[3].x + 0.5, points[3].y + thickness);
+				context.lineTo(points[2].x + 0.5, points[2].y + thickness);
 				context.lineTo(points[2].x + 0.5, points[2].y);
 				context.closePath();
 				context.stroke();
@@ -383,14 +344,8 @@ export default class RoomImager {
 				context.fillStyle = "#90929e";
 				context.beginPath();
 				context.moveTo(points[1].x - 0.5, points[1].y);
-				context.lineTo(
-					points[1].x - 0.5,
-					points[1].y + height,
-				);
-				context.lineTo(
-					points[2].x - 0.5,
-					points[2].y + height,
-				);
+				context.lineTo(points[1].x - 0.5, points[1].y + height);
+				context.lineTo(points[2].x - 0.5, points[2].y + height);
 				context.lineTo(points[2].x - 0.5, points[2].y);
 				context.closePath();
 				context.stroke();
@@ -444,14 +399,8 @@ export default class RoomImager {
 				context.fillStyle = "#bbbecd";
 				context.beginPath();
 				context.moveTo(points[1].x - 0.5, points[1].y);
-				context.lineTo(
-					points[1].x - 0.5,
-					points[1].y + height,
-				);
-				context.lineTo(
-					points[2].x - 0.5,
-					points[2].y + height,
-				);
+				context.lineTo(points[1].x - 0.5, points[1].y + height);
+				context.lineTo(points[2].x - 0.5, points[2].y + height);
 				context.lineTo(points[2].x - 0.5, points[2].y);
 				context.closePath();
 				context.stroke();
@@ -474,9 +423,7 @@ export default class RoomImager {
 	}
 }
 
-export function flipImage(
-	source: HTMLCanvasElement,
-): HTMLCanvasElement | null {
+export function flipImage(source: HTMLCanvasElement): HTMLCanvasElement | null {
 	const element = document.createElement("canvas");
 	const context = element.getContext("2d");
 	if (context == null) return null;
