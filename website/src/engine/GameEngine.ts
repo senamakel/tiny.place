@@ -51,17 +51,11 @@ const FURNI_DRAW_OFFSET_X = 32;
 const FURNI_DRAW_OFFSET_Y = 16;
 const FURNI_FRAME_SPEED = 500;
 
-const SITTABLE_ITEMS = [
-	18, 26, 30, 34, 36, 38, 39, 55,
-];
+const SITTABLE_ITEMS = [18, 26, 30, 34, 36, 38, 39, 55];
 
-const DECORATIVE_ITEMS = [
-	13, 25, 40, 47, 54, 57,
-];
+const DECORATIVE_ITEMS = [13, 25, 40, 47, 54, 57];
 
-const TABLE_ITEMS = [
-	17, 20, 21, 22, 23,
-];
+const TABLE_ITEMS = [17, 20, 21, 22, 23];
 
 const ALL_PLACEABLE_ITEMS = [
 	...SITTABLE_ITEMS,
@@ -604,17 +598,21 @@ export default class GameEngine {
 		const headFallback = `${avatar.direction}_std_0`;
 
 		if (avatar.bodyTextures[bodyKey]) {
-			avatar.bodySprite.texture = avatar.bodyTextures[bodyKey];
+			avatar.bodySprite.texture = avatar.bodyTextures[bodyKey]!;
 		}
 		if (avatar.headTextures[headKey]) {
-			avatar.headSprite.texture = avatar.headTextures[headKey];
+			avatar.headSprite.texture = avatar.headTextures[headKey]!;
 		} else if (avatar.headTextures[headFallback]) {
-			avatar.headSprite.texture = avatar.headTextures[headFallback];
+			avatar.headSprite.texture = avatar.headTextures[headFallback]!;
 		}
 	}
 
 	public updateAvatarSpritePosition(avatar: RoomAvatar): void {
-		const localPosition = tileToLocal(avatar.x, avatar.y, avatar.z + avatar.seatZ);
+		const localPosition = tileToLocal(
+			avatar.x,
+			avatar.y,
+			avatar.z + avatar.seatZ
+		);
 		const offsetX =
 			avatar.direction === 6 || avatar.direction === 5 || avatar.direction === 4
 				? ROOM_USER_SPRITE_OFFSET_X
@@ -715,9 +713,7 @@ export default class GameEngine {
 				if (furni) {
 					avatar.action = "sitting";
 					avatar.direction = this._furniSitDirection(furni);
-					avatar.seatZ = furni.furniData
-						? furni.furniData.seatHeight - 1
-						: 0;
+					avatar.seatZ = furni.furniData ? furni.furniData.seatHeight - 1 : 0;
 					avatar.sitTimer = randomBetween(3000, 8000);
 					this.updateAvatarSpritePosition(avatar);
 					this.updateAvatarTexture(avatar);
@@ -779,12 +775,22 @@ export default class GameEngine {
 
 		const sortX = Math.round(visualX);
 		const sortY = Math.round(visualY);
-		avatar.shadowSprite.zIndex = calculateZIndex(sortX, sortY, 0, PRIORITY_PLAYER_SHADOW);
-		avatar.container.zIndex = calculateZIndex(sortX, sortY, avatar.z, PRIORITY_PLAYER);
+		avatar.shadowSprite.zIndex = calculateZIndex(
+			sortX,
+			sortY,
+			0,
+			PRIORITY_PLAYER_SHADOW
+		);
+		avatar.container.zIndex = calculateZIndex(
+			sortX,
+			sortY,
+			avatar.z,
+			PRIORITY_PLAYER
+		);
 	}
 
 	private _nearestEvenDirection(direction: Direction): Direction {
-		return (Math.round(direction / 2) * 2) % 8 as Direction;
+		return ((Math.round(direction / 2) * 2) % 8) as Direction;
 	}
 
 	private _furniSitDirection(furni: RoomFurniture): Direction {
@@ -864,10 +870,7 @@ export default class GameEngine {
 		return tiles;
 	}
 
-	public isTileOccupiedByFurni(
-		x: number,
-		y: number
-	): RoomFurniture | null {
+	public isTileOccupiedByFurni(x: number, y: number): RoomFurniture | null {
 		for (const furni of this.furniture.values()) {
 			for (const tile of furni.occupiedTiles) {
 				if (tile.x === x && tile.y === y) return furni;
@@ -881,7 +884,7 @@ export default class GameEngine {
 
 		const direction = furni.furniData.directions.includes(furni.direction)
 			? furni.direction
-			: furni.furniData.directions[0] ?? 0;
+			: (furni.furniData.directions[0] ?? 0);
 
 		const textureKey = `${direction}_${furni.state}_${furni.frame}`;
 		const fallbackKey = `${direction}_0_0`;
@@ -902,7 +905,7 @@ export default class GameEngine {
 		if (furni.loaded && furni.furniData) {
 			const direction = furni.furniData.directions.includes(furni.direction)
 				? furni.direction
-				: furni.furniData.directions[0] ?? 0;
+				: (furni.furniData.directions[0] ?? 0);
 			const textureKey = `${direction}_${furni.state}_${furni.frame}`;
 			const fallbackKey = `${direction}_0_0`;
 			const furniTexture =
@@ -910,8 +913,10 @@ export default class GameEngine {
 				furni.furniData.textures[fallbackKey];
 
 			if (furniTexture) {
-				furni.sprite.x = localPosition.x + FURNI_DRAW_OFFSET_X + furniTexture.offsetX;
-				furni.sprite.y = localPosition.y + FURNI_DRAW_OFFSET_Y + furniTexture.offsetY;
+				furni.sprite.x =
+					localPosition.x + FURNI_DRAW_OFFSET_X + furniTexture.offsetX;
+				furni.sprite.y =
+					localPosition.y + FURNI_DRAW_OFFSET_Y + furniTexture.offsetY;
 			}
 		}
 
@@ -935,13 +940,15 @@ export default class GameEngine {
 		if (!this.currentModel) return;
 
 		const model = this.currentModel;
-		const interiorTiles = model.getValidTiles().filter(
-			(t) =>
-				model.isValidTile(t.x - 1, t.y) &&
-				model.isValidTile(t.x + 1, t.y) &&
-				model.isValidTile(t.x, t.y - 1) &&
-				model.isValidTile(t.x, t.y + 1)
-		);
+		const interiorTiles = model
+			.getValidTiles()
+			.filter(
+				(t) =>
+					model.isValidTile(t.x - 1, t.y) &&
+					model.isValidTile(t.x + 1, t.y) &&
+					model.isValidTile(t.x, t.y - 1) &&
+					model.isValidTile(t.x, t.y + 1)
+			);
 		const occupied: Set<string> = new Set();
 		let furniId = 1000;
 
@@ -956,11 +963,7 @@ export default class GameEngine {
 			return false;
 		};
 
-		for (
-			let index = 0;
-			index < count;
-			index++
-		) {
+		for (let index = 0; index < count; index++) {
 			const itemId =
 				ALL_PLACEABLE_ITEMS[
 					Math.floor(Math.random() * ALL_PLACEABLE_ITEMS.length)
@@ -1058,8 +1061,7 @@ export default class GameEngine {
 				(f) => !this.isFurniOccupiedByAvatar(f)
 			);
 			if (available.length > 0) {
-				const target =
-					available[Math.floor(Math.random() * available.length)]!;
+				const target = available[Math.floor(Math.random() * available.length)]!;
 				const path = this.currentModel.findPath(
 					avatar.x,
 					avatar.y,
