@@ -1,27 +1,25 @@
-/* eslint-disable */
-import type { Atlas } from "./Atlas";
-import { extractImage } from "./Atlas";
+import { extractImage, type Atlas } from "./Atlas";
 import type { Direction } from "./AvatarInfo";
 
 export default class AvatarChunk {
-	lib: string;
-	action: string;
-	resAction: string;
-	type: string;
-	resType: string;
-	isSmall: boolean;
-	partId: number;
-	direction: Direction;
-	resDirection: number;
-	resourceName: string;
-	frame: number;
-	resFrame: number;
-	color: string | null;
-	isFlip: boolean;
-	promise: Promise<HTMLImageElement> | null;
-	resource: HTMLImageElement | null;
+	public lib: string;
+	public action: string;
+	public resAction: string;
+	public type: string;
+	public resType: string;
+	public isSmall: boolean;
+	public partId: number;
+	public direction: Direction;
+	public resDirection: number;
+	public resourceName: string;
+	public frame: number;
+	public resFrame: number;
+	public color: string | null;
+	public isFlip: boolean;
+	public promise: Promise<HTMLImageElement> | null;
+	public resource: HTMLImageElement | null;
 
-	constructor(
+	public constructor(
 		uniqueName: string,
 		action: string,
 		type: string,
@@ -82,7 +80,7 @@ export default class AvatarChunk {
 		this.resource = null;
 	}
 
-	getResourceName(): string {
+	public getResourceName(): string {
 		let resourceName = this.isSmall ? "sh" : "h";
 		resourceName += "_";
 		resourceName += this.resAction;
@@ -97,7 +95,7 @@ export default class AvatarChunk {
 		return resourceName;
 	}
 
-	extractFromAtlas(
+	public extractFromAtlas(
 		atlas: Atlas,
 		atlasImg: HTMLImageElement
 	): Promise<HTMLImageElement> | null {

@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck — ported from bobba_client AvatarInfo
 export type Direction = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type Scale = "l" | "s" | "d" | "n";
 export interface FigurePart {
@@ -21,26 +19,52 @@ interface DrawAction {
 	swm?: string;
 }
 
-export default class AvatarInfo {
-	direction: Direction;
-	headDirection: Direction;
-	action: Array<string>;
-	gesture: string;
-	frame: number;
-	isHeadOnly: boolean;
-	isBodyOnly: boolean;
-	scale: Scale;
-	isDownsampled: boolean;
-	isLarge: boolean;
-	isSmall: boolean;
-	rectWidth: number;
-	rectHeight: number;
-	figure: Array<FigurePart>;
-	drawAction: DrawAction;
-	handItem: number;
-	drawOrder: string;
+export function extractFigureParts(figure: string): Array<FigurePart> {
+	const newFigure: { [id: string]: FigurePart } = {};
+	const figures: Array<FigurePart> = [];
 
-	constructor(
+	for (const part of figure.split(".")) {
+		const data = part.split("-");
+		const figurePart: FigurePart = {
+			type: data[0] ?? "",
+			id: data[1] ?? "",
+			colors: [data[2] ?? ""],
+		};
+		if (data[3] != null) {
+			figurePart.colors.push(data[3]);
+		}
+		newFigure[figurePart.type] = figurePart;
+	}
+
+	for (const part in newFigure) {
+		const figurePart = newFigure[part];
+		if (figurePart) {
+			figures.push(figurePart);
+		}
+	}
+	return figures;
+}
+
+export default class AvatarInfo {
+	public direction: Direction;
+	public headDirection: Direction;
+	public action: Array<string>;
+	public gesture: string;
+	public frame: number;
+	public isHeadOnly: boolean;
+	public isBodyOnly: boolean;
+	public scale: Scale;
+	public isDownsampled: boolean;
+	public isLarge: boolean;
+	public isSmall: boolean;
+	public rectWidth: number;
+	public rectHeight: number;
+	public figure: Array<FigurePart>;
+	public drawAction: DrawAction;
+	public handItem: number;
+	public drawOrder: string;
+
+	public constructor(
 		figure: string,
 		direction: Direction,
 		headDirection: Direction,
@@ -104,7 +128,8 @@ export default class AvatarInfo {
 
 		for (const value of this.action) {
 			const actionParameters = value.split("=");
-			switch (actionParameters[0]) {
+			const actionName = actionParameters[0] ?? "";
+			switch (actionName) {
 				case "wlk":
 					this.drawAction.wlk = "wlk";
 					break;
@@ -138,8 +163,8 @@ export default class AvatarInfo {
 					break;
 				case "crr":
 				case "drk":
-					this.drawAction.handRight = actionParameters[0];
-					this.drawAction.itemRight = actionParameters[0];
+					this.drawAction.handRight = actionName;
+					this.drawAction.itemRight = actionName;
 					this.handItem = Number(actionParameters[1]);
 					break;
 				case "swm":
@@ -152,7 +177,7 @@ export default class AvatarInfo {
 					this.drawAction.body = "std";
 					break;
 				default:
-					this.drawAction.body = actionParameters[0];
+					this.drawAction.body = actionName;
 					break;
 			}
 		}
@@ -186,27 +211,4 @@ export default class AvatarInfo {
 			}
 		}
 	}
-}
-
-export function extractFigureParts(figure: string): Array<FigurePart> {
-	const newFigure: { [id: string]: FigurePart } = {};
-	const figures: Array<FigurePart> = [];
-
-	for (const part of figure.split(".")) {
-		const data = part.split("-");
-		const figurePart: FigurePart = {
-			type: data[0],
-			id: data[1],
-			colors: [data[2]],
-		};
-		if (data[3] != null) {
-			figurePart.colors.push(data[3]);
-		}
-		newFigure[figurePart.type] = figurePart;
-	}
-
-	for (const part in newFigure) {
-		figures.push(newFigure[part]);
-	}
-	return figures;
 }

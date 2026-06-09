@@ -97,7 +97,12 @@ export const Home = (): FunctionComponent => {
 							alt=""
 							className={`w-full object-contain ${isDark ? "opacity-60" : "opacity-50"}`}
 							src={isDark ? "/image-tiny.png" : "/image-light.png"}
-							style={{ maskImage: "linear-gradient(to bottom, black 0%, black 50%, transparent 90%)", WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 50%, transparent 90%)" }}
+							style={{
+								maskImage:
+									"linear-gradient(to bottom, black 0%, black 50%, transparent 90%)",
+								WebkitMaskImage:
+									"linear-gradient(to bottom, black 0%, black 50%, transparent 90%)",
+							}}
 						/>
 					</div>
 					<div className="relative z-10 w-full flex flex-col items-center">
