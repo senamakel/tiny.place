@@ -712,9 +712,7 @@ export default class GameEngine {
 				const furni = this.furniture.get(avatar.sittingOnFurni);
 				if (furni) {
 					avatar.action = "sitting";
-					avatar.direction = this._nearestEvenDirection(
-						this.directionTowardFurni(avatar.x, avatar.y, furni.x, furni.y)
-					);
+					avatar.direction = this._furniSitDirection(furni);
 					avatar.sitTimer = randomBetween(3000, 8000);
 					this.updateAvatarSpritePosition(avatar);
 					this.updateAvatarTexture(avatar);
@@ -781,6 +779,10 @@ export default class GameEngine {
 
 	private _nearestEvenDirection(direction: Direction): Direction {
 		return (Math.round(direction / 2) * 2) % 8 as Direction;
+	}
+
+	private _furniSitDirection(furni: RoomFurniture): Direction {
+		return furni.direction;
 	}
 
 	public async addFurniture(
@@ -994,48 +996,6 @@ export default class GameEngine {
 		return blocked;
 	}
 
-	private findAdjacentTile(
-		furni: RoomFurniture
-	): { x: number; y: number } | null {
-		if (!this.currentModel) return null;
-		const blocked = this.getBlockedTiles();
-		const cardinals = [
-			[0, -1],
-			[1, 0],
-			[0, 1],
-			[-1, 0],
-		];
-		const candidates: Array<{ x: number; y: number }> = [];
-
-		for (const tile of furni.occupiedTiles) {
-			for (const [dx, dy] of cardinals) {
-				const nx = tile.x + dx!;
-				const ny = tile.y + dy!;
-				const key = `${nx},${ny}`;
-				if (
-					this.currentModel.isValidTile(nx, ny) &&
-					!blocked.has(key)
-				) {
-					candidates.push({ x: nx, y: ny });
-				}
-			}
-		}
-
-		if (candidates.length === 0) return null;
-		return candidates[Math.floor(Math.random() * candidates.length)]!;
-	}
-
-	private directionTowardFurni(
-		avatarX: number,
-		avatarY: number,
-		furniX: number,
-		furniY: number
-	): Direction {
-		const dx = Math.sign(furniX - avatarX);
-		const dy = Math.sign(furniY - avatarY);
-		return this.directionFromDelta(dx, dy);
-	}
-
 	private updateAutonomy(avatar: RoomAvatar, deltaMs: number): void {
 		if (!avatar.autonomy || !this.currentModel) return;
 
@@ -1074,22 +1034,19 @@ export default class GameEngine {
 			if (available.length > 0) {
 				const target =
 					available[Math.floor(Math.random() * available.length)]!;
-				const adjacentTile = this.findAdjacentTile(target);
-				if (adjacentTile) {
-					const path = this.currentModel.findPath(
-						avatar.x,
-						avatar.y,
-						adjacentTile.x,
-						adjacentTile.y,
-						blocked
-					);
-					if (path && path.length > 0 && path.length <= 15) {
-						avatar.path = path;
-						avatar.action = "walking";
-						avatar.sittingOnFurni = target.id;
-						this.beginNextWalkStep(avatar);
-						return;
-					}
+				const path = this.currentModel.findPath(
+					avatar.x,
+					avatar.y,
+					target.x,
+					target.y,
+					blocked
+				);
+				if (path && path.length > 0 && path.length <= 15) {
+					avatar.path = path;
+					avatar.action = "walking";
+					avatar.sittingOnFurni = target.id;
+					this.beginNextWalkStep(avatar);
+					return;
 				}
 			}
 		}
