@@ -76,7 +76,7 @@ interface Furnidata {
 }
 
 interface FurniLayer {
-	asset: { image: HTMLImageElement | HTMLCanvasElement; x: number; y: number; isFlipped: boolean };
+	asset: { image: HTMLCanvasElement; x: number; y: number; isFlipped: boolean };
 	alpha?: number;
 	color?: number;
 	ink?: string;
@@ -185,8 +185,8 @@ export default class FurniImager {
 	private _extractSprites(
 		offset: FurniOffset,
 		atlasImage: HTMLImageElement
-	): Record<string, HTMLImageElement> {
-		const sprites: Record<string, HTMLImageElement> = {};
+	): Record<string, HTMLCanvasElement> {
+		const sprites: Record<string, HTMLCanvasElement> = {};
 		for (const frameKey of Object.keys(offset.atlas.frames)) {
 			const frameData = offset.atlas.frames[frameKey]!;
 			const { x, y, w, h } = frameData.frame;
@@ -196,9 +196,7 @@ export default class FurniImager {
 			const context = canvas.getContext("2d");
 			if (context) {
 				context.drawImage(atlasImage, x, y, w, h, 0, 0, w, h);
-				const image = new Image();
-				image.src = canvas.toDataURL();
-				sprites[frameKey] = image;
+				sprites[frameKey] = canvas;
 			}
 		}
 		return sprites;
@@ -223,7 +221,7 @@ export default class FurniImager {
 
 	private _renderFrame(
 		offset: FurniOffset,
-		sprites: Record<string, HTMLImageElement>,
+		sprites: Record<string, HTMLCanvasElement>,
 		itemName: string,
 		colorId: number,
 		visualization: FurniVisualization,
@@ -276,7 +274,7 @@ export default class FurniImager {
 		for (const layer of layers) {
 			let posX = -minX - layer.asset.x;
 			const posY = -minY - layer.asset.y;
-			let image: HTMLImageElement | HTMLCanvasElement = layer.asset.image;
+			let image: HTMLCanvasElement = layer.asset.image;
 
 			if (layer.asset.isFlipped) {
 				const flipped = this._flipImage(image);
@@ -310,7 +308,7 @@ export default class FurniImager {
 
 	private _getLayers(
 		offset: FurniOffset,
-		sprites: Record<string, HTMLImageElement>,
+		sprites: Record<string, HTMLCanvasElement>,
 		itemName: string,
 		colorId: number,
 		visualization: FurniVisualization,
@@ -393,7 +391,7 @@ export default class FurniImager {
 	}
 
 	private _flipImage(
-		image: HTMLImageElement | HTMLCanvasElement
+		image: HTMLCanvasElement
 	): HTMLCanvasElement | null {
 		const canvas = document.createElement("canvas");
 		const context = canvas.getContext("2d");
@@ -408,7 +406,7 @@ export default class FurniImager {
 	}
 
 	private _tintSprite(
-		image: HTMLImageElement | HTMLCanvasElement,
+		image: HTMLCanvasElement,
 		color: number,
 		alpha: number
 	): HTMLCanvasElement | null {
