@@ -18,14 +18,11 @@ export function buildAuthHeader(
 }
 
 function toBase64(bytes: Uint8Array): string {
-  if (typeof btoa === "function") {
-    let binary = "";
-    for (const byte of bytes) {
-      binary += String.fromCharCode(byte);
-    }
-    return btoa(binary);
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
   }
-  return Buffer.from(bytes).toString("base64");
+  return btoa(binary);
 }
 
 export async function signRequest(
