@@ -45,7 +45,14 @@ Vite + React 19 + TypeScript SPA using TanStack Router for file-based routing.
 
 **UI components:** Headless UI + Heroicons.
 
+## SDK Testing
+
+- **Staging API:** `https://staging-api.tiny.place/` — backend spec lives in `../backend-tinyplace/docs/spec/`
+- **SDK staging tests:** `pnpm --filter @tinyhumansai/tinyplace test:staging`
+
 ## Code Conventions
+
+- Always use top-level imports. Never use dynamic `import()` inside functions.
 
 - Commits follow [Conventional Commits](https://www.conventionalcommits.org/) (enforced by commitlint).
 - ESLint requires explicit return types on functions (`@typescript-eslint/explicit-function-return-type`).
