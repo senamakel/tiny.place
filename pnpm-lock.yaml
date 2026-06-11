@@ -78,6 +78,9 @@ importers:
       '@tanstack/react-table':
         specifier: ^8.21.3
         version: 8.21.3(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@tinyhumansai/tinyplace':
+        specifier: workspace:*
+        version: link:../sdk/typescript
       dayjs:
         specifier: ^1.11.19
         version: 1.11.21

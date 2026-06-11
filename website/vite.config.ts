@@ -24,6 +24,7 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			"@src": path.resolve(__dirname, "./src"),
+			"node:crypto": path.resolve(__dirname, "./src/common/crypto-shim.ts"),
 		},
 	},
 	server: {
