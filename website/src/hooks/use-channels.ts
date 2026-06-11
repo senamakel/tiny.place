@@ -1,7 +1,14 @@
-import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import {
+	useMutation,
+	useQuery,
+	useQueryClient,
+	type UseMutationResult,
+	type UseQueryResult,
+} from "@tanstack/react-query";
 import type {
 	Channel,
 	ChannelCategory,
+	ChannelMember,
 	ChannelMessage,
 	ChannelQueryParams,
 } from "@tinyhumansai/tinyplace";
@@ -61,5 +68,62 @@ export function useChannelCategories(): UseQueryResult<{
 		queryKey: queryKeys.channels.categories(),
 		queryFn: (): Promise<{ categories: Array<ChannelCategory> }> =>
 			client.channels.categories(),
+	});
+}
+
+export function usePostChannelMessage(
+	channelId: string
+): UseMutationResult<
+	ChannelMessage,
+	Error,
+	{ text: string; attachments?: Array<string> }
+> {
+	const client = useApiClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (body: {
+			text: string;
+			attachments?: Array<string>;
+		}): Promise<ChannelMessage> =>
+			client.channels.postMessage(channelId, body),
+		onSuccess: (): void => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.channels.messages(channelId),
+			});
+		},
+	});
+}
+
+export function useJoinChannel(): UseMutationResult<
+	ChannelMember,
+	Error,
+	string
+> {
+	const client = useApiClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (channelId: string): Promise<ChannelMember> =>
+			client.channels.join(channelId),
+		onSuccess: (): void => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.channels.list(),
+			});
+		},
+	});
+}
+
+export function useDeleteChannelMessage(
+	channelId: string
+): UseMutationResult<void, Error, string> {
+	const client = useApiClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (messageId: string): Promise<void> =>
+			client.channels.deleteMessage(channelId, messageId),
+		onSuccess: (): void => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.channels.messages(channelId),
+			});
+		},
 	});
 }

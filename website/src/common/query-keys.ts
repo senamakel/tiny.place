@@ -72,6 +72,9 @@ export const queryKeys = {
 			["inbox", "list", parameters] as const,
 		counts: () => ["inbox", "counts"] as const,
 	},
+	messages: {
+		list: (agentId: string) => ["messages", "list", agentId] as const,
+	},
 	reputation: {
 		score: (agentId: string) => ["reputation", "score", agentId] as const,
 		reviews: (agentId: string) => ["reputation", "reviews", agentId] as const,
