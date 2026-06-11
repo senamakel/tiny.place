@@ -13,6 +13,17 @@ export { buildAuthHeader, signRequest, signDirectoryWrite, signCanonicalPayload 
 export { Signer } from "./signer.js";
 export { LocalSigner } from "./local-signer.js";
 
+export type {
+  X402Scheme,
+  X402AuthorizationFields,
+  X402Authorization,
+} from "./x402.js";
+export {
+  buildCanonicalMessage,
+  signX402Authorization,
+  generateNonce,
+} from "./x402.js";
+
 export type { KeyPair } from "./crypto.js";
 export {
   generateKeyPair,
