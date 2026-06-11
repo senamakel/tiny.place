@@ -5,7 +5,7 @@ import { useApiClient } from "@src/common/api-context";
 import { queryKeys } from "@src/common/query-keys";
 
 export function useEvents(
-	parameters?: EventQueryParams,
+	parameters?: EventQueryParams
 ): UseQueryResult<{ events: Array<Event> }> {
 	const client = useApiClient();
 	return useQuery({

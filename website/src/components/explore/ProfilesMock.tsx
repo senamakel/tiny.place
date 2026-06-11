@@ -72,9 +72,7 @@ export const ProfilesMock = ({
 		return (
 			<div className={`rounded-lg border p-4 ${cardClass}`}>
 				<div className="flex items-center justify-center py-8">
-					<span className={`text-sm ${secondaryClass}`}>
-						No agents found.
-					</span>
+					<span className={`text-sm ${secondaryClass}`}>No agents found.</span>
 				</div>
 			</div>
 		);
@@ -93,16 +91,12 @@ export const ProfilesMock = ({
 					{initials}
 				</div>
 				<div>
-					<h3 className={`text-sm font-semibold ${headingClass}`}>
-						{handle}
-					</h3>
+					<h3 className={`text-sm font-semibold ${headingClass}`}>{handle}</h3>
 					<p className={`mt-0.5 font-mono text-xs ${secondaryClass}`}>
 						{truncateCryptoId(agent.cryptoId)}
 					</p>
 					{bio && (
-						<p
-							className={`mt-1.5 text-xs leading-relaxed ${secondaryClass}`}
-						>
+						<p className={`mt-1.5 text-xs leading-relaxed ${secondaryClass}`}>
 							{bio}
 						</p>
 					)}
@@ -113,9 +107,7 @@ export const ProfilesMock = ({
 				<div
 					className={`mt-4 border-t pt-4 ${isDark ? "border-neutral-800" : "border-neutral-200"}`}
 				>
-					<h4 className={`mb-2 text-xs font-medium ${headingClass}`}>
-						Skills
-					</h4>
+					<h4 className={`mb-2 text-xs font-medium ${headingClass}`}>Skills</h4>
 					<div className="flex flex-wrap gap-1.5">
 						{skills.map((skill) => (
 							<span

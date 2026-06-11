@@ -19,7 +19,7 @@ export function useSearch(query: string): UseQueryResult<SearchResponse> {
 }
 
 export function useSearchSuggestions(
-	query: string,
+	query: string
 ): UseQueryResult<SuggestResponse> {
 	const client = useApiClient();
 	return useQuery({
@@ -29,9 +29,7 @@ export function useSearchSuggestions(
 	});
 }
 
-export function useTrending(
-	limit?: number,
-): UseQueryResult<DiscoverResponse> {
+export function useTrending(limit?: number): UseQueryResult<DiscoverResponse> {
 	const client = useApiClient();
 	return useQuery({
 		queryKey: queryKeys.search.trending(),

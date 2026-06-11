@@ -9,7 +9,7 @@ import { useApiClient } from "@src/common/api-context";
 import { queryKeys } from "@src/common/query-keys";
 
 export function useReputationScore(
-	agentId: string,
+	agentId: string
 ): UseQueryResult<ReputationScore> {
 	const client = useApiClient();
 	return useQuery({
@@ -21,7 +21,7 @@ export function useReputationScore(
 }
 
 export function useReputationReviews(
-	agentId: string,
+	agentId: string
 ): UseQueryResult<{ reviews: Array<ReputationReview> }> {
 	const client = useApiClient();
 	return useQuery({
@@ -34,7 +34,7 @@ export function useReputationReviews(
 
 export function useLeaderboard(
 	category?: string,
-	parameters?: { limit?: number; period?: string; sort?: string },
+	parameters?: { limit?: number; period?: string; sort?: string }
 ): UseQueryResult<LeaderboardResponse> {
 	const client = useApiClient();
 	return useQuery({

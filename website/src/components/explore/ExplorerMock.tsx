@@ -59,7 +59,7 @@ export const ExplorerMock = ({
 	const [searchQuery, setSearchQuery] = useState("");
 	const [activeFilter, setActiveFilter] = useState<FilterType>("All");
 	const [selectedTransaction, setSelectedTransaction] = useState<string | null>(
-		null,
+		null
 	);
 
 	const overview = useExplorerOverview();
@@ -230,7 +230,7 @@ export const ExplorerMock = ({
 										setSelectedTransaction(
 											selectedTransaction === transaction.txId
 												? null
-												: transaction.txId,
+												: transaction.txId
 										);
 									}}
 								>
@@ -267,8 +267,7 @@ export const ExplorerMock = ({
 										<span
 											className={`text-xs ${isDark ? "text-white" : "text-black"}`}
 										>
-											{transaction.amount ?? ""}{" "}
-											{transaction.asset ?? ""}
+											{transaction.amount ?? ""} {transaction.asset ?? ""}
 										</span>
 									</td>
 									<td className="px-3 py-2 text-right">
@@ -303,8 +302,8 @@ export const ExplorerMock = ({
 			<p
 				className={`text-xs ${isDark ? "text-neutral-500" : "text-neutral-400"}`}
 			>
-				Showing {filteredTransactions.length} of{" "}
-				{totalEntries.toLocaleString()} transactions
+				Showing {filteredTransactions.length} of {totalEntries.toLocaleString()}{" "}
+				transactions
 			</p>
 		</div>
 	);

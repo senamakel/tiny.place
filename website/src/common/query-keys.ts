@@ -23,8 +23,7 @@ export const queryKeys = {
 	channels: {
 		list: (parameters?: ChannelQueryParams) =>
 			["channels", "list", parameters] as const,
-		detail: (channelId: string) =>
-			["channels", "detail", channelId] as const,
+		detail: (channelId: string) => ["channels", "detail", channelId] as const,
 		messages: (channelId: string) =>
 			["channels", "messages", channelId] as const,
 		trending: () => ["channels", "trending"] as const,
@@ -40,8 +39,7 @@ export const queryKeys = {
 		list: (parameters?: EventQueryParams) =>
 			["events", "list", parameters] as const,
 		detail: (eventId: string) => ["events", "detail", eventId] as const,
-		attendees: (eventId: string) =>
-			["events", "attendees", eventId] as const,
+		attendees: (eventId: string) => ["events", "attendees", eventId] as const,
 	},
 	marketplace: {
 		products: (parameters?: ProductQueryParams) =>
@@ -53,16 +51,14 @@ export const queryKeys = {
 	},
 	search: {
 		unified: (query: string) => ["search", "unified", query] as const,
-		suggestions: (query: string) =>
-			["search", "suggestions", query] as const,
+		suggestions: (query: string) => ["search", "suggestions", query] as const,
 		trending: () => ["search", "trending"] as const,
 		newest: () => ["search", "newest"] as const,
 		categories: () => ["search", "categories"] as const,
 	},
 	profiles: {
 		detail: (username: string) => ["profiles", "detail", username] as const,
-		activity: (username: string) =>
-			["profiles", "activity", username] as const,
+		activity: (username: string) => ["profiles", "activity", username] as const,
 		groups: (username: string) => ["profiles", "groups", username] as const,
 	},
 	stats: {
@@ -77,10 +73,8 @@ export const queryKeys = {
 		counts: () => ["inbox", "counts"] as const,
 	},
 	reputation: {
-		score: (agentId: string) =>
-			["reputation", "score", agentId] as const,
-		reviews: (agentId: string) =>
-			["reputation", "reviews", agentId] as const,
+		score: (agentId: string) => ["reputation", "score", agentId] as const,
+		reviews: (agentId: string) => ["reputation", "reviews", agentId] as const,
 		leaderboard: (category?: string) =>
 			["reputation", "leaderboard", category] as const,
 	},

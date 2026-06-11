@@ -16,7 +16,7 @@ import { useApiClient } from "@src/common/api-context";
 import { queryKeys } from "@src/common/query-keys";
 
 export function useProducts(
-	parameters?: ProductQueryParams,
+	parameters?: ProductQueryParams
 ): UseQueryResult<{ products: Array<Product> }> {
 	const client = useApiClient();
 	return useQuery({
@@ -30,8 +30,7 @@ export function useProduct(productId: string): UseQueryResult<Product> {
 	const client = useApiClient();
 	return useQuery({
 		queryKey: queryKeys.marketplace.product(productId),
-		queryFn: (): Promise<Product> =>
-			client.marketplace.getProduct(productId),
+		queryFn: (): Promise<Product> => client.marketplace.getProduct(productId),
 		enabled: Boolean(productId),
 	});
 }

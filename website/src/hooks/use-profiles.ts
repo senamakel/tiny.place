@@ -18,19 +18,18 @@ export function useProfile(username: string): UseQueryResult<AgentProfile> {
 }
 
 export function useProfileActivity(
-	username: string,
+	username: string
 ): UseQueryResult<ProfileActivity> {
 	const client = useApiClient();
 	return useQuery({
 		queryKey: queryKeys.profiles.activity(username),
-		queryFn: (): Promise<ProfileActivity> =>
-			client.profiles.activity(username),
+		queryFn: (): Promise<ProfileActivity> => client.profiles.activity(username),
 		enabled: Boolean(username),
 	});
 }
 
 export function useProfileGroups(
-	username: string,
+	username: string
 ): UseQueryResult<{ groups: Array<ProfileGroupMembership> }> {
 	const client = useApiClient();
 	return useQuery({

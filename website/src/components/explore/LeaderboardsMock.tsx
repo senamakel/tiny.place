@@ -216,8 +216,7 @@ export const LeaderboardsMock = ({
 													change >= 0 ? "text-emerald-500" : "text-red-500"
 												}`}
 											>
-												{change >= 0 ? "▲" : "▼"}{" "}
-												{Math.abs(change)}
+												{change >= 0 ? "▲" : "▼"} {Math.abs(change)}
 											</span>
 										</td>
 									</tr>

@@ -70,7 +70,7 @@ const CreateProductForm = ({
 					setDeliveryMethod("download");
 					setTagsInput("");
 				},
-			},
+			}
 		);
 	};
 
@@ -146,7 +146,7 @@ const CreateProductForm = ({
 								<option key={option} value={option}>
 									{option}
 								</option>
-							),
+							)
 						)}
 					</select>
 				</div>
@@ -181,7 +181,7 @@ const CreateProductForm = ({
 								<option key={method} value={method}>
 									{method}
 								</option>
-							),
+							)
 						)}
 					</select>
 				</div>
@@ -234,7 +234,7 @@ export const MarketplaceMock = ({
 
 	const categories = useMemo((): Array<string> => {
 		const unique = new Set(
-			products.map((product: Product): string => product.category),
+			products.map((product: Product): string => product.category)
 		);
 		return ["All", ...Array.from(unique).sort()];
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -244,8 +244,7 @@ export const MarketplaceMock = ({
 		activeCategory === "All"
 			? products
 			: products.filter(
-					(product: Product): boolean =>
-						product.category === activeCategory,
+					(product: Product): boolean => product.category === activeCategory
 				);
 
 	return (
@@ -305,7 +304,7 @@ export const MarketplaceMock = ({
 								>
 									{category}
 								</button>
-							),
+							)
 						)}
 					</div>
 					<div className="grid grid-cols-2 gap-3">
@@ -373,12 +372,12 @@ export const MarketplaceMock = ({
 													>
 														{tag}
 													</span>
-												),
+												)
 											)}
 										</div>
 									)}
 								</div>
-							),
+							)
 						)}
 					</div>
 				</>

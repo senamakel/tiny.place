@@ -97,7 +97,7 @@ export const InboxMock = ({
 	const unreadCount = data?.unreadCount ?? 0;
 
 	const filteredItems = items.filter((item): boolean =>
-		matchesFilter(item, activeFilter),
+		matchesFilter(item, activeFilter)
 	);
 
 	return (
@@ -136,7 +136,7 @@ export const InboxMock = ({
 							>
 								{filter}
 							</button>
-						),
+						)
 					)}
 				</div>
 			</div>
@@ -211,12 +211,12 @@ export const InboxMock = ({
 											>
 												{action}
 											</button>
-										),
+										)
 									)}
 								</div>
 							)}
 						</div>
-					),
+					)
 				)}
 			</div>
 		</div>

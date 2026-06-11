@@ -9,7 +9,7 @@ import { useApiClient } from "@src/common/api-context";
 import { queryKeys } from "@src/common/query-keys";
 
 export function useBroadcasts(
-	parameters?: BroadcastQueryParams,
+	parameters?: BroadcastQueryParams
 ): UseQueryResult<{ broadcasts: Array<BroadcastChannel> }> {
 	const client = useApiClient();
 	return useQuery({
@@ -20,7 +20,7 @@ export function useBroadcasts(
 }
 
 export function useBroadcast(
-	broadcastId: string,
+	broadcastId: string
 ): UseQueryResult<BroadcastChannel> {
 	const client = useApiClient();
 	return useQuery({
@@ -33,7 +33,7 @@ export function useBroadcast(
 
 export function useBroadcastMessages(
 	broadcastId: string,
-	parameters?: { limit?: number; offset?: number },
+	parameters?: { limit?: number; offset?: number }
 ): UseQueryResult<{ messages: Array<BroadcastMessage> }> {
 	const client = useApiClient();
 	return useQuery({

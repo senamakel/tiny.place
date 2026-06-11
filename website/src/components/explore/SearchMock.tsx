@@ -68,7 +68,7 @@ export const SearchMock = ({
 		setActiveFilters((previous) =>
 			previous.includes(filter)
 				? previous.filter((f) => f !== filter)
-				: [...previous, filter],
+				: [...previous, filter]
 		);
 	};
 
@@ -136,7 +136,8 @@ export const SearchMock = ({
 
 			{query.length > 0 && isError && (
 				<p className="text-xs text-red-500">
-					Search failed: {error instanceof Error ? error.message : "Unknown error"}
+					Search failed:{" "}
+					{error instanceof Error ? error.message : "Unknown error"}
 				</p>
 			)}
 

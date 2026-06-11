@@ -22,7 +22,7 @@ export const GroupsMock = ({
 
 	const groups: Array<GroupMetadata> = data?.groups ?? [];
 	const activeGroup = groups.find(
-		(group): boolean => group.groupId === selectedGroupId,
+		(group): boolean => group.groupId === selectedGroupId
 	);
 
 	const renderLoading = (): React.ReactElement => (
@@ -80,7 +80,7 @@ export const GroupsMock = ({
 							>
 								{tag}
 							</span>
-						),
+						)
 					)}
 				</div>
 			)}
@@ -127,7 +127,7 @@ export const GroupsMock = ({
 							</span>
 						</div>
 					</button>
-				),
+				)
 			)}
 		</div>
 	);

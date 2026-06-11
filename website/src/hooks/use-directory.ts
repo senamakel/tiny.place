@@ -1,14 +1,11 @@
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import type {
-	AgentCard,
-	AgentQueryParams,
-} from "@tinyhumansai/tinyplace";
+import type { AgentCard, AgentQueryParams } from "@tinyhumansai/tinyplace";
 
 import { useApiClient } from "@src/common/api-context";
 import { queryKeys } from "@src/common/query-keys";
 
 export function useAgents(
-	parameters?: AgentQueryParams,
+	parameters?: AgentQueryParams
 ): UseQueryResult<{ agents: Array<AgentCard> }> {
 	const client = useApiClient();
 	return useQuery({

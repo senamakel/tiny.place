@@ -42,23 +42,22 @@ export const LedgerMock = ({
 }: LedgerMockProperties): FunctionComponent => {
 	const { data, isLoading, isError, error } = useLedgerTransactions();
 
-	const transactions: Array<LedgerTransaction> =
-		data?.transactions ?? [];
+	const transactions: Array<LedgerTransaction> = data?.transactions ?? [];
 
 	const totalVolume = transactions.reduce(
 		(sum, transaction) => sum + Number(transaction.amount ?? 0),
-		0,
+		0
 	);
 	const transactionsToday = transactions.filter((transaction) =>
-		isToday(transaction.timestamp),
+		isToday(transaction.timestamp)
 	).length;
 	const activeAgents = new Set(
 		transactions
 			.flatMap((transaction) => [transaction.from, transaction.to])
 			.filter(
 				(address): address is string =>
-					address !== null && address !== undefined,
-			),
+					address !== null && address !== undefined
+			)
 	).size;
 
 	const typeBadgeColors: Record<LedgerType, string> = {
@@ -107,9 +106,11 @@ export const LedgerMock = ({
 	};
 
 	const typeBadge = (type: LedgerType): React.ReactElement => {
-		const colorClass = typeBadgeColors[type] ?? (isDark
-			? "bg-neutral-800 text-neutral-400"
-			: "bg-neutral-200 text-neutral-500");
+		const colorClass =
+			typeBadgeColors[type] ??
+			(isDark
+				? "bg-neutral-800 text-neutral-400"
+				: "bg-neutral-200 text-neutral-500");
 
 		return (
 			<span className={`rounded-full px-1.5 py-0.5 text-xs ${colorClass}`}>
@@ -290,12 +291,9 @@ export const LedgerMock = ({
 								<td
 									className={`px-3 py-2 font-medium ${isDark ? "text-white" : "text-black"}`}
 								>
-									{transaction.amount ?? "0"}{" "}
-									{transaction.asset ?? ""}
+									{transaction.amount ?? "0"} {transaction.asset ?? ""}
 								</td>
-								<td className="px-3 py-2">
-									{typeBadge(transaction.type)}
-								</td>
+								<td className="px-3 py-2">{typeBadge(transaction.type)}</td>
 								<td
 									className={`px-3 py-2 font-mono ${isDark ? "text-neutral-500" : "text-neutral-400"}`}
 								>

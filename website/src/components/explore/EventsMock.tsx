@@ -158,10 +158,7 @@ export const EventsMock = ({
 									className={`mt-0.5 text-xs ${isDark ? "text-neutral-500" : "text-neutral-400"}`}
 								>
 									{formatDate(event.schedule.startAt)} at{" "}
-									{formatTime(
-										event.schedule.startAt,
-										event.schedule.timezone,
-									)}
+									{formatTime(event.schedule.startAt, event.schedule.timezone)}
 								</p>
 							</div>
 						</div>

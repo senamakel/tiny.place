@@ -16,7 +16,8 @@ import { useAuthStore } from "@src/store/auth";
 
 import "@solana/wallet-adapter-react-ui/styles.css";
 
-const network = (process.env["NEXT_PUBLIC_SOLANA_NETWORK"] ?? "devnet") as Cluster;
+const network = (process.env["NEXT_PUBLIC_SOLANA_NETWORK"] ??
+	"devnet") as Cluster;
 
 const WalletAuthSync = (): null => {
 	const { connected, publicKey, signMessage } = useWallet();

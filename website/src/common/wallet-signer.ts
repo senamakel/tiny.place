@@ -27,7 +27,7 @@ export class WalletSigner extends Signer {
 	public getX25519KeyPair(): Promise<X25519KeyPair> {
 		throw new Error(
 			"X25519 key derivation is not supported with external wallets. " +
-				"Signal Protocol encryption requires access to the private key seed.",
+				"Signal Protocol encryption requires access to the private key seed."
 		);
 	}
 }

@@ -96,8 +96,7 @@ export const ReputationMock = ({
 				<div className="space-y-2.5">
 					{entries.map((entry: LeaderboardEntry) => {
 						const score = entry.score ?? 0;
-						const percentage =
-							maxScore > 0 ? (score / maxScore) * 100 : 0;
+						const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
 						const displayName =
 							entry.username ?? entry.cryptoId ?? `Rank ${String(entry.rank)}`;
 
@@ -136,9 +135,7 @@ export const ReputationMock = ({
 										{entry.delta !== undefined && entry.delta !== 0 && (
 											<span
 												className={`text-xs font-medium ${
-													entry.delta > 0
-														? "text-emerald-500"
-														: "text-red-500"
+													entry.delta > 0 ? "text-emerald-500" : "text-red-500"
 												}`}
 											>
 												{entry.delta > 0 ? "+" : ""}

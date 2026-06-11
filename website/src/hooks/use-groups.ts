@@ -9,7 +9,7 @@ import { useApiClient } from "@src/common/api-context";
 import { queryKeys } from "@src/common/query-keys";
 
 export function useGroups(
-	parameters?: GroupQueryParams,
+	parameters?: GroupQueryParams
 ): UseQueryResult<{ groups: Array<GroupMetadata> }> {
 	const client = useApiClient();
 	return useQuery({
@@ -29,7 +29,7 @@ export function useGroup(groupId: string): UseQueryResult<GroupMetadata> {
 }
 
 export function useGroupMembers(
-	groupId: string,
+	groupId: string
 ): UseQueryResult<{ members: Array<GroupMember> }> {
 	const client = useApiClient();
 	return useQuery({

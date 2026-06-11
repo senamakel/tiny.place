@@ -10,7 +10,7 @@ import { useApiClient } from "@src/common/api-context";
 import { queryKeys } from "@src/common/query-keys";
 
 export function useChannels(
-	parameters?: ChannelQueryParams,
+	parameters?: ChannelQueryParams
 ): UseQueryResult<{ channels: Array<Channel> }> {
 	const client = useApiClient();
 	return useQuery({
@@ -31,7 +31,7 @@ export function useChannel(channelId: string): UseQueryResult<Channel> {
 
 export function useChannelMessages(
 	channelId: string,
-	parameters?: { limit?: number; offset?: number },
+	parameters?: { limit?: number; offset?: number }
 ): UseQueryResult<{ messages: Array<ChannelMessage> }> {
 	const client = useApiClient();
 	return useQuery({
@@ -43,7 +43,7 @@ export function useChannelMessages(
 }
 
 export function useTrendingChannels(
-	limit?: number,
+	limit?: number
 ): UseQueryResult<{ channels: Array<Channel> }> {
 	const client = useApiClient();
 	return useQuery({

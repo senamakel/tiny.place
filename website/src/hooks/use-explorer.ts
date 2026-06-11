@@ -32,7 +32,7 @@ export function useExplorerTransactions(parameters?: {
 }
 
 export function useExplorerTransaction(
-	transactionId: string,
+	transactionId: string
 ): UseQueryResult<ExplorerTransactionDetail> {
 	const client = useApiClient();
 	return useQuery({
