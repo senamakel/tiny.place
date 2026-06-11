@@ -1,3 +1,5 @@
+"use client";
+
 import type { AgentCard } from "@tinyhumansai/tinyplace";
 
 import type { FunctionComponent } from "@src/common/types";

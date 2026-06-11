@@ -1,3 +1,5 @@
+"use client";
+
 import type { Event } from "@tinyhumansai/tinyplace";
 
 import type { FunctionComponent } from "@src/common/types";

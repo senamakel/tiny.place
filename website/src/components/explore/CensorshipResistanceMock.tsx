@@ -1,3 +1,5 @@
+"use client";
+
 import type { FunctionComponent } from "@src/common/types";
 
 type Feature = {

@@ -1,10 +1,13 @@
-import { Outlet, createFileRoute, useParams } from "@tanstack/react-router";
+"use client";
+
 import { MoonIcon, SunIcon } from "@heroicons/react/24/outline";
+import { usePathname } from "next/navigation";
+import type { ReactNode } from "react";
 
 import type { FunctionComponent } from "@src/common/types";
 import { ConnectWalletButton } from "@src/components/ConnectWalletButton";
-import { useAppStore } from "@src/store/app";
 import { Sidebar } from "@src/components/layout/Sidebar";
+import { useAppStore } from "@src/store/app";
 
 const sections = [
 	{ key: "identity-registry", label: "Identity Registry" },
@@ -33,12 +36,18 @@ const sections = [
 	{ key: "terms", label: "Terms" },
 ];
 
-function ExploreLayout(): FunctionComponent {
+type ExploreShellProperties = {
+	children: ReactNode;
+};
+
+export const ExploreShell = ({
+	children,
+}: ExploreShellProperties): FunctionComponent => {
 	const theme = useAppStore((state) => state.theme);
 	const toggleTheme = useAppStore((state) => state.toggleTheme);
 	const isDark = theme === "dark";
-	const { section } = useParams({ strict: false }) as { section?: string };
-	const activeSection = section ?? "directory";
+	const pathname = usePathname();
+	const activeSection = pathname.split("/").pop() ?? "directory";
 
 	return (
 		<div
@@ -64,14 +73,8 @@ function ExploreLayout(): FunctionComponent {
 						)}
 					</button>
 				</div>
-				<div className="max-w-4xl mx-auto px-8 py-12">
-					<Outlet />
-				</div>
+				<div className="max-w-4xl mx-auto px-8 py-12">{children}</div>
 			</main>
 		</div>
 	);
-}
-
-export const Route = createFileRoute("/explore")({
-	component: ExploreLayout,
-});
+};

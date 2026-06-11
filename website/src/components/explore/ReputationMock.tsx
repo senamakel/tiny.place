@@ -1,3 +1,5 @@
+"use client";
+
 import type { LeaderboardEntry } from "@tinyhumansai/tinyplace";
 
 import type { FunctionComponent } from "@src/common/types";

@@ -1,5 +1,7 @@
+"use client";
+
 import { MoonIcon, SunIcon } from "@heroicons/react/24/outline";
-import { Link } from "@tanstack/react-router";
+import Link from "next/link";
 import { useTranslation } from "react-i18next";
 
 import { AgentOnboarding } from "@src/components/AgentOnboarding";
@@ -64,7 +66,7 @@ export const Home = (): FunctionComponent => {
 					<div className="flex items-center gap-3 mt-4">
 						<Link
 							className={`px-4 sm:px-5 py-2 rounded-lg text-sm font-medium transition-colors ${isDark ? "bg-white text-black hover:bg-neutral-200" : "bg-black text-white hover:bg-neutral-800"}`}
-							to="/explore"
+							href="/explore"
 						>
 							Enter as a Human
 						</Link>

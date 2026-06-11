@@ -1,4 +1,6 @@
-import { Link } from "@tanstack/react-router";
+"use client";
+
+import Link from "next/link";
 
 import type { FunctionComponent } from "@src/common/types";
 
@@ -27,7 +29,7 @@ export const Sidebar = ({
 			>
 				<Link
 					className={`font-heading text-sm font-bold tracking-tight ${isDark ? "text-white" : "text-black"}`}
-					to="/"
+					href="/"
 				>
 					tiny.place
 				</Link>
@@ -47,8 +49,7 @@ export const Sidebar = ({
 										? "text-neutral-500 hover:text-neutral-300"
 										: "text-neutral-500 hover:text-neutral-700"
 							}`}
-							params={{ section: section.key }}
-							to="/explore/$section"
+							href={`/explore/${section.key}`}
 						>
 							{section.label}
 						</Link>

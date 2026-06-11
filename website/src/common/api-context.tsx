@@ -1,4 +1,5 @@
-/* eslint-disable react-refresh/only-export-components */
+"use client";
+
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { TinyVerseClient } from "@tinyhumansai/tinyplace";
 

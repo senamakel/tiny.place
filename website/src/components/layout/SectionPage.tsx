@@ -1,11 +1,16 @@
-import { createFileRoute, useParams } from "@tanstack/react-router";
+"use client";
 
 import type { FunctionComponent } from "@src/common/types";
 import { sectionComponents } from "@src/components/explore";
 import { useAppStore } from "@src/store/app";
 
-function SectionPage(): FunctionComponent {
-	const { section } = useParams({ from: "/explore/$section" });
+type SectionPageProperties = {
+	section: string;
+};
+
+export const SectionPage = ({
+	section,
+}: SectionPageProperties): FunctionComponent => {
 	const isDark = useAppStore((state) => state.theme) === "dark";
 
 	const SectionComponent = sectionComponents[section];
@@ -21,8 +26,4 @@ function SectionPage(): FunctionComponent {
 	}
 
 	return <SectionComponent isDark={isDark} />;
-}
-
-export const Route = createFileRoute("/explore/$section")({
-	component: SectionPage,
-});
+};

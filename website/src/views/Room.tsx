@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { FunctionComponent } from "@src/common/types";
 import GameEngine from "@src/engine/GameEngine";

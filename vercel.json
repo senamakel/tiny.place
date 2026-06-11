@@ -1,8 +1,5 @@
 {
   "buildCommand": "pnpm build",
-  "outputDirectory": "website/dist",
-  "framework": "vite",
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  "outputDirectory": "website/.next",
+  "framework": "nextjs"
 }
