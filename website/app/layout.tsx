@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
-import { ClientOnly } from "@src/components/ClientOnly";
-
-import { Providers } from "./providers";
 import "@src/styles/tailwind.css";
+
+import { ClientLayout } from "./client-layout";
 
 export const metadata: Metadata = {
 	title: {
@@ -57,9 +56,7 @@ export default function RootLayout({
 				/>
 			</head>
 			<body>
-				<ClientOnly>
-					<Providers>{children}</Providers>
-				</ClientOnly>
+				<ClientLayout>{children}</ClientLayout>
 			</body>
 		</html>
 	);
