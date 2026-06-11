@@ -161,6 +161,173 @@ export function generateCardFaceDownSvg(): string {
 	return parts.join("");
 }
 
+export function generateJudgeBenchSvg(): string {
+	const w = 220;
+	const h = 130;
+	const cx = w / 2;
+	const benchW = 180;
+	const benchH = 70;
+	const depth = 20;
+	const topY = 20;
+
+	const tl = { x: cx, y: topY };
+	const topRight = { x: cx + benchW / 2, y: topY + benchH / 4 };
+	const br = { x: cx, y: topY + benchH / 2 };
+	const bl = { x: cx - benchW / 2, y: topY + benchH / 4 };
+
+	const parts: Array<string> = [];
+	parts.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">`);
+
+	const depthLeft = `${bl.x},${bl.y} ${bl.x},${bl.y + depth} ${br.x},${br.y + depth} ${br.x},${br.y}`;
+	parts.push(`<polygon points="${depthLeft}" fill="#4a3020"/>`);
+	const depthRight = `${br.x},${br.y} ${br.x},${br.y + depth} ${topRight.x},${topRight.y + depth} ${topRight.x},${topRight.y}`;
+	parts.push(`<polygon points="${depthRight}" fill="#3a2418"/>`);
+
+	const top = `${tl.x},${tl.y} ${topRight.x},${topRight.y} ${br.x},${br.y} ${bl.x},${bl.y}`;
+	parts.push(`<polygon points="${top}" fill="#5c3a22" stroke="#4a2e1a" stroke-width="1"/>`);
+
+	const panelInset = 12;
+	const ptl = { x: cx, y: topY + panelInset / 2 };
+	const ptr = { x: cx + benchW / 2 - panelInset, y: topY + benchH / 4 };
+	const pbr = { x: cx, y: topY + benchH / 2 - panelInset / 2 };
+	const pbl = { x: cx - benchW / 2 + panelInset, y: topY + benchH / 4 };
+	const panel = `${ptl.x},${ptl.y} ${ptr.x},${ptr.y} ${pbr.x},${pbr.y} ${pbl.x},${pbl.y}`;
+	parts.push(`<polygon points="${panel}" fill="#6b4530" stroke="#5a3828" stroke-width="0.5"/>`);
+
+	const emblemY = topY + benchH / 4 - 2;
+	parts.push(`<ellipse cx="${cx}" cy="${emblemY}" rx="12" ry="6" fill="#c9a84c" opacity="0.6"/>`);
+
+	parts.push("</svg>");
+	return parts.join("");
+}
+
+export function generateWitnessStandSvg(): string {
+	const w = 80;
+	const h = 80;
+	const cx = w / 2;
+	const standW = 60;
+	const standH = 30;
+	const depth = 16;
+	const topY = 18;
+
+	const tl = { x: cx, y: topY };
+	const topRight = { x: cx + standW / 2, y: topY + standH / 4 };
+	const br = { x: cx, y: topY + standH / 2 };
+	const bl = { x: cx - standW / 2, y: topY + standH / 4 };
+
+	const parts: Array<string> = [];
+	parts.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">`);
+
+	const depthLeft = `${bl.x},${bl.y} ${bl.x},${bl.y + depth} ${br.x},${br.y + depth} ${br.x},${br.y}`;
+	parts.push(`<polygon points="${depthLeft}" fill="#4a3020"/>`);
+	const depthRight = `${br.x},${br.y} ${br.x},${br.y + depth} ${topRight.x},${topRight.y + depth} ${topRight.x},${topRight.y}`;
+	parts.push(`<polygon points="${depthRight}" fill="#3a2418"/>`);
+
+	const top = `${tl.x},${tl.y} ${topRight.x},${topRight.y} ${br.x},${br.y} ${bl.x},${bl.y}`;
+	parts.push(`<polygon points="${top}" fill="#5c3a22" stroke="#4a2e1a" stroke-width="1"/>`);
+
+	const railH = 8;
+	const railY = topY - railH;
+	const rtl = { x: cx, y: railY };
+	const rtr = { x: cx + standW / 2 - 4, y: railY + standH / 4 - 1 };
+	const rbr = { x: cx + standW / 2 - 4, y: railY + standH / 4 - 1 + railH };
+	const rbl = { x: cx, y: railY + railH };
+	parts.push(`<polygon points="${rtl.x},${rtl.y} ${rtr.x},${rtr.y} ${rbr.x},${rbr.y} ${rbl.x},${rbl.y}" fill="#6b4530" stroke="#5a3828" stroke-width="0.5"/>`);
+
+	parts.push("</svg>");
+	return parts.join("");
+}
+
+export function generateCourtTableSvg(): string {
+	const w = 140;
+	const h = 90;
+	const cx = w / 2;
+	const tableW = 120;
+	const tableH = 50;
+	const depth = 10;
+	const topY = 20;
+
+	const tl = { x: cx, y: topY };
+	const topRight = { x: cx + tableW / 2, y: topY + tableH / 4 };
+	const br = { x: cx, y: topY + tableH / 2 };
+	const bl = { x: cx - tableW / 2, y: topY + tableH / 4 };
+
+	const parts: Array<string> = [];
+	parts.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">`);
+
+	const legW = 4;
+	const legH = 16;
+	const legColor = "#3d2517";
+	parts.push(`<rect x="${bl.x + 8}" y="${bl.y + depth - 2}" width="${legW}" height="${legH}" rx="1" fill="${legColor}"/>`);
+	parts.push(`<rect x="${br.x - 6}" y="${br.y + depth - 2}" width="${legW}" height="${legH}" rx="1" fill="${legColor}"/>`);
+	parts.push(`<rect x="${topRight.x - 12}" y="${topRight.y + depth - 2}" width="${legW}" height="${legH}" rx="1" fill="${legColor}"/>`);
+
+	const depthLeft = `${bl.x},${bl.y} ${bl.x},${bl.y + depth} ${br.x},${br.y + depth} ${br.x},${br.y}`;
+	parts.push(`<polygon points="${depthLeft}" fill="#4a3020"/>`);
+	const depthRight = `${br.x},${br.y} ${br.x},${br.y + depth} ${topRight.x},${topRight.y + depth} ${topRight.x},${topRight.y}`;
+	parts.push(`<polygon points="${depthRight}" fill="#3a2418"/>`);
+
+	const top = `${tl.x},${tl.y} ${topRight.x},${topRight.y} ${br.x},${br.y} ${bl.x},${bl.y}`;
+	parts.push(`<polygon points="${top}" fill="#5c3a22" stroke="#4a2e1a" stroke-width="1"/>`);
+
+	parts.push("</svg>");
+	return parts.join("");
+}
+
+export function generateGalleryBenchSvg(): string {
+	const w = 120;
+	const h = 50;
+	const cx = w / 2;
+	const benchW = 100;
+	const benchH = 24;
+	const depth = 5;
+	const topY = 16;
+
+	const tl = { x: cx, y: topY };
+	const topRight = { x: cx + benchW / 2, y: topY + benchH / 4 };
+	const br = { x: cx, y: topY + benchH / 2 };
+	const bl = { x: cx - benchW / 2, y: topY + benchH / 4 };
+
+	const parts: Array<string> = [];
+	parts.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">`);
+
+	const legW = 3;
+	const legH = 12;
+	const legColor = "#3d2517";
+	parts.push(`<rect x="${bl.x + 6}" y="${bl.y + depth}" width="${legW}" height="${legH}" rx="1" fill="${legColor}"/>`);
+	parts.push(`<rect x="${br.x - 4}" y="${br.y + depth}" width="${legW}" height="${legH}" rx="1" fill="${legColor}"/>`);
+	parts.push(`<rect x="${topRight.x - 10}" y="${topRight.y + depth}" width="${legW}" height="${legH}" rx="1" fill="${legColor}"/>`);
+	parts.push(`<rect x="${tl.x - 2}" y="${tl.y + depth - 2}" width="${legW}" height="${legH}" rx="1" fill="${legColor}"/>`);
+
+	const depthLeft = `${bl.x},${bl.y} ${bl.x},${bl.y + depth} ${br.x},${br.y + depth} ${br.x},${br.y}`;
+	parts.push(`<polygon points="${depthLeft}" fill="#4a3020"/>`);
+	const depthRight = `${br.x},${br.y} ${br.x},${br.y + depth} ${topRight.x},${topRight.y + depth} ${topRight.x},${topRight.y}`;
+	parts.push(`<polygon points="${depthRight}" fill="#3a2418"/>`);
+
+	const top = `${tl.x},${tl.y} ${topRight.x},${topRight.y} ${br.x},${br.y} ${bl.x},${bl.y}`;
+	parts.push(`<polygon points="${top}" fill="#6b4530" stroke="#5a3828" stroke-width="0.5"/>`);
+
+	parts.push("</svg>");
+	return parts.join("");
+}
+
+export function generateGavelSvg(): string {
+	const w = 32;
+	const h = 24;
+
+	const parts: Array<string> = [];
+	parts.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">`);
+
+	parts.push(`<line x1="8" y1="16" x2="24" y2="8" stroke="#5c3a22" stroke-width="2.5" stroke-linecap="round"/>`);
+
+	parts.push(`<rect x="4" y="12" width="10" height="6" rx="2" fill="#3d2517" transform="rotate(-25, 9, 15)"/>`);
+
+	parts.push(`<ellipse cx="20" cy="18" rx="6" ry="3" fill="#4a3020" opacity="0.6"/>`);
+
+	parts.push("</svg>");
+	return parts.join("");
+}
+
 export function generateDealerChipSvg(): string {
 	const w = 24;
 	const h = 18;

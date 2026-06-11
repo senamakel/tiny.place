@@ -35,6 +35,47 @@ const POKER_ROOM_LAYOUT: RoomFurnitureLayout = {
 	],
 };
 
+const COURT_ROOM_LAYOUT: RoomFurnitureLayout = {
+	roomType: "court",
+	items: [
+		// Judge's bench — top-center of room
+		{ itemType: "judge_bench", tileX: 6, tileY: 4, tileZ: 2, offsetY: -30 },
+		{ itemType: "gavel", tileX: 5.5, tileY: 3.5, tileZ: 2, offsetY: -32 },
+
+		// Judge's chair — behind the bench
+		{ itemType: "chair", tileX: 5.0, tileY: 3.0, tileZ: 2, offsetY: -10 },
+
+		// Witness stand — to the right of the judge
+		{ itemType: "witness_stand", tileX: 8.5, tileY: 4.5, tileZ: 2, offsetY: -20 },
+		{ itemType: "chair", tileX: 8.0, tileY: 4.0, tileZ: 2, offsetY: -10 },
+
+		// Defense table — left side, facing judge
+		{ itemType: "court_table", tileX: 4, tileY: 8, tileZ: 2, offsetY: -16 },
+		{ itemType: "chair", tileX: 3.0, tileY: 7.5, tileZ: 2, offsetY: -10 },
+		{ itemType: "chair", tileX: 3.0, tileY: 8.5, tileZ: 2, offsetY: -10 },
+
+		// Prosecution table — right side, facing judge
+		{ itemType: "court_table", tileX: 8, tileY: 8, tileZ: 2, offsetY: -16 },
+		{ itemType: "chair", tileX: 7.0, tileY: 7.5, tileZ: 2, offsetY: -10 },
+		{ itemType: "chair", tileX: 7.0, tileY: 8.5, tileZ: 2, offsetY: -10 },
+
+		// Jury box — 6 chairs along the left wall
+		{ itemType: "chair", tileX: 2.0, tileY: 4.5, tileZ: 2, offsetY: -10 },
+		{ itemType: "chair", tileX: 2.0, tileY: 5.5, tileZ: 2, offsetY: -10 },
+		{ itemType: "chair", tileX: 2.0, tileY: 6.5, tileZ: 2, offsetY: -10 },
+		{ itemType: "chair", tileX: 3.0, tileY: 4.5, tileZ: 2, offsetY: -10 },
+		{ itemType: "chair", tileX: 3.0, tileY: 5.5, tileZ: 2, offsetY: -10 },
+		{ itemType: "chair", tileX: 3.0, tileY: 6.5, tileZ: 2, offsetY: -10 },
+
+		// Gallery benches — back of the courtroom
+		{ itemType: "gallery_bench", tileX: 4, tileY: 12, tileZ: 2, offsetY: -10 },
+		{ itemType: "gallery_bench", tileX: 8, tileY: 12, tileZ: 2, offsetY: -10 },
+		{ itemType: "gallery_bench", tileX: 4, tileY: 14, tileZ: 2, offsetY: -10 },
+		{ itemType: "gallery_bench", tileX: 8, tileY: 14, tileZ: 2, offsetY: -10 },
+	],
+};
+
 export const FURNITURE_LAYOUTS: Record<string, RoomFurnitureLayout> = {
 	poker: POKER_ROOM_LAYOUT,
+	court: COURT_ROOM_LAYOUT,
 };

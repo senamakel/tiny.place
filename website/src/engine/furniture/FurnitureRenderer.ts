@@ -6,6 +6,11 @@ import {
 	generateChipStackSvg,
 	generateCardFaceDownSvg,
 	generateDealerChipSvg,
+	generateJudgeBenchSvg,
+	generateWitnessStandSvg,
+	generateCourtTableSvg,
+	generateGalleryBenchSvg,
+	generateGavelSvg,
 } from "./FurnitureSvgGenerator";
 
 /* eslint-disable camelcase */
@@ -57,6 +62,36 @@ const ITEM_DEFINITIONS: Record<string, FurnitureItemDefinition> = {
 		svgWidth: 24,
 		svgHeight: 18,
 		generateSvg: generateDealerChipSvg,
+	},
+	judge_bench: {
+		key: "judge_bench",
+		svgWidth: 220,
+		svgHeight: 130,
+		generateSvg: generateJudgeBenchSvg,
+	},
+	witness_stand: {
+		key: "witness_stand",
+		svgWidth: 80,
+		svgHeight: 80,
+		generateSvg: generateWitnessStandSvg,
+	},
+	court_table: {
+		key: "court_table",
+		svgWidth: 140,
+		svgHeight: 90,
+		generateSvg: generateCourtTableSvg,
+	},
+	gallery_bench: {
+		key: "gallery_bench",
+		svgWidth: 120,
+		svgHeight: 50,
+		generateSvg: generateGalleryBenchSvg,
+	},
+	gavel: {
+		key: "gavel",
+		svgWidth: 32,
+		svgHeight: 24,
+		generateSvg: generateGavelSvg,
 	},
 };
 /* eslint-enable camelcase */
