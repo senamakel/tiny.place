@@ -15,7 +15,7 @@ export class ModerationApi {
   }
 
   createReport(report: ModerationReportCreate): Promise<ModerationReport> {
-    return this.http.post<ModerationReport>("/moderation/reports", report);
+    return this.http.postDirectoryAuth<ModerationReport>("/moderation/reports", report);
   }
 
   getReport(reportId: string): Promise<ModerationReport> {
@@ -28,7 +28,7 @@ export class ModerationApi {
     reportId: string,
     update: { status: string; note?: string },
   ): Promise<ModerationReport> {
-    return this.http.put<ModerationReport>(
+    return this.http.putDirectoryAuth<ModerationReport>(
       `/moderation/reports/${encodeURIComponent(reportId)}/status`,
       update,
     );
@@ -46,11 +46,11 @@ export class ModerationApi {
   }
 
   createAction(action: Partial<ModerationAction>): Promise<ModerationAction> {
-    return this.http.post<ModerationAction>("/moderation/actions", action);
+    return this.http.postDirectoryAuth<ModerationAction>("/moderation/actions", action);
   }
 
   createAppeal(appeal: { actionId: string; comment?: string }): Promise<ModerationAppeal> {
-    return this.http.post<ModerationAppeal>("/moderation/appeals", appeal);
+    return this.http.postDirectoryAuth<ModerationAppeal>("/moderation/appeals", appeal);
   }
 
   getAppeal(appealId: string): Promise<ModerationAppeal> {
@@ -63,7 +63,7 @@ export class ModerationApi {
     appealId: string,
     update: { status: string; note?: string },
   ): Promise<ModerationAppeal> {
-    return this.http.put<ModerationAppeal>(
+    return this.http.putDirectoryAuth<ModerationAppeal>(
       `/moderation/appeals/${encodeURIComponent(appealId)}/status`,
       update,
     );

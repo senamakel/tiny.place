@@ -18,7 +18,7 @@ export class EventsApi {
   }
 
   create(event: Partial<Event>): Promise<Event> {
-    return this.http.post<Event>("/events", event);
+    return this.http.postDirectoryAuth<Event>("/events", event);
   }
 
   get(eventId: string): Promise<Event> {
@@ -26,49 +26,49 @@ export class EventsApi {
   }
 
   update(eventId: string, event: Partial<Event>): Promise<Event> {
-    return this.http.put<Event>(`/events/${encodeURIComponent(eventId)}`, event);
+    return this.http.putDirectoryAuth<Event>(`/events/${encodeURIComponent(eventId)}`, event);
   }
 
   remove(eventId: string): Promise<void> {
-    return this.http.delete<void>(`/events/${encodeURIComponent(eventId)}`);
+    return this.http.deleteDirectoryAuth<void>(`/events/${encodeURIComponent(eventId)}`);
   }
 
   rsvp(eventId: string, ticketType?: string): Promise<EventAttendee> {
-    return this.http.post<EventAttendee>(
+    return this.http.postDirectoryAuth<EventAttendee>(
       `/events/${encodeURIComponent(eventId)}/rsvp`,
       ticketType ? { ticketType } : undefined,
     );
   }
 
   cancelRsvp(eventId: string): Promise<void> {
-    return this.http.delete<void>(`/events/${encodeURIComponent(eventId)}/rsvp`);
+    return this.http.deleteDirectoryAuth<void>(`/events/${encodeURIComponent(eventId)}/rsvp`);
   }
 
   attendees(eventId: string): Promise<{ attendees: Array<EventAttendee> }> {
-    return this.http.get<{ attendees: Array<EventAttendee> }>(
+    return this.http.getDirectoryAuth<{ attendees: Array<EventAttendee> }>(
       `/events/${encodeURIComponent(eventId)}/attendees`,
     );
   }
 
   removeAttendee(eventId: string, agentId: string): Promise<void> {
-    return this.http.delete<void>(
+    return this.http.deleteDirectoryAuth<void>(
       `/events/${encodeURIComponent(eventId)}/attendees/${encodeURIComponent(agentId)}`,
     );
   }
 
   invite(eventId: string, agentId: string): Promise<void> {
-    return this.http.post<void>(
+    return this.http.postDirectoryAuth<void>(
       `/events/${encodeURIComponent(eventId)}/invite`,
       { agentId },
     );
   }
 
   start(eventId: string): Promise<Event> {
-    return this.http.post<Event>(`/events/${encodeURIComponent(eventId)}/start`);
+    return this.http.postDirectoryAuth<Event>(`/events/${encodeURIComponent(eventId)}/start`);
   }
 
   end(eventId: string): Promise<Event> {
-    return this.http.post<Event>(`/events/${encodeURIComponent(eventId)}/end`);
+    return this.http.postDirectoryAuth<Event>(`/events/${encodeURIComponent(eventId)}/end`);
   }
 
   getStage(eventId: string): Promise<{ messages: Array<EventStageMessage> }> {
@@ -81,18 +81,18 @@ export class EventsApi {
     eventId: string,
     body: { speaker?: string; message: string },
   ): Promise<EventStageMessage> {
-    return this.http.post<EventStageMessage>(
+    return this.http.postDirectoryAuth<EventStageMessage>(
       `/events/${encodeURIComponent(eventId)}/stage`,
       body,
     );
   }
 
   pauseStage(eventId: string): Promise<Event> {
-    return this.http.post<Event>(`/events/${encodeURIComponent(eventId)}/stage/pause`);
+    return this.http.postDirectoryAuth<Event>(`/events/${encodeURIComponent(eventId)}/stage/pause`);
   }
 
   resumeStage(eventId: string): Promise<Event> {
-    return this.http.post<Event>(`/events/${encodeURIComponent(eventId)}/stage/resume`);
+    return this.http.postDirectoryAuth<Event>(`/events/${encodeURIComponent(eventId)}/stage/resume`);
   }
 
   questions(eventId: string): Promise<{ questions: Array<EventQuestion> }> {
@@ -116,7 +116,7 @@ export class EventsApi {
   }
 
   createSeries(series: Partial<EventSeries>): Promise<EventSeries> {
-    return this.http.post<EventSeries>("/events/series", series);
+    return this.http.postDirectoryAuth<EventSeries>("/events/series", series);
   }
 
   getSeries(seriesId: string): Promise<EventSeries> {
@@ -124,10 +124,10 @@ export class EventsApi {
   }
 
   followSeries(seriesId: string): Promise<void> {
-    return this.http.post<void>(`/events/series/${encodeURIComponent(seriesId)}/follow`);
+    return this.http.postDirectoryAuth<void>(`/events/series/${encodeURIComponent(seriesId)}/follow`);
   }
 
   unfollowSeries(seriesId: string): Promise<void> {
-    return this.http.delete<void>(`/events/series/${encodeURIComponent(seriesId)}/follow`);
+    return this.http.deleteDirectoryAuth<void>(`/events/series/${encodeURIComponent(seriesId)}/follow`);
   }
 }

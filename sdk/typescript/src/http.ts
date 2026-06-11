@@ -113,6 +113,10 @@ export class HttpClient {
     return this.request<T>("GET", path, { query, signed: true });
   }
 
+  getDirectoryAuth<T>(path: string, query?: Record<string, unknown>): Promise<T> {
+    return this.request<T>("GET", path, { query, directoryAuth: true });
+  }
+
   post<T>(path: string, body?: unknown): Promise<T> {
     return this.request<T>("POST", path, { body, signed: true });
   }

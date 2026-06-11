@@ -26,7 +26,7 @@ export class A2AApi {
   ) {}
 
   sendTask(agentId: string, request: A2ATaskRequest): Promise<A2ATaskResponse> {
-    return this.http.post<A2ATaskResponse>(
+    return this.http.postDirectoryAuth<A2ATaskResponse>(
       `/a2a/${encodeURIComponent(agentId)}`,
       request,
     );

@@ -23,7 +23,7 @@ export class BroadcastsApi {
   }
 
   create(request: BroadcastCreateRequest): Promise<BroadcastChannel> {
-    return this.http.post<BroadcastChannel>("/broadcasts", request);
+    return this.http.postDirectoryAuth<BroadcastChannel>("/broadcasts", request);
   }
 
   get(broadcastId: string): Promise<BroadcastChannel> {
@@ -31,49 +31,49 @@ export class BroadcastsApi {
   }
 
   update(broadcastId: string, update: Partial<BroadcastChannel>): Promise<BroadcastChannel> {
-    return this.http.put<BroadcastChannel>(
+    return this.http.putDirectoryAuth<BroadcastChannel>(
       `/broadcasts/${encodeURIComponent(broadcastId)}`,
       update,
     );
   }
 
   remove(broadcastId: string): Promise<void> {
-    return this.http.delete<void>(`/broadcasts/${encodeURIComponent(broadcastId)}`);
+    return this.http.deleteDirectoryAuth<void>(`/broadcasts/${encodeURIComponent(broadcastId)}`);
   }
 
   addPublisher(broadcastId: string, agentId: string): Promise<void> {
-    return this.http.post<void>(
+    return this.http.postDirectoryAuth<void>(
       `/broadcasts/${encodeURIComponent(broadcastId)}/publishers`,
       { agentId },
     );
   }
 
   removePublisher(broadcastId: string, agentId: string): Promise<void> {
-    return this.http.delete<void>(
+    return this.http.deleteDirectoryAuth<void>(
       `/broadcasts/${encodeURIComponent(broadcastId)}/publishers/${encodeURIComponent(agentId)}`,
     );
   }
 
   subscribe(broadcastId: string): Promise<Subscription> {
-    return this.http.post<Subscription>(
+    return this.http.postDirectoryAuth<Subscription>(
       `/broadcasts/${encodeURIComponent(broadcastId)}/subscribe`,
     );
   }
 
   unsubscribe(broadcastId: string): Promise<void> {
-    return this.http.delete<void>(
+    return this.http.deleteDirectoryAuth<void>(
       `/broadcasts/${encodeURIComponent(broadcastId)}/subscribe`,
     );
   }
 
   subscribers(broadcastId: string): Promise<{ subscribers: Array<BroadcastSubscriber> }> {
-    return this.http.get<{ subscribers: Array<BroadcastSubscriber> }>(
+    return this.http.getDirectoryAuth<{ subscribers: Array<BroadcastSubscriber> }>(
       `/broadcasts/${encodeURIComponent(broadcastId)}/subscribers`,
     );
   }
 
   removeSubscriber(broadcastId: string, agentId: string): Promise<void> {
-    return this.http.delete<void>(
+    return this.http.deleteDirectoryAuth<void>(
       `/broadcasts/${encodeURIComponent(broadcastId)}/subscribers/${encodeURIComponent(agentId)}`,
     );
   }
@@ -82,7 +82,7 @@ export class BroadcastsApi {
     broadcastId: string,
     params?: { limit?: number; offset?: number },
   ): Promise<{ messages: Array<BroadcastMessage> }> {
-    return this.http.get<{ messages: Array<BroadcastMessage> }>(
+    return this.http.getDirectoryAuth<{ messages: Array<BroadcastMessage> }>(
       `/broadcasts/${encodeURIComponent(broadcastId)}/messages`,
       params as Record<string, unknown>,
     );
@@ -90,16 +90,16 @@ export class BroadcastsApi {
 
   postMessage(
     broadcastId: string,
-    body: { text: string; encrypted?: boolean },
+    message: Partial<BroadcastMessage>,
   ): Promise<BroadcastMessage> {
-    return this.http.post<BroadcastMessage>(
+    return this.http.postDirectoryAuth<BroadcastMessage>(
       `/broadcasts/${encodeURIComponent(broadcastId)}/messages`,
-      body,
+      message,
     );
   }
 
   deleteMessage(broadcastId: string, messageId: string): Promise<void> {
-    return this.http.delete<void>(
+    return this.http.deleteDirectoryAuth<void>(
       `/broadcasts/${encodeURIComponent(broadcastId)}/messages/${encodeURIComponent(messageId)}`,
     );
   }

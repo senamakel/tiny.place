@@ -34,6 +34,21 @@ describe("staging: unauthenticated endpoints", () => {
     expect(stats).toHaveProperty("volume");
   });
 
+  it("stats.agents returns agent stats", async () => {
+    const stats = await client.stats.agents();
+    expect(stats).toBeDefined();
+  });
+
+  it("stats.transactions returns transaction stats", async () => {
+    const stats = await client.stats.transactions();
+    expect(stats).toBeDefined();
+  });
+
+  it("stats.volume returns volume stats", async () => {
+    const stats = await client.stats.volume();
+    expect(stats).toBeDefined();
+  });
+
   it("directory.listAgents returns array", async () => {
     const result = await client.directory.listAgents();
     expect(result).toHaveProperty("agents");
@@ -49,6 +64,16 @@ describe("staging: unauthenticated endpoints", () => {
   it("channels.list returns array", async () => {
     const result = await client.channels.list();
     expect(result).toHaveProperty("channels");
+  });
+
+  it("channels.trending returns array", async () => {
+    const result = await client.channels.trending();
+    expect(result).toHaveProperty("channels");
+  });
+
+  it("channels.categories returns array", async () => {
+    const result = await client.channels.categories();
+    expect(result).toHaveProperty("categories");
   });
 
   it("moderation.getConstitution returns rules", async () => {
@@ -72,6 +97,46 @@ describe("staging: unauthenticated endpoints", () => {
   it("groups.list returns array", async () => {
     const result = await client.groups.list();
     expect(result).toHaveProperty("groups");
+  });
+
+  it("broadcasts.list returns array", async () => {
+    const result = await client.broadcasts.list();
+    expect(result).toHaveProperty("broadcasts");
+  });
+
+  it("events.list returns array", async () => {
+    const result = await client.events.list();
+    expect(result).toHaveProperty("events");
+  });
+
+  it("reputation.leaderboard returns data", async () => {
+    const result = await client.reputation.leaderboard();
+    expect(result).toBeDefined();
+  });
+
+  it("search.suggest returns suggestions", async () => {
+    const result = await client.search.suggest("test");
+    expect(result).toBeDefined();
+  });
+
+  it("search.trending returns discover data", async () => {
+    const result = await client.search.trending();
+    expect(result).toBeDefined();
+  });
+
+  it("search.newest returns discover data", async () => {
+    const result = await client.search.newest();
+    expect(result).toBeDefined();
+  });
+
+  it("search.categories returns category list", async () => {
+    const result = await client.search.categories();
+    expect(result).toHaveProperty("categories");
+  });
+
+  it("moderation.listActions returns array", async () => {
+    const result = await client.moderation.listActions();
+    expect(result).toHaveProperty("actions");
   });
 
   it("handles 404 errors as TinyVerseError", async () => {
@@ -278,7 +343,221 @@ describe("staging: authenticated flows", () => {
     });
   });
 
-  describe("search", () => {
+  describe("broadcasts", () => {
+    let broadcastId: string;
+
+    it("creates a broadcast", async () => {
+      const broadcast = await client.broadcasts.create({
+        name: `sdk-broadcast-${Date.now()}`,
+        description: "SDK test broadcast",
+        owner: publicKeyB64,
+        ownerCryptoId: publicKeyB64,
+        visibility: "public",
+      } as any);
+      expect(broadcast).toHaveProperty("broadcastId");
+      broadcastId = broadcast.broadcastId;
+    });
+
+    it("retrieves the broadcast", async () => {
+      const broadcast = await client.broadcasts.get(broadcastId);
+      expect(broadcast.broadcastId).toBe(broadcastId);
+    });
+
+    it("subscribes to the broadcast", async () => {
+      const sub = await client.broadcasts.subscribe(broadcastId);
+      expect(sub).toBeDefined();
+    });
+
+    it("lists subscribers", async () => {
+      const result = await client.broadcasts.subscribers(broadcastId);
+      expect(result).toHaveProperty("subscribers");
+    });
+
+    it("posts a message to the broadcast", async () => {
+      const message = await client.broadcasts.postMessage(broadcastId, {
+        body: "Broadcast from SDK test!",
+        publisher: publicKeyB64,
+      });
+      expect(message).toBeDefined();
+    });
+
+    it("lists broadcast messages", async () => {
+      const result = await client.broadcasts.listMessages(broadcastId);
+      expect(result).toHaveProperty("messages");
+      expect(result.messages.length).toBeGreaterThan(0);
+    });
+
+    it("updates the broadcast", async () => {
+      const updated = await client.broadcasts.update(broadcastId, {
+        description: "Updated broadcast",
+      } as any);
+      expect(updated).toBeDefined();
+    });
+
+    it("appears in broadcasts listing", async () => {
+      const result = await client.broadcasts.list();
+      const found = (result.broadcasts ?? []).find((b) => b.broadcastId === broadcastId);
+      expect(found).toBeDefined();
+    });
+
+    it("unsubscribes from the broadcast", async () => {
+      await client.broadcasts.unsubscribe(broadcastId);
+    });
+
+    it("cleans up: deletes the broadcast", async () => {
+      await client.broadcasts.remove(broadcastId);
+    });
+  });
+
+  describe("events", () => {
+    let eventId: string;
+
+    it("creates an event", async () => {
+      const event = await client.events.create({
+        title: `SDK Test Event ${Date.now()}`,
+        description: "Integration test event",
+        type: "meetup",
+        host: publicKeyB64,
+        hostCryptoId: publicKeyB64,
+        schedule: {
+          startAt: new Date(Date.now() + 3600000).toISOString(),
+          endAt: new Date(Date.now() + 7200000).toISOString(),
+        },
+        visibility: "public",
+      } as any);
+      expect(event).toHaveProperty("eventId");
+      eventId = event.eventId;
+    });
+
+    it("retrieves the event", async () => {
+      const event = await client.events.get(eventId);
+      expect(event.eventId).toBe(eventId);
+    });
+
+    it("RSVPs to the event", async () => {
+      const attendee = await client.events.rsvp(eventId);
+      expect(attendee).toBeDefined();
+    });
+
+    it("lists attendees", async () => {
+      const result = await client.events.attendees(eventId);
+      expect(result).toHaveProperty("attendees");
+    });
+
+    it("updates the event", async () => {
+      const updated = await client.events.update(eventId, {
+        description: "Updated event description",
+      } as any);
+      expect(updated).toBeDefined();
+    });
+
+    it("appears in events listing", async () => {
+      const result = await client.events.list();
+      const found = (result.events ?? []).find((e) => e.eventId === eventId);
+      expect(found).toBeDefined();
+    });
+
+    it("cleans up: deletes the event", async () => {
+      await client.events.remove(eventId);
+    });
+  });
+
+  describe("relay messages", () => {
+    let secondSigner: LocalSigner;
+    let secondClient: TinyVerseClient;
+    let secondPubKeyB64: string;
+
+    beforeAll(async () => {
+      secondSigner = await LocalSigner.generate();
+      secondPubKeyB64 = secondSigner.publicKeyBase64;
+      secondClient = makeClient(secondSigner);
+
+      await secondClient.directory.upsertAgent(secondSigner.agentId, {
+        agentId: secondSigner.agentId,
+        name: "sdk-test-agent-2",
+        description: "Second SDK test agent",
+        version: "0.1.0",
+        interfaces: [],
+        skills: [],
+        endpoints: {},
+        publicKey: secondPubKeyB64,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    });
+
+    afterAll(async () => {
+      try {
+        await secondClient.directory.deleteAgent(secondSigner.agentId);
+      } catch {
+        // best-effort cleanup
+      }
+    });
+
+    it("sends a message envelope", async () => {
+      const bodyBytes = new TextEncoder().encode("hello from SDK test");
+      const bodyB64 = btoa(String.fromCharCode(...bodyBytes));
+      const envelope = await client.messages.send({
+        id: `msg-sdk-test-${Date.now()}`,
+        from: publicKeyB64,
+        to: secondPubKeyB64,
+        body: bodyB64,
+        type: "CIPHERTEXT",
+        deviceId: 1,
+      } as any);
+      expect(envelope).toBeDefined();
+    });
+
+    it("recipient lists their messages", async () => {
+      const result = await secondClient.messages.list(secondPubKeyB64);
+      expect(result).toHaveProperty("messages");
+      expect(result.messages.length).toBeGreaterThan(0);
+    });
+
+    it("recipient acknowledges a message", async () => {
+      const result = await secondClient.messages.list(secondPubKeyB64);
+      const message = result.messages[0];
+      await secondClient.messages.acknowledge(message.id, secondPubKeyB64);
+    });
+  });
+
+  describe("moderation", () => {
+    it("creates a moderation report", async () => {
+      const report = await client.moderation.createReport({
+        reporter: publicKeyB64,
+        contentType: "channel_message",
+        contentId: "msg_test_fake",
+        ruleViolated: "spam",
+        comment: "SDK test report",
+      } as any);
+      expect(report).toHaveProperty("reportId");
+      expect(report.status).toBe("pending");
+    });
+  });
+
+  describe("reputation (read endpoints)", () => {
+    it("gets reputation score for an agent", async () => {
+      const score = await client.reputation.getScore(cryptoId);
+      expect(score).toBeDefined();
+    });
+
+    it("gets reputation history", async () => {
+      const result = await client.reputation.getHistory(cryptoId);
+      expect(result).toHaveProperty("history");
+    });
+
+    it("gets reviews for an agent", async () => {
+      const result = await client.reputation.getReviews(cryptoId);
+      expect(result).toHaveProperty("reviews");
+    });
+
+    it("gets attestations for an agent", async () => {
+      const result = await client.reputation.getAttestations(cryptoId);
+      expect(result).toHaveProperty("attestations");
+    });
+  });
+
+  describe("search (authenticated)", () => {
     it("search.agents works", async () => {
       const result = await client.search.agents({ q: "test" });
       expect(result).toHaveProperty("results");
@@ -291,6 +570,16 @@ describe("staging: authenticated flows", () => {
 
     it("search.channels works", async () => {
       const result = await client.search.channels({ q: "test" });
+      expect(result).toHaveProperty("results");
+    });
+
+    it("search.broadcasts works", async () => {
+      const result = await client.search.broadcasts({ q: "test" });
+      expect(result).toHaveProperty("results");
+    });
+
+    it("search.events works", async () => {
+      const result = await client.search.events({ q: "test" });
       expect(result).toHaveProperty("results");
     });
 
