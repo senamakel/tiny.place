@@ -3,10 +3,16 @@
 import { useCallback, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
+import {
+	generateNonce,
+	publicKeyToBase64,
+	publicKeyToHex,
+	signX402Authorization,
+	type AvailabilityResponse,
+} from "@tinyhumansai/tinyplace";
 import type { FunctionComponent } from "@src/common/types";
 import { useApiClient } from "@src/common/api-context";
 import { useAuthStore } from "@src/store/auth";
-import type { AvailabilityResponse } from "@tinyhumansai/tinyplace";
 
 const PRICING_TIERS: Array<{ label: string; fee: string; example: string }> = [
 	{ label: "1 char", fee: "2,000 USDC", example: "@x" },
@@ -45,8 +51,7 @@ export const DomainRegistration = ({
 	isDark,
 }: DomainRegistrationProperties): FunctionComponent => {
 	const client = useApiClient();
-	const sessionSigner = useAuthStore((state) => state.sessionSigner);
-	const walletSigner = useAuthStore((state) => state.walletSigner);
+	const signer = useAuthStore((state) => state.signer);
 	const agentId = useAuthStore((state) => state.agentId);
 
 	const [searchInput, setSearchInput] = useState("");
@@ -54,7 +59,9 @@ export const DomainRegistration = ({
 	const [bio, setBio] = useState("");
 	const [registrationComplete, setRegistrationComplete] = useState(false);
 
-	const searchName = searchInput.startsWith("@") ? searchInput : `@${searchInput}`;
+	const searchName = searchInput.startsWith("@")
+		? searchInput
+		: `@${searchInput}`;
 
 	const availabilityQuery = useQuery<AvailabilityResponse>({
 		queryKey: ["registry", "availability", searchName],
@@ -64,24 +71,44 @@ export const DomainRegistration = ({
 
 	const registerMutation = useMutation({
 		mutationFn: async (): Promise<unknown> => {
-			if (!selectedName || !agentId || !sessionSigner) {
-				throw new Error("Not ready to register");
+			if (!selectedName || !agentId || !signer) {
+				throw new Error("Connect your wallet first");
 			}
 
 			const amount = getAnnualFee(selectedName);
-			const payment = await sessionSigner.signPayment(
-				"",
+
+			const payment = await signX402Authorization(signer, {
+				scheme: "exact",
+				network: "eip155:8453",
+				asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
 				amount,
-				"eip155:8453",
-				"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-				agentId,
-			);
+				from: agentId,
+				to: "",
+				nonce: generateNonce("reg"),
+				expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+				metadata: {
+					domain: "tiny.place",
+					publicKey: publicKeyToHex(
+						new Uint8Array(
+							atob(signer.publicKeyBase64)
+								.split("")
+								.map((c) => c.charCodeAt(0)),
+						),
+					),
+				},
+			});
 
 			return client.registry.register({
 				username: selectedName,
 				bio,
 				cryptoId: agentId,
-				publicKey: sessionSigner.publicKeyBase64,
+				publicKey: publicKeyToBase64(
+					new Uint8Array(
+						atob(signer.publicKeyBase64)
+							.split("")
+							.map((c) => c.charCodeAt(0)),
+					),
+				),
 				payment: {
 					scheme: payment.scheme,
 					network: payment.network,
@@ -196,23 +223,17 @@ export const DomainRegistration = ({
 					</label>
 				</div>
 
-				{!walletSigner && (
+				{!signer && (
 					<p className={`text-xs ${secondaryClass}`}>
 						Connect your wallet to register this domain.
 					</p>
 				)}
 
-				{walletSigner && !sessionSigner && (
-					<p className={`text-xs ${secondaryClass}`}>
-						Approving session... Please sign the wallet prompt.
-					</p>
-				)}
-
 				<button
-					disabled={!sessionSigner || bio.length === 0 || registerMutation.isPending}
+					disabled={!signer || bio.length === 0 || registerMutation.isPending}
 					type="button"
 					className={`w-full rounded-md px-4 py-2.5 text-sm font-medium transition-colors ${
-						sessionSigner && bio.length > 0 && !registerMutation.isPending
+						signer && bio.length > 0 && !registerMutation.isPending
 							? buttonClass
 							: disabledButtonClass
 					}`}
@@ -221,7 +242,7 @@ export const DomainRegistration = ({
 					}}
 				>
 					{registerMutation.isPending
-						? "Registering..."
+						? "Signing & Registering..."
 						: `Pay ${formatUsdc(getAnnualFee(selectedName))} & Register`}
 				</button>
 

@@ -16,9 +16,7 @@ type ApiProviderProperties = {
 export const ApiProvider = ({
 	children,
 }: ApiProviderProperties): FunctionComponent => {
-	const sessionSigner = useAuthStore((state) => state.sessionSigner);
-	const walletSigner = useAuthStore((state) => state.walletSigner);
-	const signer = sessionSigner ?? walletSigner;
+	const signer = useAuthStore((state) => state.signer);
 	const client = useMemo(() => createClient(signer), [signer]);
 
 	return <ApiContext.Provider value={client}>{children}</ApiContext.Provider>;
