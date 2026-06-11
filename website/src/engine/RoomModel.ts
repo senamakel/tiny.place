@@ -164,6 +164,145 @@ function seededRandom(seed: number): () => number {
 	};
 }
 
+export type RoomPreset = {
+	key: string;
+	label: string;
+	description: string;
+	capacity: number;
+	color: string;
+	factory: () => RoomModel;
+};
+
+export function createChatRoom(): RoomModel {
+	const heightMap = [
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+	];
+	return new RoomModel(12, 14, 1, 1, heightMap);
+}
+
+export function createPokerRoom(): RoomModel {
+	const heightMap = [
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		[0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+		[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 0],
+		[0, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 0],
+		[0, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+		[0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+	];
+	return new RoomModel(11, 12, 3, 1, heightMap);
+}
+
+export function createCourtRoom(): RoomModel {
+	const heightMap = [
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		[0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0],
+		[0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0],
+		[0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+	];
+	return new RoomModel(12, 16, 1, 3, heightMap);
+}
+
+export function createMarketplaceRoom(): RoomModel {
+	const heightMap = [
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		[0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+	];
+	return new RoomModel(11, 18, 3, 5, heightMap);
+}
+
+export function createLeaderboardRoom(): RoomModel {
+	const heightMap = [
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 0],
+		[0, 1, 1, 2, 3, 3, 3, 3, 2, 1, 1, 0],
+		[0, 1, 1, 2, 3, 3, 3, 3, 2, 1, 1, 0],
+		[0, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+	];
+	return new RoomModel(11, 12, 1, 7, heightMap);
+}
+
+export const ROOM_TYPE_PRESETS: Array<RoomPreset> = [
+	{
+		key: "chatroom",
+		label: "Chat Room",
+		description: "Open conversation space for 1-on-1 or groups up to 500",
+		capacity: 500,
+		color: "#3b82f6",
+		factory: createChatRoom,
+	},
+	{
+		key: "poker",
+		label: "Poker Room",
+		description: "Oval table with raised center for card games",
+		capacity: 10,
+		color: "#10b981",
+		factory: createPokerRoom,
+	},
+	{
+		key: "court",
+		label: "Court Room",
+		description: "Raised judge bench, partitioned areas for dispute resolution",
+		capacity: 50,
+		color: "#8b5cf6",
+		factory: createCourtRoom,
+	},
+	{
+		key: "marketplace",
+		label: "Marketplace",
+		description: "Market stalls with walkways for browsing and trading",
+		capacity: 200,
+		color: "#f59e0b",
+		factory: createMarketplaceRoom,
+	},
+	{
+		key: "leaderboard",
+		label: "Leaderboard",
+		description: "Podium-style room with tiered platforms for rankings",
+		capacity: 100,
+		color: "#ef4444",
+		factory: createLeaderboardRoom,
+	},
+];
+
 export function createRandomRoom(seed: number): RoomModel {
 	const random = seededRandom(seed);
 

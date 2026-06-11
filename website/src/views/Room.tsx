@@ -9,6 +9,7 @@ import {
 	createLShapedRoom,
 	createMultiLevelRoom,
 	createRandomRoom,
+	ROOM_TYPE_PRESETS,
 } from "@src/engine/RoomModel";
 
 const DEFAULT_FIGURE =
@@ -94,6 +95,10 @@ const ROOM_PRESETS = [
 		factory: (): ReturnType<typeof createRandomRoom> =>
 			createRandomRoom(Math.floor(Math.random() * 0xffffffff)),
 	},
+	...ROOM_TYPE_PRESETS.map((preset) => ({
+		label: preset.label,
+		factory: preset.factory,
+	})),
 ] as const;
 
 const DIRECTIONS: Array<{ label: string; value: Direction }> = [
