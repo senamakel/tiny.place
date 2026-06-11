@@ -60,6 +60,7 @@ export {
   serializeSignedKey,
   serializePreKey,
   generateX25519KeyPair,
+  ed25519PubToX25519Pub,
 } from "./signal/index.js";
 export type {
   SessionStore,
