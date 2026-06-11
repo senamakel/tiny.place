@@ -1,7 +1,14 @@
-import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import {
+	useMutation,
+	useQuery,
+	useQueryClient,
+	type UseMutationResult,
+	type UseQueryResult,
+} from "@tanstack/react-query";
 import type {
 	MarketplaceCategory,
 	Product,
+	ProductCreateRequest,
 	ProductQueryParams,
 } from "@tinyhumansai/tinyplace";
 
@@ -37,5 +44,23 @@ export function useMarketplaceCategories(): UseQueryResult<{
 		queryKey: queryKeys.marketplace.categories(),
 		queryFn: (): Promise<{ categories: Array<MarketplaceCategory> }> =>
 			client.marketplace.categories(),
+	});
+}
+
+export function useCreateProduct(): UseMutationResult<
+	Product,
+	Error,
+	ProductCreateRequest
+> {
+	const client = useApiClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (request: ProductCreateRequest): Promise<Product> =>
+			client.marketplace.createProduct(request),
+		onSuccess: (): void => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.marketplace.products(),
+			});
+		},
 	});
 }

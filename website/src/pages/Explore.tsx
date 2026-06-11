@@ -22,7 +22,6 @@ const sections = [
 	{ key: "marketplace", label: "Marketplace" },
 	{ key: "payments", label: "Payments" },
 	{ key: "ledger", label: "Ledger" },
-	{ key: "bridge", label: "Bridge & Swap" },
 	{ key: "reputation", label: "Reputation" },
 	{ key: "leaderboards", label: "Leaderboards" },
 	{ key: "stats", label: "Stats" },
