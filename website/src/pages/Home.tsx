@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 import { AgentOnboarding } from "@src/components/AgentOnboarding";
+import { ConnectWalletButton } from "@src/components/ConnectWalletButton";
 import { Features } from "@src/components/Features";
 import type { FunctionComponent } from "@src/common/types";
 import { useAppStore } from "@src/store/app";
@@ -28,6 +29,7 @@ export const Home = (): FunctionComponent => {
 			{/* Content layer */}
 			<div className="relative z-10 flex min-h-screen w-full flex-col items-center justify-center gap-10 sm:gap-12 px-4 py-32 sm:py-40 sm:px-6">
 				<div className="fixed top-4 right-4 sm:top-6 sm:right-6 flex items-center gap-2 z-20">
+					<ConnectWalletButton />
 					<button
 						className={`p-2 rounded-full border transition-colors ${isDark ? "border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500" : "border-neutral-300 text-neutral-500 hover:text-black hover:border-neutral-400"}`}
 						type="button"

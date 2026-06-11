@@ -2,6 +2,7 @@ import { useState } from "react";
 import { MoonIcon, SunIcon } from "@heroicons/react/24/outline";
 
 import type { FunctionComponent } from "@src/common/types";
+import { ConnectWalletButton } from "@src/components/ConnectWalletButton";
 import { useAppStore } from "@src/store/app";
 import { Sidebar } from "@src/components/layout/Sidebar";
 import { sectionComponents } from "@src/components/explore";
@@ -55,7 +56,8 @@ export const Explore = (): FunctionComponent => {
 				onSelect={setActiveSection}
 			/>
 			<main className="flex-1 min-h-screen overflow-y-auto">
-				<div className="fixed top-4 right-4 z-10">
+				<div className="fixed top-4 right-4 z-10 flex items-center gap-2">
+					<ConnectWalletButton />
 					<button
 						className={`p-2 rounded-full border transition-colors ${isDark ? "border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500" : "border-neutral-300 text-neutral-500 hover:text-black hover:border-neutral-400"}`}
 						type="button"
