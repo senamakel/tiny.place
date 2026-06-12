@@ -6,7 +6,8 @@ import { queryKeys } from "@src/common/query-keys";
 
 /**
  * Checks whether an identity handle is available to register. Disabled until a
- * non-empty name is provided.
+ * non-empty name is provided. A leading `@` is normalized away so `atlas` and
+ * `@atlas` resolve to the same query and backend lookup.
  *
  * @param name - The handle to check (with or without a leading `@`).
  */
@@ -14,10 +15,11 @@ export function useHandleAvailability(
 	name: string
 ): UseQueryResult<AvailabilityResponse> {
 	const client = useApiClient();
-	const trimmed = name.trim();
+	const normalized = name.trim().replace(/^@+/, "");
 	return useQuery({
-		queryKey: queryKeys.registry.availability(trimmed),
-		queryFn: (): Promise<AvailabilityResponse> => client.registry.get(trimmed),
-		enabled: trimmed.length > 0,
+		queryKey: queryKeys.registry.availability(normalized),
+		queryFn: (): Promise<AvailabilityResponse> =>
+			client.registry.get(normalized),
+		enabled: normalized.length > 0,
 	});
 }

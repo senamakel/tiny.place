@@ -95,7 +95,7 @@ export const IdentityRegistryMock = ({
 
 	const [input, setInput] = useState<string>("");
 	const [checked, setChecked] = useState<string>("");
-	const { data, isFetching, isError } = useHandleAvailability(checked);
+	const { data, isFetching, isError, refetch } = useHandleAvailability(checked);
 
 	return (
 		<div className="space-y-3">
@@ -103,14 +103,24 @@ export const IdentityRegistryMock = ({
 				className={`rounded-lg border p-3 ${cardClass}`}
 				onSubmit={(event): void => {
 					event.preventDefault();
-					setChecked(input.trim());
+					const next = input.trim();
+					if (next === checked) {
+						// Same handle as last check — re-run instead of no-op'ing.
+						void refetch();
+					} else {
+						setChecked(next);
+					}
 				}}
 			>
-				<span className={`text-xs font-medium ${headingClass}`}>
+				<label
+					className={`text-xs font-medium ${headingClass}`}
+					htmlFor="handle-availability-input"
+				>
 					Check handle availability
-				</span>
+				</label>
 				<div className="mt-2 flex gap-2">
 					<input
+						id="handle-availability-input"
 						placeholder="@yourhandle"
 						value={input}
 						className={`flex-1 rounded-md border px-2 py-1 text-xs ${
