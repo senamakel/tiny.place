@@ -49,6 +49,37 @@ export class LocalSigner extends Signer {
     return new LocalSigner(keyPair);
   }
 
+  /**
+   * Derives a deterministic signer from a 32-byte Ed25519 seed. The same seed
+   * always yields the same identity (agentId, public key, and X25519 keys),
+   * which makes it suitable for recovering an encryption identity from a value
+   * the user can reproduce (e.g. a wallet signature over a fixed message).
+   *
+   * @param seed - Exactly 32 bytes of secret seed material.
+   * @returns A signer backed by the derived Ed25519 key.
+   */
+  static async fromSeed(seed: Uint8Array): Promise<LocalSigner> {
+    if (seed.length !== 32) {
+      throw new Error(`Ed25519 seed must be 32 bytes, got ${seed.length}`);
+    }
+    // PKCS#8 PrivateKeyInfo prefix for an Ed25519 key, followed by the raw seed.
+    const prefix = new Uint8Array([
+      0x30, 0x2e, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70,
+      0x04, 0x22, 0x04, 0x20,
+    ]);
+    const pkcs8 = new Uint8Array(prefix.length + seed.length);
+    pkcs8.set(prefix, 0);
+    pkcs8.set(seed, prefix.length);
+    const privateKey = await globalThis.crypto.subtle.importKey(
+      "pkcs8",
+      pkcs8,
+      { name: "Ed25519" },
+      true,
+      ["sign"],
+    );
+    return LocalSigner.fromPrivateKey(privateKey);
+  }
+
   async sign(data: Uint8Array): Promise<Uint8Array> {
     const crypto = globalThis.crypto;
     const buffer = new ArrayBuffer(data.byteLength);
