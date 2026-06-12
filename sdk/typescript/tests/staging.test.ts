@@ -116,6 +116,12 @@ describe("staging: unauthenticated endpoints", () => {
     expect(result).toHaveProperty("events");
   });
 
+  it("rooms.list returns array", async () => {
+    const result = await client.rooms.list();
+    expect(result).toHaveProperty("rooms");
+    expect(Array.isArray(result.rooms)).toBe(true);
+  });
+
   it("reputation.leaderboard returns data", async () => {
     const result = await client.reputation.leaderboard();
     expect(result).toBeDefined();
@@ -584,11 +590,11 @@ describe("staging: authenticated flows", () => {
     it("creates a moderation report", async () => {
       const report = await client.moderation.createReport({
         reporter: publicKeyB64,
-        contentType: "channel_message",
+        contentType: "channel-message",
         contentId: "msg_test_fake",
         ruleViolated: "spam",
         comment: "SDK test report",
-      } as any);
+      });
       expect(report).toHaveProperty("reportId");
       expect(report.status).toBe("pending");
     });
