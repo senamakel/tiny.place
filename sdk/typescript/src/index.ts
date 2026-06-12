@@ -49,6 +49,7 @@ export { StatsApi } from "./api/stats.js";
 export { AdminApi } from "./api/admin.js";
 export { A2AApi } from "./api/a2a.js";
 export type { A2ATaskRequest, A2ATaskResponse } from "./api/a2a.js";
+export { RoomsApi } from "./api/rooms.js";
 
 export * from "./types/index.js";
 
