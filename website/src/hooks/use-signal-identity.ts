@@ -8,6 +8,7 @@ import { publishEncryptionKey } from "@src/common/encryption-discovery";
 import type { SignalIdentity } from "@src/common/signal-identity";
 import { publishKeyBundle } from "@src/common/signal-messaging";
 import { useAuthStore } from "@src/store/auth";
+import { useConversationsStore } from "@src/store/conversations";
 import { useMessagingStore } from "@src/store/messaging";
 import { useSignalStore, type SignalStatus } from "@src/store/signal";
 
@@ -42,13 +43,15 @@ export function useSignalIdentity(): UseSignalIdentityResult {
 	const reset = useSignalStore((state) => state.reset);
 	const setupMessaging = useMessagingStore((state) => state.setup);
 	const resetMessaging = useMessagingStore((state) => state.reset);
+	const resetConversations = useConversationsStore((state) => state.reset);
 
 	useEffect(() => {
 		if (!connected) {
 			reset();
 			resetMessaging();
+			resetConversations();
 		}
-	}, [connected, reset, resetMessaging]);
+	}, [connected, reset, resetMessaging, resetConversations]);
 
 	const canEnable = connected && Boolean(signMessage) && Boolean(agentId);
 
@@ -62,25 +65,32 @@ export function useSignalIdentity(): UseSignalIdentityResult {
 			return undefined;
 		}
 
-		// Bring messaging online once per identity: build the encryption client +
-		// session, publish the key bundle, and advertise the encryption key on the
-		// directory card. Publishing is best-effort so a transient failure does not
-		// invalidate the derived identity.
-		if (!useMessagingStore.getState().session) {
+		// (Re)build the messaging client + session when the active identity changes
+		// (first enable, or a wallet/agent switch), clearing the previous user's
+		// conversations so they can't leak across identities.
+		const address = readyIdentity.signer.publicKeyBase64;
+		if (useMessagingStore.getState().address !== address) {
+			resetConversations();
 			setupMessaging(readyIdentity);
-			const encryptionClient = useMessagingStore.getState().encryptionClient;
-			if (encryptionClient) {
+		}
+
+		// Publish the key bundle and advertise the encryption key. Both are tracked
+		// independently and retried on every enable() until they succeed, so a
+		// transient failure can't leave the user unreachable for DMs.
+		const encryptionClient = useMessagingStore.getState().encryptionClient;
+		if (encryptionClient) {
+			if (!useMessagingStore.getState().bundlePublished) {
 				try {
 					await publishKeyBundle(encryptionClient, readyIdentity);
+					useMessagingStore.getState().markBundlePublished();
 				} catch (publishError) {
 					console.warn("Failed to publish key bundle:", publishError);
 				}
+			}
+			if (!useMessagingStore.getState().keyAdvertised) {
 				try {
-					await publishEncryptionKey(
-						walletClient,
-						agentId,
-						readyIdentity.signer.publicKeyBase64
-					);
+					await publishEncryptionKey(walletClient, agentId, address);
+					useMessagingStore.getState().markKeyAdvertised();
 				} catch (advertiseError) {
 					console.warn("Failed to advertise encryption key:", advertiseError);
 				}
@@ -88,7 +98,14 @@ export function useSignalIdentity(): UseSignalIdentityResult {
 		}
 
 		return readyIdentity;
-	}, [agentId, signMessage, enableIdentity, setupMessaging, walletClient]);
+	}, [
+		agentId,
+		signMessage,
+		enableIdentity,
+		setupMessaging,
+		resetConversations,
+		walletClient,
+	]);
 
 	return {
 		status,

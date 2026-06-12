@@ -85,6 +85,29 @@ async function idbDelete(
 	await promisifyRequest(tx.objectStore(store).delete(key));
 }
 
+/** Writes several records across stores in a single atomic transaction. */
+function idbPutAll(
+	db: IDBDatabase,
+	entries: Array<{ store: string; key: string; value: unknown }>
+): Promise<void> {
+	return new Promise((resolve, reject) => {
+		const stores = Array.from(new Set(entries.map((entry) => entry.store)));
+		const tx = db.transaction(stores, "readwrite");
+		tx.oncomplete = (): void => {
+			resolve();
+		};
+		tx.onerror = (): void => {
+			reject(tx.error ?? new Error("IndexedDB transaction failed"));
+		};
+		tx.onabort = (): void => {
+			reject(tx.error ?? new Error("IndexedDB transaction aborted"));
+		};
+		for (const entry of entries) {
+			tx.objectStore(entry.store).put(entry.value, entry.key);
+		}
+	});
+}
+
 async function idbGetAllByPrefix<T>(
 	db: IDBDatabase,
 	store: string,
@@ -179,18 +202,20 @@ export class IndexedDbSessionStore implements SessionStore {
 	}
 
 	public async storeSignedPreKey(preKey: SignedPreKeyPair): Promise<void> {
-		await idbPut(
-			this.db,
-			STORE_SIGNED_PREKEYS,
-			this.scoped(preKey.keyId),
-			preKey
-		);
-		await idbPut(
-			this.db,
-			STORE_META,
-			this.scoped("activeSignedPreKey"),
-			preKey.keyId
-		);
+		// Atomic: persist the key and mark it active in one transaction, so a partial
+		// failure can't leave a stored key that getActiveSignedPreKey() can't find.
+		await idbPutAll(this.db, [
+			{
+				store: STORE_SIGNED_PREKEYS,
+				key: this.scoped(preKey.keyId),
+				value: preKey,
+			},
+			{
+				store: STORE_META,
+				key: this.scoped("activeSignedPreKey"),
+				value: preKey.keyId,
+			},
+		]);
 	}
 
 	public async getPreKey(keyId: string): Promise<PreKeyPair | null> {

@@ -14,7 +14,10 @@ export const ENCRYPTION_PUBLIC_KEY_METADATA = "encryptionPublicKey";
  */
 export function resolveEncryptionAddress(card: AgentCard): string {
 	const advertised = card.metadata?.[ENCRYPTION_PUBLIC_KEY_METADATA];
-	const address = advertised ?? card.publicKey;
+	const address =
+		typeof advertised === "string" && advertised.length > 0
+			? advertised
+			: card.publicKey;
 	if (!address) {
 		throw new Error(
 			`Agent ${card.agentId} has no encryption public key or wallet public key`
@@ -26,12 +29,13 @@ export function resolveEncryptionAddress(card: AgentCard): string {
 /**
  * Advertises the wallet's Signal encryption pubkey in its directory agent card so
  * other agents can discover where to fetch its key bundle and address messages.
- * Best-effort: if the card cannot be read or written, the error is returned so the
- * caller can decide whether to treat it as fatal.
+ * No-op if the card already advertises this key.
  *
  * @param walletClient - A client authenticated with the wallet (directory-write).
  * @param walletAgentId - The wallet's agent id (the card to update).
  * @param encryptionPublicKey - The derived encryption public key (base64).
+ * @throws If the card cannot be read or written. Callers that treat advertising as
+ * best-effort should wrap this in try/catch.
  */
 export async function publishEncryptionKey(
 	walletClient: TinyVerseClient,

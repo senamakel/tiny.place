@@ -28,6 +28,22 @@ export const DirectMessages = ({
 	const [peerInput, setPeerInput] = useState<string>("");
 	const [messageInput, setMessageInput] = useState<string>("");
 
+	const handleSend = (): void => {
+		const text = messageInput.trim();
+		if (!text || !selected || isSending) {
+			return;
+		}
+		// Clear the draft only after the send succeeds, so a failed send keeps the
+		// user's text instead of silently dropping it.
+		void send(selected, text)
+			.then((): void => {
+				setMessageInput("");
+			})
+			.catch((): void => {
+				/* keep the draft; the hook logs the failure */
+			});
+	};
+
 	const panelClass = isDark
 		? "border-neutral-800 bg-neutral-950"
 		: "border-neutral-200 bg-white";
@@ -146,8 +162,7 @@ export const DirectMessages = ({
 							className="flex gap-2 border-t border-neutral-800/40 p-2"
 							onSubmit={(event): void => {
 								event.preventDefault();
-								void send(selected, messageInput);
-								setMessageInput("");
+								handleSend();
 							}}
 						>
 							<input

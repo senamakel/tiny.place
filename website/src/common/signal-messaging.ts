@@ -160,24 +160,30 @@ export async function fetchInbox(
 	// Sequential by design: the Double Ratchet advances per message, so decryption
 	// must happen in delivery order — these awaits cannot be parallelized.
 	for (const envelope of messages) {
+		let plaintext: Uint8Array;
 		try {
 			const senderX25519 = ed25519PubToX25519Pub(fromBase64(envelope.from));
 			// eslint-disable-next-line no-await-in-loop
-			const plaintext = await session.decrypt(
-				envelope.from,
-				senderX25519,
-				envelope
-			);
-			decrypted.push({
-				id: envelope.id,
-				from: envelope.from,
-				text: new TextDecoder().decode(plaintext),
-				at: envelope.timestamp,
-			});
+			plaintext = await session.decrypt(envelope.from, senderX25519, envelope);
+		} catch (error) {
+			console.warn(`Failed to decrypt message ${envelope.id}:`, error);
+			continue;
+		}
+
+		decrypted.push({
+			id: envelope.id,
+			from: envelope.from,
+			text: new TextDecoder().decode(plaintext),
+			at: envelope.timestamp,
+		});
+
+		// Acknowledge separately: the message is already decrypted (the ratchet has
+		// advanced), so an ack failure must not be reported as a decrypt failure.
+		try {
 			// eslint-disable-next-line no-await-in-loop
 			await encClient.messages.acknowledge(envelope.id, address);
 		} catch (error) {
-			console.warn(`Failed to decrypt message ${envelope.id}:`, error);
+			console.warn(`Failed to acknowledge message ${envelope.id}:`, error);
 		}
 	}
 

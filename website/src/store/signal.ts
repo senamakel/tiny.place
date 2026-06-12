@@ -12,10 +12,13 @@ export type SignalStatus = "idle" | "loading" | "ready" | "error";
 type SignalState = {
 	status: SignalStatus;
 	identity: SignalIdentity | undefined;
+	/** The wallet agent id the current identity was derived for. */
+	agentId: string | undefined;
 	error: string | undefined;
 	/**
 	 * Derives (first use) or loads the wallet's encryption identity. Idempotent
-	 * while loading/ready for the same wallet.
+	 * while loading/ready for the *same* wallet; re-derives when the wallet agent
+	 * changes so a different user never reuses the previous identity.
 	 */
 	enable: (
 		walletAgentId: string,
@@ -28,10 +31,14 @@ type SignalState = {
 export const useSignalStore = create<SignalState>()((set, get) => ({
 	status: "idle",
 	identity: undefined,
+	agentId: undefined,
 	error: undefined,
 	enable: async (walletAgentId, signMessage): Promise<void> => {
-		const { status } = get();
-		if (status === "loading" || status === "ready") {
+		const { status, agentId } = get();
+		if (
+			(status === "loading" || status === "ready") &&
+			agentId === walletAgentId
+		) {
 			return;
 		}
 		set({ status: "loading", error: undefined });
@@ -40,7 +47,7 @@ export const useSignalStore = create<SignalState>()((set, get) => ({
 				walletAgentId,
 				signMessage
 			);
-			set({ status: "ready", identity });
+			set({ status: "ready", identity, agentId: walletAgentId });
 		} catch (error) {
 			set({
 				status: "error",
@@ -49,6 +56,11 @@ export const useSignalStore = create<SignalState>()((set, get) => ({
 		}
 	},
 	reset: (): void => {
-		set({ status: "idle", identity: undefined, error: undefined });
+		set({
+			status: "idle",
+			identity: undefined,
+			agentId: undefined,
+			error: undefined,
+		});
 	},
 }));
