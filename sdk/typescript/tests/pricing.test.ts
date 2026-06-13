@@ -2,6 +2,41 @@ import { describe, expect, it } from "vitest";
 import { TinyVerseClient } from "../src/index.js";
 
 describe("PricingApi", () => {
+  it("builds swap and bridge quote query strings", async () => {
+    const requests: Array<Request> = [];
+    const client = new TinyVerseClient({
+      baseUrl: "https://example.test",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json({});
+      },
+    });
+
+    await client.pricing.swapQuote({
+      from: "SOL",
+      to: "USDC",
+      amount: "1000000000",
+      network: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+    });
+    await client.pricing.bridgeRoutes({
+      from: "eip155:8453",
+      to: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+      asset: "USDC",
+    });
+    await client.pricing.bridgeQuote({
+      from: "eip155:8453",
+      to: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+      asset: "USDC",
+      amount: "10000000",
+    });
+
+    expect(requests.map((request) => request.url)).toEqual([
+      "https://example.test/swap/quote?from=SOL&to=USDC&amount=1000000000&network=solana%3A5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+      "https://example.test/bridge/routes?from=eip155%3A8453&to=solana%3A5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp&asset=USDC",
+      "https://example.test/bridge/quote?from=eip155%3A8453&to=solana%3A5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp&asset=USDC&amount=10000000",
+    ]);
+  });
+
   it("executes swaps with destination alias and structured payment payloads", async () => {
     const requests: Array<Request> = [];
     const client = new TinyVerseClient({

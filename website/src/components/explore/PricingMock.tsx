@@ -308,7 +308,7 @@ export const PricingMock = ({
 	const swapQuote = useSwapQuote({
 		from: "SOL",
 		to: "USDC",
-		amount: "1",
+		amount: "1000000000",
 		network: SOLANA_NETWORK,
 	});
 	const bridgeRoutes = useBridgeRoutes({

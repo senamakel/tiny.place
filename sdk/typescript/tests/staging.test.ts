@@ -372,7 +372,7 @@ describe("staging: unauthenticated endpoints", () => {
       from: SOLANA_NETWORK,
       to: BASE_NETWORK,
       asset: "USDC",
-      amount: "1",
+      amount: "10000000",
     });
     expect(result).toHaveProperty("quoteId");
     expect(result.provider).toBeDefined();
