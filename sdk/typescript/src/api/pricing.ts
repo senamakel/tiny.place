@@ -96,6 +96,12 @@ export class PricingApi {
     );
   }
 
+  getSwapStatus(swapId: string): Promise<SwapExecution> {
+    return this.http.get<SwapExecution>(
+      `/swap/status/${encodeURIComponent(swapId)}`,
+    );
+  }
+
   swapHistory(params?: {
     limit?: number;
     offset?: number;
@@ -137,6 +143,12 @@ export class PricingApi {
   getBridge(bridgeId: string): Promise<BridgeExecution> {
     return this.http.getAuth<BridgeExecution>(
       `/bridge/${encodeURIComponent(bridgeId)}`,
+    );
+  }
+
+  getBridgeStatus(bridgeId: string): Promise<BridgeExecution> {
+    return this.http.get<BridgeExecution>(
+      `/bridge/status/${encodeURIComponent(bridgeId)}`,
     );
   }
 

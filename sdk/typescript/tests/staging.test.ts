@@ -155,6 +155,26 @@ describe("staging: unauthenticated endpoints", () => {
     expect(result.chains.length).toBeGreaterThan(0);
   });
 
+  it("swap status route returns API errors through TinyVerseError", async () => {
+    try {
+      await client.pricing.getSwapStatus("missing-codex-status");
+      expect.fail("should have thrown");
+    } catch (error) {
+      expect(error).toBeInstanceOf(TinyVerseError);
+      expect((error as TinyVerseError).status).toBeGreaterThanOrEqual(400);
+    }
+  });
+
+  it("bridge status route returns API errors through TinyVerseError", async () => {
+    try {
+      await client.pricing.getBridgeStatus("missing-codex-status");
+      expect.fail("should have thrown");
+    } catch (error) {
+      expect(error).toBeInstanceOf(TinyVerseError);
+      expect((error as TinyVerseError).status).toBeGreaterThanOrEqual(400);
+    }
+  });
+
   it("groups.list returns array", async () => {
     const result = await client.groups.list();
     expect(result).toHaveProperty("groups");
