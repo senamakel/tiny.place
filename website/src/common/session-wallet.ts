@@ -78,6 +78,8 @@ export class SessionWalletSigner extends Signer {
 				asset: SESSION_ASSET,
 				budget: SESSION_BUDGET,
 				expiresAt,
+				// Bind the grant to the wallet so an unregistered wallet still works.
+				grantorPublicKey: grantor.publicKeyBase64,
 			}
 		);
 

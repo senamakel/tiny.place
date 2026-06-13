@@ -29,6 +29,14 @@ export interface BrowserSessionSignerOptions {
   budget: string;
   expiresAt: string;
   to?: string;
+  /**
+   * The grantor's base64 Ed25519 public key. Required when the grantor is not a
+   * registered identity: the backend derives/binds the grant to the grantor via
+   * metadata.publicKey, and stores it as the grantor public key the session key
+   * is allowed to act as. Omit only when the grantor is already registered (the
+   * backend then resolves the key from the registry).
+   */
+  grantorPublicKey?: string;
 }
 
 export class BrowserSessionSigner extends Signer {
@@ -60,6 +68,15 @@ export class BrowserSessionSigner extends Signer {
     const nonce = generateNonce("signer");
     this.approvalNonce = nonce;
 
+    // The backend verifies the approval signature against an RFC 3339
+    // (whole-second) expiry, so strip any fractional seconds before signing —
+    // otherwise a `Date.toISOString()` millisecond expiry signs bytes the server
+    // never reconstructs ("invalid signature").
+    const expiresAt = options.expiresAt.replace(
+      /\.\d+(Z|[+-]\d{2}:?\d{2})$/,
+      "$1",
+    );
+
     const fields: X402AuthorizationFields = {
       scheme: "upto",
       network: options.network,
@@ -68,10 +85,16 @@ export class BrowserSessionSigner extends Signer {
       from: grantorCryptoId,
       to: options.to ?? "",
       nonce,
-      expiresAt: options.expiresAt,
+      expiresAt,
       metadata: {
         domain: "tiny.place",
         signerKey: this.publicKeyHex,
+        // Bind the grant to the grantor's key so an unregistered wallet can
+        // still be the grantor (the backend requires publicKey to derive the
+        // grantor cryptoId and stores it as the delegated-to key).
+        ...(options.grantorPublicKey
+          ? { publicKey: options.grantorPublicKey }
+          : {}),
       },
     };
 
