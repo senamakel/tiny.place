@@ -214,6 +214,14 @@ export class MarketplaceApi {
       );
     }
 
+    if (listing.seller) {
+      return this.http.postDirectoryAuthAs<IdentityListing>(
+        "/marketplace/identities",
+        listing.seller,
+        listing,
+      );
+    }
+
     return this.http.postDirectoryAuth<IdentityListing>(
       "/marketplace/identities",
       listing,
@@ -250,6 +258,14 @@ export class MarketplaceApi {
       };
     }
 
+    if (request.buyer) {
+      return this.http.postDirectoryAuthAs<IdentitySale>(
+        `/marketplace/identities/${encodeURIComponent(listingId)}/buy`,
+        request.buyer,
+        request,
+      );
+    }
+
     return this.http.postDirectoryAuth<IdentitySale>(
       `/marketplace/identities/${encodeURIComponent(listingId)}/buy`,
       request,
@@ -278,22 +294,50 @@ export class MarketplaceApi {
       );
     }
 
+    if (bid.bidder) {
+      return this.http.postDirectoryAuthAs<IdentityListing>(
+        `/marketplace/identities/${encodeURIComponent(listingId)}/bids`,
+        bid.bidder,
+        bid,
+      );
+    }
+
     return this.http.postDirectoryAuth<IdentityListing>(
       `/marketplace/identities/${encodeURIComponent(listingId)}/bids`,
       bid,
     );
   }
 
-  closeListing(listingId: string): Promise<IdentitySale> {
+  closeListing(
+    listingId: string,
+    sellerId?: string,
+    request?: Record<string, unknown>,
+  ): Promise<IdentitySale> {
+    if (sellerId) {
+      return this.http.postDirectoryAuthAs<IdentitySale>(
+        `/marketplace/identities/${encodeURIComponent(listingId)}/close`,
+        sellerId,
+        request,
+      );
+    }
     return this.http.postDirectoryAuth<IdentitySale>(
       `/marketplace/identities/${encodeURIComponent(listingId)}/close`,
+      request,
     );
   }
 
   setDefaultIdentityListing(
     listingId: string,
     request?: Record<string, unknown>,
+    sellerId?: string,
   ): Promise<Record<string, unknown>> {
+    if (sellerId) {
+      return this.http.postDirectoryAuthAs<Record<string, unknown>>(
+        `/marketplace/identities/${encodeURIComponent(listingId)}/default`,
+        sellerId,
+        request,
+      );
+    }
     return this.http.postDirectoryAuth<Record<string, unknown>>(
       `/marketplace/identities/${encodeURIComponent(listingId)}/default`,
       request,
@@ -326,6 +370,14 @@ export class MarketplaceApi {
       offer.signature = await signCanonicalPayload(
         this.signingKey,
         identityOfferSignaturePayload(offer),
+      );
+    }
+
+    if (offer.buyer) {
+      return this.http.postDirectoryAuthAs<IdentityOffer>(
+        "/marketplace/offers",
+        offer.buyer,
+        offer,
       );
     }
 
@@ -363,6 +415,14 @@ export class MarketplaceApi {
           identityOfferAcceptSignaturePayload(offerId, request.seller),
         ),
       };
+    }
+
+    if (request.seller) {
+      return this.http.postDirectoryAuthAs<IdentitySale>(
+        `/marketplace/offers/${encodeURIComponent(offerId)}/accept`,
+        request.seller,
+        request,
+      );
     }
 
     return this.http.postDirectoryAuth<IdentitySale>(

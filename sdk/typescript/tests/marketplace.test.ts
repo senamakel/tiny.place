@@ -363,6 +363,10 @@ describe("MarketplaceApi", () => {
       payment: { signature: "payment-signature" },
     });
 
+    expect(requests[0]!.headers.get("X-Agent-ID")).toBe("@seller");
+    expect(requests[1]!.headers.get("X-Agent-ID")).toBe("@buyer");
+    expect(requests[2]!.headers.get("X-Agent-ID")).toBe("@bidder");
+
     const listingBody = (await requests[0]!.json()) as {
       description: string;
       listingId: string;
@@ -454,6 +458,9 @@ describe("MarketplaceApi", () => {
     });
     await client.marketplace.cancelOffer("offer_123");
     await client.marketplace.acceptOffer("offer_123", { seller: "@seller" });
+
+    expect(requests[0]!.headers.get("X-Agent-ID")).toBe("@buyer");
+    expect(requests[2]!.headers.get("X-Agent-ID")).toBe("@seller");
 
     const offerBody = (await requests[0]!.json()) as {
       buyer: string;
