@@ -1,3 +1,6 @@
+import type { LedgerTransaction } from "./ledger.js";
+import type { MessageEnvelope } from "./messaging.js";
+
 export type GroupMembershipPolicy = "open" | "approval" | "invite-only";
 
 export interface PaymentPrice {
@@ -64,4 +67,40 @@ export interface GroupCreateRequest {
 export interface GroupSubscriptionEnforceResponse {
   groupId: string;
   removed: Array<string>;
+}
+
+export interface GroupSubscriptionRenewRequest {
+  paymentAuthorization?: string;
+}
+
+export interface GroupRevenueShareParticipant {
+  agentId: string;
+  amount: string;
+}
+
+export interface GroupRevenueShareRequest {
+  taskId: string;
+  payer: string;
+  amount: string;
+  asset: string;
+  network: string;
+  onChainTx: string;
+  participants: Array<GroupRevenueShareParticipant>;
+}
+
+export interface GroupRevenueShareResponse {
+  groupId: string;
+  taskId: string;
+  payment: LedgerTransaction;
+  revenueShares: Array<LedgerTransaction>;
+}
+
+export type GroupMessageFanoutRequest = MessageEnvelope;
+
+export interface GroupMessageFanoutResponse {
+  groupId: string;
+  sourceMessageId: string;
+  messageIds: Record<string, string>;
+  recipients: Array<string>;
+  fanout: number;
 }

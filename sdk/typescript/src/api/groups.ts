@@ -1,10 +1,15 @@
 import type { HttpClient } from "../http.js";
 import type {
   GroupCreateRequest,
+  GroupMessageFanoutRequest,
+  GroupMessageFanoutResponse,
   GroupMember,
   GroupMetadata,
   GroupQueryParams,
+  GroupRevenueShareRequest,
+  GroupRevenueShareResponse,
   GroupSubscriptionEnforceResponse,
+  GroupSubscriptionRenewRequest,
 } from "../types/index.js";
 
 export class GroupsApi {
@@ -68,11 +73,22 @@ export class GroupsApi {
     );
   }
 
+  renewMemberSubscription(
+    groupId: string,
+    agentId: string,
+    request?: GroupSubscriptionRenewRequest,
+  ): Promise<GroupMember> {
+    return this.http.postDirectoryAuth<GroupMember>(
+      `/directory/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(agentId)}/subscription/renew`,
+      request,
+    );
+  }
+
   setRevenueShares(
     groupId: string,
-    request: Record<string, unknown>,
-  ): Promise<Record<string, unknown>> {
-    return this.http.postDirectoryAuth<Record<string, unknown>>(
+    request: GroupRevenueShareRequest,
+  ): Promise<GroupRevenueShareResponse> {
+    return this.http.postDirectoryAuth<GroupRevenueShareResponse>(
       `/directory/groups/${encodeURIComponent(groupId)}/revenue-shares`,
       request,
     );
@@ -85,6 +101,16 @@ export class GroupsApi {
     return this.http.postDirectoryAuth<GroupSubscriptionEnforceResponse>(
       `/directory/groups/${encodeURIComponent(groupId)}/subscriptions/enforce`,
       request,
+    );
+  }
+
+  fanoutMessage(
+    groupId: string,
+    message: GroupMessageFanoutRequest,
+  ): Promise<GroupMessageFanoutResponse> {
+    return this.http.postDirectoryAuth<GroupMessageFanoutResponse>(
+      `/directory/groups/${encodeURIComponent(groupId)}/messages`,
+      message,
     );
   }
 }
