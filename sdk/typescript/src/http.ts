@@ -1,5 +1,10 @@
 import type { SigningKey } from "./auth.js";
-import { signRequest, signDirectoryWrite } from "./auth.js";
+import {
+  signAdminRequest,
+  signDirectoryWrite,
+  signRequest,
+  type AdminSigningOptions,
+} from "./auth.js";
 
 export class TinyVerseError extends Error {
   constructor(
@@ -16,6 +21,8 @@ export interface HttpClientOptions {
   baseUrl: string;
   signingKey?: SigningKey;
   publicKeyBase64?: string;
+  adminSigningKey?: SigningKey;
+  admin?: AdminSigningOptions;
   fetch?: typeof globalThis.fetch;
 }
 
@@ -42,12 +49,16 @@ export class HttpClient {
   private readonly baseUrl: string;
   private readonly signingKey?: SigningKey;
   private readonly publicKeyBase64?: string;
+  private readonly adminSigningKey?: SigningKey;
+  private readonly admin?: AdminSigningOptions;
   private readonly _fetch: typeof globalThis.fetch;
 
   constructor(options: HttpClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/+$/, "");
     this.signingKey = options.signingKey;
     this.publicKeyBase64 = options.publicKeyBase64;
+    this.adminSigningKey = options.adminSigningKey;
+    this.admin = options.admin;
     this._fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
   }
 
@@ -60,6 +71,7 @@ export class HttpClient {
       signed?: boolean;
       directoryAuth?: boolean;
       agentAuth?: boolean;
+      adminAuth?: boolean;
       headers?: Record<string, string>;
       responseType?: "json" | "text" | "raw";
     },
@@ -73,7 +85,17 @@ export class HttpClient {
 
     const bodyStr = options?.body != null ? JSON.stringify(options.body) : "";
 
-    if (
+    if (options?.adminAuth && this.adminSigningKey) {
+      const requestUri = `${path}${queryString}`;
+      const adminHeaders = await signAdminRequest(
+        this.adminSigningKey,
+        method,
+        requestUri,
+        bodyStr,
+        this.admin,
+      );
+      Object.assign(headers, adminHeaders);
+    } else if (
       (options?.directoryAuth || options?.agentAuth) &&
       this.signingKey &&
       this.publicKeyBase64
@@ -139,6 +161,10 @@ export class HttpClient {
     return this.request<T>("GET", path, { query, signed: true });
   }
 
+  getAdmin<T>(path: string, query?: Record<string, unknown>): Promise<T> {
+    return this.request<T>("GET", path, { query, adminAuth: true });
+  }
+
   getText(path: string, query?: Record<string, unknown>): Promise<string> {
     return this.request<string>("GET", path, { query, responseType: "text" });
   }
@@ -192,6 +218,10 @@ export class HttpClient {
     return this.request<T>("POST", path, { body, signed: true });
   }
 
+  postAdmin<T>(path: string, body?: unknown): Promise<T> {
+    return this.request<T>("POST", path, { body, adminAuth: true });
+  }
+
   postPublic<T>(path: string, body?: unknown): Promise<T> {
     return this.request<T>("POST", path, { body });
   }
@@ -212,6 +242,10 @@ export class HttpClient {
     return this.request<T>("PUT", path, { body, signed: true });
   }
 
+  putAdmin<T>(path: string, body?: unknown): Promise<T> {
+    return this.request<T>("PUT", path, { body, adminAuth: true });
+  }
+
   postDirectoryAuth<T>(path: string, body?: unknown): Promise<T> {
     return this.request<T>("POST", path, { body, directoryAuth: true });
   }
@@ -226,6 +260,10 @@ export class HttpClient {
 
   delete<T>(path: string, body?: unknown): Promise<T> {
     return this.request<T>("DELETE", path, { body, signed: true });
+  }
+
+  deleteAdmin<T>(path: string, body?: unknown): Promise<T> {
+    return this.request<T>("DELETE", path, { body, adminAuth: true });
   }
 
   deletePublicRaw(

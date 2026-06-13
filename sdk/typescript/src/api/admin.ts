@@ -15,32 +15,34 @@ export class AdminApi {
   // --- Fee Configuration ---
 
   listFees(): Promise<{ fees: Array<FeeConfig> }> {
-    return this.http.getAuth<{ fees: Array<FeeConfig> }>("/admin/fees");
+    return this.http.getAdmin<{ fees: Array<FeeConfig> }>("/admin/fees");
   }
 
   createFee(fee: Partial<FeeConfig>): Promise<FeeConfig> {
-    return this.http.post<FeeConfig>("/admin/fees", fee);
+    return this.http.postAdmin<FeeConfig>("/admin/fees", fee);
   }
 
   getFee(feeId: string): Promise<FeeConfig> {
-    return this.http.getAuth<FeeConfig>(
+    return this.http.getAdmin<FeeConfig>(
       `/admin/fees/${encodeURIComponent(feeId)}`,
     );
   }
 
   updateFee(feeId: string, update: Partial<FeeConfig>): Promise<FeeConfig> {
-    return this.http.put<FeeConfig>(
+    return this.http.putAdmin<FeeConfig>(
       `/admin/fees/${encodeURIComponent(feeId)}`,
       update,
     );
   }
 
   deleteFee(feeId: string): Promise<void> {
-    return this.http.delete<void>(`/admin/fees/${encodeURIComponent(feeId)}`);
+    return this.http.deleteAdmin<void>(
+      `/admin/fees/${encodeURIComponent(feeId)}`,
+    );
   }
 
   resolveFee(params: FeeResolveParams): Promise<FeeResolveResponse> {
-    return this.http.getAuth<FeeResolveResponse>("/admin/fees/resolve", {
+    return this.http.getAdmin<FeeResolveResponse>("/admin/fees/resolve", {
       from: params.from,
       to: params.to,
       type: params.type,
@@ -50,7 +52,7 @@ export class AdminApi {
   // --- Agent Management ---
 
   getAgentStatus(agentId: string): Promise<AgentPaymentStatus> {
-    return this.http.getAuth<AgentPaymentStatus>(
+    return this.http.getAdmin<AgentPaymentStatus>(
       `/admin/agents/${encodeURIComponent(agentId)}/status`,
     );
   }
@@ -59,14 +61,14 @@ export class AdminApi {
     agentId: string,
     params: { until: string; reason: string },
   ): Promise<AgentPaymentStatus> {
-    return this.http.post<AgentPaymentStatus>(
+    return this.http.postAdmin<AgentPaymentStatus>(
       `/admin/agents/${encodeURIComponent(agentId)}/suspend`,
       params,
     );
   }
 
   unsuspendAgent(agentId: string): Promise<AgentPaymentStatus> {
-    return this.http.post<AgentPaymentStatus>(
+    return this.http.postAdmin<AgentPaymentStatus>(
       `/admin/agents/${encodeURIComponent(agentId)}/unsuspend`,
     );
   }
@@ -75,7 +77,7 @@ export class AdminApi {
     agentId: string,
     params: Record<string, unknown>,
   ): Promise<AgentPaymentStatus> {
-    return this.http.post<AgentPaymentStatus>(
+    return this.http.postAdmin<AgentPaymentStatus>(
       `/admin/agents/${encodeURIComponent(agentId)}/flag`,
       params,
     );
@@ -84,13 +86,13 @@ export class AdminApi {
   // --- System Config ---
 
   getConfig(): Promise<{ config: Record<string, string> }> {
-    return this.http.getAuth<{ config: Record<string, string> }>(
+    return this.http.getAdmin<{ config: Record<string, string> }>(
       "/admin/config",
     );
   }
 
   setConfig(key: string, value: string, reason?: string): Promise<SystemConfig> {
-    return this.http.put<SystemConfig>(
+    return this.http.putAdmin<SystemConfig>(
       `/admin/config/${encodeURIComponent(key)}`,
       {
         value,
@@ -107,7 +109,7 @@ export class AdminApi {
     limit?: number;
     offset?: number;
   }): Promise<{ audit: Array<AdminAuditEntry> }> {
-    return this.http.getAuth<{ audit: Array<AdminAuditEntry> }>(
+    return this.http.getAdmin<{ audit: Array<AdminAuditEntry> }>(
       "/admin/audit",
       params as Record<string, unknown>,
     );
@@ -116,7 +118,7 @@ export class AdminApi {
   // --- Metrics ---
 
   feeMetrics(period?: string): Promise<AdminFeeMetrics> {
-    return this.http.getAuth<AdminFeeMetrics>("/admin/metrics/fees", {
+    return this.http.getAdmin<AdminFeeMetrics>("/admin/metrics/fees", {
       period,
     });
   }

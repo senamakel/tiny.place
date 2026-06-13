@@ -9,12 +9,29 @@ export interface AuthHeaders {
   Authorization: string;
 }
 
+export interface AdminAuthHeaders {
+  Authorization: string;
+  "X-TinyPlace-Date": string;
+  "X-TinyPlace-Nonce": string;
+}
+
+export interface AdminSigningOptions {
+  actor?: string;
+  role?: "operator" | "auditor";
+}
+
 function toBase64(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) {
     binary += String.fromCharCode(byte);
   }
   return btoa(binary);
+}
+
+function generateNonce(): string {
+  const bytes = new Uint8Array(16);
+  globalThis.crypto.getRandomValues(bytes);
+  return toBase64(bytes);
 }
 
 export function buildAuthHeader(
@@ -35,6 +52,28 @@ export async function signRequest(
   const payload = new TextEncoder().encode(body + timestamp);
   const signature = await key.sign(payload);
   return buildAuthHeader(key.agentId, toBase64(signature), timestamp);
+}
+
+export async function signAdminRequest(
+  key: SigningKey,
+  method: string,
+  requestUri: string,
+  body: Uint8Array | string,
+  options?: AdminSigningOptions,
+): Promise<AdminAuthHeaders> {
+  const timestamp = new Date().toISOString();
+  const nonce = generateNonce();
+  const actor = options?.actor ?? key.agentId;
+  const bodyHash = sha256Hex(body);
+  const roleLine = options?.role ? `\n${options.role}` : "";
+  const payload = `${method}\n${requestUri}\n${timestamp}\n${nonce}\n${bodyHash}${roleLine}`;
+  const signature = await key.sign(new TextEncoder().encode(payload));
+  const roleField = options?.role ? `,role="${options.role}"` : "";
+  return {
+    Authorization: `TinyPlace-Admin actor="${actor}"${roleField},signature="${toBase64(signature)}"`,
+    "X-TinyPlace-Date": timestamp,
+    "X-TinyPlace-Nonce": nonce,
+  };
 }
 
 export interface DirectoryWriteHeaders {

@@ -10,9 +10,16 @@ export type {
   WebSocketEventHandler,
 } from "./websocket.js";
 
-export type { SigningKey, AuthHeaders, DirectoryWriteHeaders } from "./auth.js";
+export type {
+  AdminAuthHeaders,
+  AdminSigningOptions,
+  SigningKey,
+  AuthHeaders,
+  DirectoryWriteHeaders,
+} from "./auth.js";
 export {
   buildAuthHeader,
+  signAdminRequest,
   signRequest,
   signDirectoryWrite,
   signCanonicalPayload,

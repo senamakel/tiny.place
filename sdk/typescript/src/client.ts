@@ -1,4 +1,5 @@
 import type { SigningKey } from "./auth.js";
+import type { AdminSigningOptions } from "./auth.js";
 import { Signer } from "./signer.js";
 import { HttpClient } from "./http.js";
 import { TinyVerseWebSocket } from "./websocket.js";
@@ -38,6 +39,10 @@ export interface TinyVerseClientOptions {
   signingKey?: SigningKey;
   /** @deprecated Use `signer` instead. */
   publicKeyBase64?: string;
+  /** Signing key configured as an operator or auditor in the backend admin key set. */
+  adminSigningKey?: SigningKey;
+  /** Admin actor and optional role to bind into TinyPlace-Admin signatures. */
+  admin?: AdminSigningOptions;
   fetch?: typeof globalThis.fetch;
 }
 
@@ -87,6 +92,8 @@ export class TinyVerseClient {
       baseUrl: this.baseUrl,
       signingKey,
       publicKeyBase64,
+      adminSigningKey: options.adminSigningKey,
+      admin: options.admin,
       fetch: options.fetch,
     });
 

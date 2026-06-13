@@ -7,7 +7,8 @@ describe("AdminApi", () => {
     const requests: Array<Request> = [];
     const client = new TinyVerseClient({
       baseUrl: "https://example.test",
-      signer,
+      adminSigningKey: signer,
+      admin: { actor: "operator", role: "operator" },
       fetch: async (input, init) => {
         requests.push(new Request(input, init));
         return Response.json({
@@ -39,7 +40,11 @@ describe("AdminApi", () => {
     expect(requests[0]!.url).toBe(
       "https://example.test/admin/fees/resolve?from=%40buyer&to=%40seller&type=PAYMENT",
     );
-    expect(requests[0]!.headers.get("Authorization")).toMatch(/^tiny\.place /);
+    expect(requests[0]!.headers.get("Authorization")).toMatch(
+      /^TinyPlace-Admin actor="operator",role="operator",signature="[^"]+"$/,
+    );
+    expect(requests[0]!.headers.get("X-TinyPlace-Date")).toBeTruthy();
+    expect(requests[0]!.headers.get("X-TinyPlace-Nonce")).toBeTruthy();
   });
 
   it("returns saved config and sends optional update reason", async () => {
@@ -47,7 +52,8 @@ describe("AdminApi", () => {
     const requests: Array<Request> = [];
     const client = new TinyVerseClient({
       baseUrl: "https://example.test",
-      signer,
+      adminSigningKey: signer,
+      admin: { actor: "operator", role: "operator" },
       fetch: async (input, init) => {
         requests.push(new Request(input, init));
         return Response.json({
@@ -71,6 +77,9 @@ describe("AdminApi", () => {
     expect(requests[0]!.url).toBe(
       "https://example.test/admin/config/settlement.batch_window",
     );
+    expect(requests[0]!.headers.get("Authorization")).toMatch(
+      /^TinyPlace-Admin actor="operator",role="operator",signature="[^"]+"$/,
+    );
     await expect(requests[0]!.json()).resolves.toEqual({
       value: "120s",
       reason: "faster batches",
@@ -82,7 +91,8 @@ describe("AdminApi", () => {
     const requests: Array<Request> = [];
     const client = new TinyVerseClient({
       baseUrl: "https://example.test",
-      signer,
+      adminSigningKey: signer,
+      admin: { actor: "auditor", role: "auditor" },
       fetch: async (input, init) => {
         requests.push(new Request(input, init));
         return Response.json({
@@ -108,13 +118,17 @@ describe("AdminApi", () => {
     expect(requests[0]!.url).toBe(
       "https://example.test/admin/audit?limit=10&offset=20",
     );
+    expect(requests[0]!.headers.get("Authorization")).toMatch(
+      /^TinyPlace-Admin actor="auditor",role="auditor",signature="[^"]+"$/,
+    );
   });
 
   it("returns fee metric breakdowns from the backend shape", async () => {
     const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(54));
     const client = new TinyVerseClient({
       baseUrl: "https://example.test",
-      signer,
+      adminSigningKey: signer,
+      admin: { actor: "auditor", role: "auditor" },
       fetch: async () =>
         Response.json({
           count: 2,
