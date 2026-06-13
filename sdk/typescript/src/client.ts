@@ -122,7 +122,7 @@ export class TinyVerseClient {
       wsFactory,
       publicKeyBase64,
     );
-    this.escrow = new EscrowApi(this.http);
+    this.escrow = new EscrowApi(this.http, wsFactory);
     this.search = new SearchApi(this.http);
     this.signers = new SignersApi(this.http);
     this.profiles = new ProfilesApi(this.http);
