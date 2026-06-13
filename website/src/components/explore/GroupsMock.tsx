@@ -9,6 +9,11 @@ import type { GroupMetadata } from "@tinyhumansai/tinyplace";
 
 import type { FunctionComponent } from "@src/common/types";
 import { useCreateGroup, useGroups, useJoinGroup } from "@src/hooks/use-groups";
+import {
+	firstActiveIdentity,
+	useOwnedIdentities,
+} from "@src/hooks/use-marketplace";
+import { useAuthStore } from "@src/store/auth";
 
 dayjs.extend(relativeTime);
 
@@ -18,9 +23,12 @@ export const GroupsMock = ({
 	isDark: boolean;
 }): FunctionComponent => {
 	const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
-	const [actor, setActor] = useState("");
 	const [name, setName] = useState("Research Guild");
 	const [description, setDescription] = useState("Encrypted agent workspace");
+	const agentId = useAuthStore((state) => state.agentId);
+	const ownedIdentities = useOwnedIdentities(agentId);
+	const groupIdentity = firstActiveIdentity(ownedIdentities.data?.identities);
+	const actor = groupIdentity?.username ?? "";
 	const { data, isLoading, isError, error } = useGroups();
 	const createGroup = useCreateGroup();
 	const joinGroup = useJoinGroup();
@@ -40,13 +48,13 @@ export const GroupsMock = ({
 
 	const handleCreate = (event: FormEvent): void => {
 		event.preventDefault();
-		if (!actor.trim() || !name.trim()) {
+		if (!actor || !name.trim()) {
 			return;
 		}
 		createGroup.mutate({
 			name,
 			description,
-			createdBy: actor.trim(),
+			createdBy: actor,
 			membershipPolicy: "open",
 			membersPublic: true,
 			tags: ["explore"],
@@ -114,11 +122,11 @@ export const GroupsMock = ({
 			)}
 			<button
 				className="mt-3 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
-				disabled={!actor.trim() || joinGroup.isPending}
+				disabled={!actor || joinGroup.isPending}
 				type="button"
 				onClick={(): void => {
 					joinGroup.mutate({
-						agentId: actor.trim(),
+						agentId: actor,
 						groupId: group.groupId,
 					});
 				}}
@@ -194,16 +202,7 @@ export const GroupsMock = ({
 			className={`flex h-full flex-col overflow-hidden rounded-lg border ${isDark ? "border-neutral-800 bg-neutral-950" : "border-neutral-200 bg-neutral-50"}`}
 		>
 			<form className={`border-b p-3 ${formClass}`} onSubmit={handleCreate}>
-				<div className="grid gap-2 md:grid-cols-3">
-					<input
-						className={`rounded-md border px-2 py-1 text-xs ${inputClass}`}
-						placeholder="@owner"
-						type="text"
-						value={actor}
-						onChange={(event): void => {
-							setActor(event.target.value);
-						}}
-					/>
+				<div className="grid gap-2 md:grid-cols-[1fr_auto]">
 					<input
 						className={`rounded-md border px-2 py-1 text-xs ${inputClass}`}
 						placeholder="Group name"
@@ -215,7 +214,7 @@ export const GroupsMock = ({
 					/>
 					<button
 						className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
-						disabled={createGroup.isPending || !actor.trim() || !name.trim()}
+						disabled={createGroup.isPending || !actor || !name.trim()}
 						type="submit"
 					>
 						{createGroup.isPending ? "Creating..." : "Create Group"}
@@ -233,6 +232,21 @@ export const GroupsMock = ({
 				{mutationError ? (
 					<p className="mt-2 text-xs text-red-500">{mutationError.message}</p>
 				) : null}
+				{agentId ? (
+					<p
+						className={`mt-2 text-xs ${actor ? (isDark ? "text-neutral-500" : "text-neutral-400") : "text-red-500"}`}
+					>
+						{actor
+							? `Acting as ${actor}`
+							: ownedIdentities.isLoading
+								? "Checking your active handle..."
+								: "Register an active handle before creating or joining groups."}
+					</p>
+				) : (
+					<p className="mt-2 text-xs text-red-500">
+						Connect your wallet before creating or joining groups.
+					</p>
+				)}
 			</form>
 			<div
 				className={`flex items-center justify-between border-b px-4 py-3 ${isDark ? "border-neutral-800" : "border-neutral-200"}`}
