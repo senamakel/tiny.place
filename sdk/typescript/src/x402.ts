@@ -18,21 +18,19 @@ export interface X402Authorization extends X402AuthorizationFields {
   signature: string;
 }
 
-function sortedMetadata(
+function sortedMetadataEntries(
   metadata: Record<string, string> | undefined,
-): Record<string, string> | undefined {
+): Array<{ key: string; value: string }> | undefined {
   if (!metadata) return undefined;
-  const sorted: Record<string, string> = {};
-  for (const key of Object.keys(metadata).sort()) {
-    sorted[key] = metadata[key]!;
-  }
-  return sorted;
+
+  return Object.keys(metadata)
+    .sort()
+    .map((key) => ({ key, value: metadata[key]! }));
 }
 
-export function buildCanonicalMessage(
-  fields: X402AuthorizationFields,
-): string {
+export function buildCanonicalMessage(fields: X402AuthorizationFields): string {
   const canonical: Record<string, unknown> = {
+    domain: fields.metadata?.["domain"],
     scheme: fields.scheme,
     network: fields.network,
     asset: fields.asset,
@@ -42,8 +40,14 @@ export function buildCanonicalMessage(
     nonce: fields.nonce,
     expiresAt: fields.expiresAt,
   };
+  if (!canonical["domain"]) {
+    delete canonical["domain"];
+  }
+  if (!canonical["expiresAt"]) {
+    delete canonical["expiresAt"];
+  }
   if (fields.metadata) {
-    canonical["metadata"] = sortedMetadata(fields.metadata);
+    canonical["metadata"] = sortedMetadataEntries(fields.metadata);
   }
   return JSON.stringify(canonical);
 }

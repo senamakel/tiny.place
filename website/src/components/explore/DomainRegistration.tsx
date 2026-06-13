@@ -111,7 +111,6 @@ export const DomainRegistration = ({
 					"metadata.publicKey": signer.publicKeyBase64,
 					"metadata.identity": selectedName,
 					"metadata.purpose": "registration",
-					verifiedId: payment.nonce,
 				},
 			});
 		},
