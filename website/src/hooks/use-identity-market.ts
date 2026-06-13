@@ -10,6 +10,7 @@ import {
 	signX402Authorization,
 	TinyVerseError,
 	x402AuthorizationToPaymentMap,
+	type IdentityBid,
 	type IdentityBuyRequest,
 	type IdentityFloor,
 	type IdentityListing,
@@ -66,6 +67,18 @@ export function useIdentityFloor(
 	});
 }
 
+export function useIdentityBids(
+	listingId: string
+): UseQueryResult<{ bids: Array<IdentityBid> }> {
+	const client = useApiClient();
+	return useQuery({
+		queryKey: queryKeys.marketplace.identityBids(listingId),
+		queryFn: (): Promise<{ bids: Array<IdentityBid> }> =>
+			client.marketplace.listBids(listingId),
+		enabled: listingId.trim().length > 0,
+	});
+}
+
 type IdentityPaymentChallenge = {
 	error: string;
 	payment: Omit<X402AuthorizationFields, "expiresAt" | "nonce"> &
@@ -89,6 +102,26 @@ function identityPaymentChallenge(
 		error: body.error ?? "Payment required",
 		payment: body.payment,
 	};
+}
+
+async function signIdentityPaymentChallenge(
+	signer: NonNullable<ReturnType<typeof useAuthStore.getState>["signer"]>,
+	challenge: IdentityPaymentChallenge,
+	fallbackFrom: string,
+	noncePrefix: string
+): Promise<Record<string, string>> {
+	const challengePayment = challenge.payment;
+	const signedPayment = await signX402Authorization(signer, {
+		...challengePayment,
+		expiresAt:
+			challengePayment.expiresAt ??
+			new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+		from: challengePayment.from || fallbackFrom,
+		metadata: challengePayment.metadata,
+		nonce: challengePayment.nonce || generateNonce(noncePrefix),
+	});
+
+	return x402AuthorizationToPaymentMap(signedPayment);
 }
 
 export function useCreateIdentityListing(): UseMutationResult<
@@ -199,6 +232,182 @@ export function useBuyIdentityListing(): UseMutationResult<
 			});
 			void queryClient.invalidateQueries({
 				queryKey: queryKeys.marketplace.identityRecent(),
+			});
+		},
+	});
+}
+
+export function usePlaceIdentityBid(): UseMutationResult<
+	IdentityListing,
+	Error,
+	{ bid: Partial<IdentityBid>; listingId: string }
+> {
+	const client = useApiClient();
+	const signer = useAuthStore((state) => state.signer);
+	const agentId = useAuthStore((state) => state.agentId);
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: async ({ bid, listingId }): Promise<IdentityListing> => {
+			if (!signer || !agentId) {
+				throw new Error("Connect your wallet first");
+			}
+			if (!bid.bidder) {
+				throw new Error("Bidder is required");
+			}
+
+			const request: Partial<IdentityBid> = {
+				...bid,
+				bidderCryptoId: bid.bidderCryptoId ?? agentId,
+				bidderPublicKey: bid.bidderPublicKey ?? signer.publicKeyBase64,
+			};
+
+			try {
+				return await client.marketplace.placeBid(listingId, request);
+			} catch (error) {
+				const challenge = identityPaymentChallenge(error);
+				if (!challenge) {
+					throw error;
+				}
+
+				return client.marketplace.placeBid(listingId, {
+					...request,
+					payment: await signIdentityPaymentChallenge(
+						signer,
+						challenge,
+						bid.bidder,
+						"identity-bid"
+					),
+				});
+			}
+		},
+		onSuccess: (_listing, { listingId }): void => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.marketplace.identityListings(),
+			});
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.marketplace.identityBids(listingId),
+			});
+		},
+	});
+}
+
+export function useCloseIdentityAuction(): UseMutationResult<
+	IdentitySale,
+	Error,
+	{
+		listingId: string;
+		request?: Record<string, unknown>;
+		sellerId?: string;
+	}
+> {
+	const client = useApiClient();
+	const signer = useAuthStore((state) => state.signer);
+	const agentId = useAuthStore((state) => state.agentId);
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: async ({
+			listingId,
+			request,
+			sellerId,
+		}): Promise<IdentitySale> => {
+			try {
+				return await client.marketplace.closeListing(
+					listingId,
+					sellerId,
+					request
+				);
+			} catch (error) {
+				const challenge = identityPaymentChallenge(error);
+				if (!challenge) {
+					throw error;
+				}
+				if (!signer) {
+					throw new Error("Connect your wallet first");
+				}
+
+				return client.marketplace.closeListing(listingId, sellerId, {
+					...request,
+					payment: await signIdentityPaymentChallenge(
+						signer,
+						challenge,
+						sellerId ?? agentId ?? "",
+						"identity-auction"
+					),
+				});
+			}
+		},
+		onSuccess: (): void => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.marketplace.identityListings(),
+			});
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.marketplace.identityRecent(),
+			});
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.directory.identities(),
+			});
+		},
+	});
+}
+
+export function useDefaultIdentityAuction(): UseMutationResult<
+	Record<string, unknown>,
+	Error,
+	{
+		listingId: string;
+		request?: Record<string, unknown>;
+		sellerId?: string;
+	}
+> {
+	const client = useApiClient();
+	const signer = useAuthStore((state) => state.signer);
+	const agentId = useAuthStore((state) => state.agentId);
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: async ({
+			listingId,
+			request,
+			sellerId,
+		}): Promise<Record<string, unknown>> => {
+			try {
+				return await client.marketplace.setDefaultIdentityListing(
+					listingId,
+					request,
+					sellerId
+				);
+			} catch (error) {
+				const challenge = identityPaymentChallenge(error);
+				if (!challenge) {
+					throw error;
+				}
+				if (!signer) {
+					throw new Error("Connect your wallet first");
+				}
+
+				return client.marketplace.setDefaultIdentityListing(
+					listingId,
+					{
+						...request,
+						payment: await signIdentityPaymentChallenge(
+							signer,
+							challenge,
+							sellerId ?? agentId ?? "",
+							"identity-auction-default"
+						),
+					},
+					sellerId
+				);
+			}
+		},
+		onSuccess: (_listing, { listingId }): void => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.marketplace.identityListings(),
+			});
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.marketplace.identityBids(listingId),
+			});
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.directory.identities(),
 			});
 		},
 	});
