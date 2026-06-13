@@ -4,6 +4,7 @@ import type {
   GameActionRequest,
   GameActionResponse,
   GameCloseResponse,
+  GameCollusionReport,
   GameEmergencyWithdrawalRequest,
   GameEmergencyWithdrawalResponse,
   GameHand,
@@ -273,6 +274,17 @@ export class RoomsApi {
     }
     return this.http.get<GameHand>(
       `/rooms/${encodeURIComponent(roomId)}/hands/${encodeURIComponent(handId)}`,
+    );
+  }
+
+  /**
+   * Fetches public anti-collusion analysis for a room's completed hand history.
+   * @param roomId - The room id.
+   * @returns Pair-level fold/showdown stats and any suspicious pattern flags.
+   */
+  collusionReport(roomId: string): Promise<GameCollusionReport> {
+    return this.http.get<GameCollusionReport>(
+      `/rooms/${encodeURIComponent(roomId)}/collusion`,
     );
   }
 

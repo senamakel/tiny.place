@@ -246,4 +246,47 @@ describe("RoomsApi", () => {
       "GET",
     ]);
   });
+
+  it("fetches room collusion reports", async () => {
+    const requests: Array<Request> = [];
+    const client = new TinyVerseClient({
+      baseUrl: "https://example.test",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json({
+          handsAnalyzed: 8,
+          flags: [
+            {
+              type: "high_fold_rate",
+              agents: ["@alice", "@bob"],
+              detail: "abnormally high fold rate",
+              handIds: ["hand_1"],
+            },
+          ],
+          pairStats: [
+            {
+              agentA: "@alice",
+              agentB: "@bob",
+              handsTogether: 8,
+              foldsAgainstEach: 7,
+              showdownsTogether: 1,
+              foldRate: 0.875,
+              showdownRate: 0.125,
+            },
+          ],
+        });
+      },
+    });
+
+    const report = await client.rooms.collusionReport("room_123");
+
+    expect(report.handsAnalyzed).toBe(8);
+    expect(report.flags?.[0]?.type).toBe("high_fold_rate");
+    expect(report.pairStats?.[0]?.foldRate).toBe(0.875);
+    expect(requests).toHaveLength(1);
+    expect(requests[0]!.method).toBe("GET");
+    expect(requests[0]!.url).toBe(
+      "https://example.test/rooms/room_123/collusion",
+    );
+  });
 });

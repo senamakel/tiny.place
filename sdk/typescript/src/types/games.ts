@@ -61,6 +61,29 @@ export interface GameEmergencyWithdrawalResponse {
   withdrawal: GameEmergencyWithdrawal;
 }
 
+export interface GameCollusionFlag {
+  type: string;
+  agents: Array<string>;
+  detail: string;
+  handIds?: Array<string>;
+}
+
+export interface GameAgentPairStats {
+  agentA: string;
+  agentB: string;
+  handsTogether: number;
+  foldsAgainstEach: number;
+  showdownsTogether: number;
+  foldRate: number;
+  showdownRate: number;
+}
+
+export interface GameCollusionReport {
+  handsAnalyzed: number;
+  flags?: Array<GameCollusionFlag>;
+  pairStats?: Array<GameAgentPairStats>;
+}
+
 export interface GameTimeouts {
   decision: number;
   disconnectGrace: number;
