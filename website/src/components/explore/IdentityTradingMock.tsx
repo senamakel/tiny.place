@@ -2,14 +2,24 @@
 
 import { useState } from "react";
 
-import type { MarketplacePrice } from "@tinyhumansai/tinyplace";
+import type {
+	IdentityListing,
+	MarketplacePrice,
+} from "@tinyhumansai/tinyplace";
 
 import type { FunctionComponent } from "@src/common/types";
 import {
+	useBuyIdentityListing,
+	useCreateIdentityListing,
 	useIdentityFloor,
 	useIdentityListings,
 	useIdentityRecentSales,
 } from "@src/hooks/use-identity-market";
+import {
+	firstActiveIdentity,
+	useOwnedIdentities,
+} from "@src/hooks/use-marketplace";
+import { useAuthStore } from "@src/store/auth";
 
 const avatarColors = [
 	"bg-indigo-600",
@@ -54,6 +64,128 @@ function floorDescription(length: number): string {
 
 const floorLengths = [3, 4, 5] as const;
 
+type IdentityListingFormProperties = {
+	agentId: string;
+	isDark: boolean;
+	isIdentityLoading: boolean;
+	sellerHandle: string | undefined;
+};
+
+function IdentityListingForm({
+	agentId,
+	isDark,
+	isIdentityLoading,
+	sellerHandle,
+}: IdentityListingFormProperties): FunctionComponent {
+	const createListing = useCreateIdentityListing();
+	const [amount, setAmount] = useState("");
+	const [description, setDescription] = useState("");
+
+	const inputClass = `w-full rounded-md border px-2.5 py-1.5 text-xs ${
+		isDark
+			? "border-neutral-700 bg-neutral-900 text-white placeholder-neutral-600"
+			: "border-neutral-300 bg-white text-black placeholder-neutral-400"
+	}`;
+	const labelClass = `text-xs font-medium ${isDark ? "text-neutral-400" : "text-neutral-500"}`;
+	const cardClass = isDark
+		? "border-neutral-800 bg-neutral-950"
+		: "border-neutral-200 bg-neutral-50";
+
+	const handleSubmit = (event: React.FormEvent): void => {
+		event.preventDefault();
+		if (!sellerHandle) {
+			return;
+		}
+		createListing.mutate(
+			{
+				description,
+				name: sellerHandle,
+				price: {
+					amount,
+					asset: "USDC",
+					network: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+				},
+				seller: sellerHandle,
+				sellerCryptoId: agentId,
+			},
+			{
+				onSuccess: (): void => {
+					setAmount("");
+					setDescription("");
+				},
+			}
+		);
+	};
+
+	return (
+		<form
+			className={`rounded-lg border p-4 ${cardClass}`}
+			onSubmit={handleSubmit}
+		>
+			<h3
+				className={`mb-3 text-sm font-medium ${isDark ? "text-white" : "text-black"}`}
+			>
+				List an Identity
+			</h3>
+			<p
+				className={`mb-3 text-xs ${isDark ? "text-neutral-500" : "text-neutral-500"}`}
+			>
+				{isIdentityLoading
+					? "Checking registered handles..."
+					: sellerHandle
+						? `Selling ${sellerHandle}`
+						: "Register a handle before listing identities."}
+			</p>
+			<div className="grid grid-cols-2 gap-3">
+				<div>
+					<label className={labelClass}>Price (USDC)</label>
+					<input
+						required
+						className={inputClass}
+						min="0"
+						placeholder="25.00"
+						step="0.01"
+						type="number"
+						value={amount}
+						onChange={(event): void => {
+							setAmount(event.target.value);
+						}}
+					/>
+				</div>
+				<div>
+					<label className={labelClass}>Description</label>
+					<input
+						className={inputClass}
+						placeholder="Premium agent handle"
+						type="text"
+						value={description}
+						onChange={(event): void => {
+							setDescription(event.target.value);
+						}}
+					/>
+				</div>
+			</div>
+			{createListing.isError && (
+				<p className="mt-2 text-xs text-rose-500">
+					{createListing.error instanceof Error
+						? createListing.error.message
+						: "Failed to list identity"}
+				</p>
+			)}
+			{createListing.isSuccess && (
+				<p className="mt-2 text-xs text-emerald-500">Identity listed.</p>
+			)}
+			<button
+				className="mt-3 w-full rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+				disabled={createListing.isPending || !sellerHandle || !amount}
+				type="submit"
+			>
+				{createListing.isPending ? "Listing..." : "List Identity"}
+			</button>
+		</form>
+	);
+}
+
 type FloorCardProperties = {
 	isDark: boolean;
 	length: number;
@@ -93,9 +225,13 @@ export const IdentityTradingMock = ({
 	isDark,
 }: IdentityTradingMockProperties): FunctionComponent => {
 	const [selectedListing, setSelectedListing] = useState<string | null>(null);
+	const agentId = useAuthStore((state) => state.agentId);
 
 	const listingsQuery = useIdentityListings();
 	const salesQuery = useIdentityRecentSales();
+	const ownedIdentities = useOwnedIdentities(agentId);
+	const buyerIdentity = firstActiveIdentity(ownedIdentities.data?.identities);
+	const buyListing = useBuyIdentityListing();
 	const listings = listingsQuery.data?.listings ?? [];
 	const sales = salesQuery.data?.recent ?? [];
 
@@ -107,8 +243,26 @@ export const IdentityTradingMock = ({
 	const headerClass = isDark ? "text-neutral-500" : "text-neutral-400";
 	const rowEvenClass = isDark ? "bg-neutral-900/50" : "bg-neutral-100/50";
 
+	function canBuyListing(listing: IdentityListing): boolean {
+		return Boolean(
+			agentId &&
+			buyerIdentity &&
+			listing.status === "active" &&
+			listing.seller !== buyerIdentity.username
+		);
+	}
+
 	return (
 		<div className="space-y-4">
+			{agentId && (
+				<IdentityListingForm
+					agentId={agentId}
+					isDark={isDark}
+					isIdentityLoading={ownedIdentities.isLoading}
+					sellerHandle={buyerIdentity?.username}
+				/>
+			)}
+
 			<div>
 				<h3
 					className={`mb-2 text-xs font-semibold uppercase tracking-wider ${secondaryClass}`}
@@ -168,29 +322,65 @@ export const IdentityTradingMock = ({
 										by {listing.seller}
 									</div>
 								</div>
-								<button
-									type="button"
-									className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-										selectedListing === listing.listingId
-											? "bg-blue-600 text-white"
-											: isDark
-												? "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
-												: "bg-neutral-200 text-neutral-600 hover:bg-neutral-300"
-									}`}
-									onClick={(): void => {
-										setSelectedListing(
+								<div className="flex gap-1">
+									<button
+										type="button"
+										className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
 											selectedListing === listing.listingId
-												? null
-												: listing.listingId
-										);
-									}}
-								>
-									Details
-								</button>
+												? "bg-blue-600 text-white"
+												: isDark
+													? "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
+													: "bg-neutral-200 text-neutral-600 hover:bg-neutral-300"
+										}`}
+										onClick={(): void => {
+											setSelectedListing(
+												selectedListing === listing.listingId
+													? null
+													: listing.listingId
+											);
+										}}
+									>
+										Details
+									</button>
+									<button
+										className="rounded-full bg-neutral-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-neutral-700 disabled:opacity-50"
+										disabled={!canBuyListing(listing) || buyListing.isPending}
+										type="button"
+										onClick={(): void => {
+											if (!agentId || !buyerIdentity) {
+												return;
+											}
+											buyListing.mutate({
+												buyer: buyerIdentity.username,
+												buyerCryptoId: agentId,
+												listingId: listing.listingId,
+											});
+										}}
+									>
+										{buyListing.isPending ? "Buying..." : "Buy"}
+									</button>
+								</div>
 							</div>
+							{selectedListing === listing.listingId && (
+								<p className={`mt-2 text-xs ${secondaryClass}`}>
+									{listing.description || "Fixed-price identity listing"}
+								</p>
+							)}
 						</div>
 					))}
 				</div>
+				{buyListing.isError && (
+					<p className="mt-2 text-xs text-rose-500">
+						{buyListing.error instanceof Error
+							? buyListing.error.message
+							: "Failed to buy identity"}
+					</p>
+				)}
+				{buyListing.isSuccess && (
+					<p className="mt-2 text-xs text-emerald-500">
+						Identity purchase recorded.
+					</p>
+				)}
 			</div>
 
 			<div>
