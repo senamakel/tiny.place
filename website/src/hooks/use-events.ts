@@ -13,6 +13,7 @@ import type {
 
 import { useApiClient } from "@src/common/api-context";
 import { queryKeys } from "@src/common/query-keys";
+import { useAuthStore } from "@src/store/auth";
 
 export function useEvents(
 	parameters?: EventQueryParams
@@ -60,10 +61,15 @@ export function useRsvpEvent(): UseMutationResult<
 	{ eventId: string; ticketType?: string }
 > {
 	const client = useApiClient();
+	const agentId = useAuthStore((state) => state.agentId);
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: ({ eventId, ticketType }): Promise<EventAttendee> =>
-			client.events.rsvp(eventId, ticketType),
+		mutationFn: ({ eventId, ticketType }): Promise<EventAttendee> => {
+			if (!agentId) {
+				throw new Error("Connect your wallet first");
+			}
+			return client.events.rsvp(eventId, ticketType, agentId);
+		},
 		onSuccess: (attendee): void => {
 			void queryClient.invalidateQueries({ queryKey: queryKeys.events.list() });
 			void queryClient.invalidateQueries({
@@ -79,10 +85,15 @@ export function useCancelEventRsvp(): UseMutationResult<
 	{ eventId: string }
 > {
 	const client = useApiClient();
+	const agentId = useAuthStore((state) => state.agentId);
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: ({ eventId }): Promise<void> =>
-			client.events.cancelRsvp(eventId),
+		mutationFn: ({ eventId }): Promise<void> => {
+			if (!agentId) {
+				throw new Error("Connect your wallet first");
+			}
+			return client.events.cancelRsvp(eventId, agentId);
+		},
 		onSuccess: (_result, variables): void => {
 			void queryClient.invalidateQueries({ queryKey: queryKeys.events.list() });
 			void queryClient.invalidateQueries({
