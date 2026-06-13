@@ -10,30 +10,65 @@ import type {
 export class ArtifactsApi {
   constructor(private readonly http: HttpClient) {}
 
-  list(params?: ArtifactQueryParams): Promise<ArtifactListResult> {
+  list(
+    params?: ArtifactQueryParams,
+    actorId?: string,
+  ): Promise<ArtifactListResult> {
+    if (actorId) {
+      return this.http.getDirectoryAuthAs<ArtifactListResult>(
+        "/artifacts",
+        actorId,
+        params as Record<string, unknown>,
+      );
+    }
     return this.http.getDirectoryAuth<ArtifactListResult>(
       "/artifacts",
       params as Record<string, unknown>,
     );
   }
 
-  create(request: ArtifactCreateRequest): Promise<Artifact> {
+  create(request: ArtifactCreateRequest, ownerId?: string): Promise<Artifact> {
+    if (ownerId) {
+      return this.http.postDirectoryAuthAs<Artifact>(
+        "/artifacts",
+        ownerId,
+        request,
+      );
+    }
     return this.http.postDirectoryAuth<Artifact>("/artifacts", request);
   }
 
-  get(artifactId: string): Promise<Artifact> {
+  get(artifactId: string, actorId?: string): Promise<Artifact> {
+    if (actorId) {
+      return this.http.getDirectoryAuthAs<Artifact>(
+        `/artifacts/${encodeURIComponent(artifactId)}`,
+        actorId,
+      );
+    }
     return this.http.getDirectoryAuth<Artifact>(
       `/artifacts/${encodeURIComponent(artifactId)}`,
     );
   }
 
-  remove(artifactId: string): Promise<void> {
+  remove(artifactId: string, ownerId?: string): Promise<void> {
+    if (ownerId) {
+      return this.http.deleteDirectoryAuthAs<void>(
+        `/artifacts/${encodeURIComponent(artifactId)}`,
+        ownerId,
+      );
+    }
     return this.http.deleteDirectoryAuth<void>(
       `/artifacts/${encodeURIComponent(artifactId)}`,
     );
   }
 
-  download(artifactId: string): Promise<Response> {
+  download(artifactId: string, actorId?: string): Promise<Response> {
+    if (actorId) {
+      return this.http.getDirectoryAuthRawAs(
+        `/artifacts/${encodeURIComponent(artifactId)}/download`,
+        actorId,
+      );
+    }
     return this.http.getDirectoryAuthRaw(
       `/artifacts/${encodeURIComponent(artifactId)}/download`,
     );
@@ -42,7 +77,15 @@ export class ArtifactsApi {
   updateRecipients(
     artifactId: string,
     request: ArtifactRecipientUpdate,
+    ownerId?: string,
   ): Promise<Artifact> {
+    if (ownerId) {
+      return this.http.putDirectoryAuthAs<Artifact>(
+        `/artifacts/${encodeURIComponent(artifactId)}/recipients`,
+        ownerId,
+        request,
+      );
+    }
     return this.http.putDirectoryAuth<Artifact>(
       `/artifacts/${encodeURIComponent(artifactId)}/recipients`,
       request,

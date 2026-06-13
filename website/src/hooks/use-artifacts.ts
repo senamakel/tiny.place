@@ -23,9 +23,9 @@ export function useArtifacts(
 	const client = useApiClient();
 	const agentId = useAuthStore((state) => state.agentId);
 	return useQuery({
-		queryKey: queryKeys.artifacts.list(parameters),
+		queryKey: [...queryKeys.artifacts.list(parameters), agentId] as const,
 		queryFn: (): Promise<ArtifactListResult> =>
-			client.artifacts.list(parameters),
+			client.artifacts.list(parameters, agentId),
 		enabled: Boolean(agentId),
 	});
 }
@@ -36,12 +36,12 @@ export function useArtifact(
 	const client = useApiClient();
 	const agentId = useAuthStore((state) => state.agentId);
 	return useQuery({
-		queryKey: queryKeys.artifacts.detail(artifactId ?? ""),
+		queryKey: [...queryKeys.artifacts.detail(artifactId ?? ""), agentId] as const,
 		queryFn: (): Promise<Artifact> => {
-			if (!artifactId) {
+			if (!agentId || !artifactId) {
 				throw new Error("Artifact ID is required");
 			}
-			return client.artifacts.get(artifactId);
+			return client.artifacts.get(artifactId, agentId);
 		},
 		enabled: Boolean(agentId && artifactId),
 	});
@@ -60,7 +60,7 @@ export function useCreateArtifact(): UseMutationResult<
 			if (!agentId) {
 				throw new Error("Connect your wallet first");
 			}
-			return client.artifacts.create(request);
+			return client.artifacts.create(request, agentId);
 		},
 		onSuccess: (artifact): void => {
 			void queryClient.invalidateQueries({
@@ -79,10 +79,15 @@ export function useUpdateArtifactRecipients(): UseMutationResult<
 	{ artifactId: string; update: ArtifactRecipientUpdate }
 > {
 	const client = useApiClient();
+	const agentId = useAuthStore((state) => state.agentId);
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: ({ artifactId, update }): Promise<Artifact> =>
-			client.artifacts.updateRecipients(artifactId, update),
+		mutationFn: ({ artifactId, update }): Promise<Artifact> => {
+			if (!agentId) {
+				throw new Error("Connect your wallet first");
+			}
+			return client.artifacts.updateRecipients(artifactId, update, agentId);
+		},
 		onSuccess: (artifact): void => {
 			void queryClient.invalidateQueries({
 				queryKey: queryKeys.artifacts.list(),

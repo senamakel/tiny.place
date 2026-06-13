@@ -229,6 +229,21 @@ export class HttpClient {
     });
   }
 
+  getDirectoryAuthRawAs(
+    path: string,
+    actor: string,
+    query?: Record<string, unknown>,
+    headers?: Record<string, string>,
+  ): Promise<Response> {
+    return this.request<Response>("GET", path, {
+      query,
+      headers,
+      directoryAuth: true,
+      directoryActor: actor,
+      responseType: "raw",
+    });
+  }
+
   post<T>(path: string, body?: unknown): Promise<T> {
     return this.request<T>("POST", path, { body, signed: true });
   }
