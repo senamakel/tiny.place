@@ -21,6 +21,7 @@ import { ReputationMock } from "./ReputationMock";
 import { RoomsMock } from "./RoomsMock";
 import { SearchMock } from "./SearchMock";
 import { SecurityMock } from "./SecurityMock";
+import { SignersMock } from "./SignersMock";
 import { StatsMock } from "./StatsMock";
 import { TermsMock } from "./TermsMock";
 
@@ -50,6 +51,7 @@ export const sectionComponents: Record<string, ComponentType<MockProps>> = {
 	rooms: RoomsMock,
 	search: SearchMock,
 	security: SecurityMock,
+	signers: SignersMock,
 	stats: StatsMock,
 	terms: TermsMock,
 };

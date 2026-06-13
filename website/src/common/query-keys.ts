@@ -141,4 +141,9 @@ export const queryKeys = {
 		detail: (artifactId: string) =>
 			["artifacts", "detail", artifactId] as const,
 	},
+	signers: {
+		list: (grantor: string | undefined) =>
+			["signers", "list", grantor] as const,
+		detail: (signerKey: string) => ["signers", "detail", signerKey] as const,
+	},
 };

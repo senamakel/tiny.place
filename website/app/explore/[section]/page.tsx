@@ -7,6 +7,7 @@ const sectionTitles: Record<string, string> = {
 	identities: "Identities",
 	profiles: "Profiles",
 	messaging: "Messaging",
+	signers: "Signers",
 	events: "Events",
 	marketplace: "Marketplace",
 	artifacts: "Artifacts",

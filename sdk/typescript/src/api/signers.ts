@@ -9,19 +9,24 @@ export class SignersApi {
     return this.http.post<SignerApproval>("/signers", authorization);
   }
 
-  list(): Promise<{ signers: Array<SignerApproval> }> {
-    return this.http.getAuth<{ signers: Array<SignerApproval> }>("/signers");
-  }
-
-  get(signerKey: string): Promise<SignerApproval> {
-    return this.http.getAuth<SignerApproval>(
-      `/signers/${encodeURIComponent(signerKey)}`,
+  list(grantor?: string): Promise<{ signers: Array<SignerApproval> }> {
+    return this.http.getAuth<{ signers: Array<SignerApproval> }>(
+      "/signers",
+      grantor ? { grantor } : undefined,
     );
   }
 
-  revoke(signerKey: string): Promise<void> {
-    return this.http.delete<void>(
+  get(signerKey: string, grantor?: string): Promise<SignerApproval> {
+    return this.http.getAuth<SignerApproval>(
       `/signers/${encodeURIComponent(signerKey)}`,
+      grantor ? { grantor } : undefined,
+    );
+  }
+
+  revoke(signerKey: string, grantor?: string): Promise<SignerApproval> {
+    const query = grantor ? `?grantor=${encodeURIComponent(grantor)}` : "";
+    return this.http.delete<SignerApproval>(
+      `/signers/${encodeURIComponent(signerKey)}${query}`,
     );
   }
 }

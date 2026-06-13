@@ -1,0 +1,84 @@
+import { describe, expect, it } from "vitest";
+import { LocalSigner, TinyVerseClient } from "../src/index.js";
+
+describe("SignersApi", () => {
+  it("lists approved signers for the authenticated grantor", async () => {
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(41));
+    const requests: Array<Request> = [];
+    const client = new TinyVerseClient({
+      baseUrl: "https://example.test",
+      signer,
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json({
+          signers: [
+            {
+              signerKey: "session-key",
+              grantor: signer.agentId,
+              network: "eip155:8453",
+              asset: "USDC",
+              budget: "1000000",
+              spent: "0",
+              remaining: "1000000",
+              expiresAt: "2026-06-20T00:00:00.000Z",
+              nonce: "signer_nonce",
+              status: "active",
+              createdAt: "2026-06-13T00:00:00.000Z",
+            },
+          ],
+        });
+      },
+    });
+
+    const result = await client.signers.list(signer.agentId);
+
+    expect(result.signers).toHaveLength(1);
+    expect(requests).toHaveLength(1);
+    const request = requests[0]!;
+    expect(request.method).toBe("GET");
+    expect(request.url).toBe(
+      `https://example.test/signers?grantor=${encodeURIComponent(signer.agentId)}`,
+    );
+    expect(request.headers.get("Authorization")).toMatch(/^tiny\.place /);
+  });
+
+  it("gets and revokes signer approvals with grantor query auth", async () => {
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(42));
+    const requests: Array<Request> = [];
+    const approval = {
+      signerKey: "session-key",
+      grantor: signer.agentId,
+      network: "eip155:8453",
+      asset: "USDC",
+      budget: "1000000",
+      spent: "0",
+      remaining: "1000000",
+      expiresAt: "2026-06-20T00:00:00.000Z",
+      nonce: "signer_nonce",
+      status: "active",
+      createdAt: "2026-06-13T00:00:00.000Z",
+    };
+    const client = new TinyVerseClient({
+      baseUrl: "https://example.test",
+      signer,
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(approval);
+      },
+    });
+
+    await client.signers.get("session-key", signer.agentId);
+    await client.signers.revoke("session-key", signer.agentId);
+
+    expect(requests).toHaveLength(2);
+    expect(requests[0]!.method).toBe("GET");
+    expect(requests[0]!.url).toBe(
+      `https://example.test/signers/session-key?grantor=${encodeURIComponent(signer.agentId)}`,
+    );
+    expect(requests[1]!.method).toBe("DELETE");
+    expect(requests[1]!.url).toBe(
+      `https://example.test/signers/session-key?grantor=${encodeURIComponent(signer.agentId)}`,
+    );
+    expect(requests[1]!.headers.get("Authorization")).toMatch(/^tiny\.place /);
+  });
+});
