@@ -1,7 +1,23 @@
 import type { SigningKey } from "../auth.js";
 import { signFreshCanonicalPayload } from "../auth.js";
 import { canonicalPayload } from "../crypto.js";
-import type { HttpClient } from "../http.js";
+import {
+  TinyVerseError,
+  type HttpClient,
+  type PaymentChallenge,
+} from "../http.js";
+import {
+  buildX402PaymentMap,
+  type X402PaymentMap,
+  type X402PaymentMapOptions,
+} from "../x402.js";
+import {
+  executeSolanaX402Payment,
+  SOLANA_MAINNET_NETWORK,
+  SOLANA_USDC_MINT,
+  type SolanaX402PaymentExecution,
+  type SolanaX402PaymentExecutionOptions,
+} from "../solana.js";
 import type {
   AvailabilityResponse,
   Identity,
@@ -28,6 +44,56 @@ export interface RegisterRequest {
   signature?: string;
 }
 
+export interface SolanaRegistrationPaymentOptions
+  extends Omit<SolanaX402PaymentExecutionOptions, "payment" | "signer"> {
+  amount?: string;
+  to?: string;
+  asset?: string;
+  network?: string;
+  nonce?: string;
+  expiresAt?: string;
+  expiresInMs?: number;
+  metadata?: Record<string, string>;
+  registrationAttempts?: number;
+  registrationIntervalMs?: number;
+  registrationRetryErrors?: Array<string>;
+}
+
+export interface SolanaRegistrationResult {
+  identity: Identity;
+  payment: SolanaX402PaymentExecution;
+}
+
+export interface SolanaRegistrationFailure extends Error {
+  registrationPayment?: SolanaX402PaymentExecution | X402PaymentMap;
+  onChainTx?: string;
+}
+
+export interface SolanaRegistrationProofOptions
+  extends Partial<Pick<
+    X402PaymentMapOptions,
+    "amount" | "asset" | "network" | "nonce" | "expiresAt" | "expiresInMs" | "metadata"
+  >> {
+  onChainTx: string;
+  to?: string;
+  registrationAttempts?: number;
+  registrationIntervalMs?: number;
+  registrationRetryErrors?: Array<string>;
+}
+
+export interface SolanaRegistrationProofResult {
+  identity: Identity;
+  onChainTx: string;
+  payment: X402PaymentMap;
+}
+
+const DEFAULT_REGISTRATION_ATTEMPTS = 30;
+const DEFAULT_REGISTRATION_INTERVAL_MS = 3000;
+const DEFAULT_REGISTRATION_RETRY_ERRORS = [
+  "transaction not found",
+  "insufficient confirmations",
+];
+
 export class RegistryApi {
   constructor(
     private readonly http: HttpClient,
@@ -35,16 +101,14 @@ export class RegistryApi {
   ) {}
 
   async register(request: RegisterRequest): Promise<Identity> {
+    request = {
+      ...request,
+      username: normalizeHandle(request.username),
+    };
+
     let signature: string | undefined;
     if (this.signingKey && !request.signature) {
-      const payload = canonicalPayload("identity.register", {
-        bio: request.bio,
-        cryptoId: request.cryptoId,
-        metadata: request.metadata ?? {},
-        paymentMethods: request.paymentMethods ?? null,
-        publicKey: request.publicKey,
-        username: request.username,
-      });
+      const payload = registrationSignaturePayload(request);
       signature = await signFreshCanonicalPayload(this.signingKey, payload);
     }
 
@@ -52,6 +116,187 @@ export class RegistryApi {
       ...request,
       ...(signature ? { signature } : {}),
     });
+  }
+
+  async registerWithSolanaPayment(
+    request: Omit<RegisterRequest, "payment"> & { payment?: never },
+    options: SolanaRegistrationPaymentOptions,
+  ): Promise<SolanaRegistrationResult> {
+    if (!this.signingKey) {
+      throw new Error("registerWithSolanaPayment requires a signing key");
+    }
+
+    const normalizedRequest: RegisterRequest = {
+      ...request,
+      username: normalizeHandle(request.username),
+    };
+    const challenge =
+      options.amount && options.to
+        ? undefined
+        : await this.registrationPaymentChallenge(normalizedRequest);
+    const amount = options.amount ?? challenge?.amount;
+    const to = options.to ?? challenge?.to;
+    if (!amount || !to) {
+      throw new Error("registration payment requires amount and recipient");
+    }
+
+    const payment = await executeSolanaX402Payment({
+      ...options,
+      mint: options.mint ?? SOLANA_USDC_MINT,
+      signer: this.signingKey,
+      payment: {
+        scheme: "exact",
+        network: options.network ?? challenge?.network ?? SOLANA_MAINNET_NETWORK,
+        asset: options.asset ?? challenge?.asset ?? "USDC",
+        amount,
+        from: normalizedRequest.cryptoId,
+        to,
+        nonce:
+          options.nonce ??
+          challenge?.nonce ??
+          generateRegistrationNonce(normalizedRequest.username),
+        expiresAt: options.expiresAt ?? challenge?.expiresAt,
+        expiresInMs: options.expiresInMs,
+        metadata: {
+          ...challenge?.metadata,
+          identity: normalizedRequest.username,
+          purpose: "registration",
+          ...options.metadata,
+        },
+        publicKeyBase64: normalizedRequest.publicKey,
+      },
+    });
+    let identity: Identity;
+    try {
+      identity = await this.registerWithPaymentMap(
+        normalizedRequest,
+        payment.payment,
+        options,
+      );
+    } catch (error) {
+      throw attachRegistrationPayment(error, payment);
+    }
+
+    return { identity, payment };
+  }
+
+  async registerWithExistingSolanaPayment(
+    request: Omit<RegisterRequest, "payment"> & { payment?: never },
+    options: SolanaRegistrationProofOptions,
+  ): Promise<SolanaRegistrationProofResult> {
+    if (!this.signingKey) {
+      throw new Error("registerWithExistingSolanaPayment requires a signing key");
+    }
+
+    const normalizedRequest: RegisterRequest = {
+      ...request,
+      username: normalizeHandle(request.username),
+    };
+    const challenge =
+      options.amount && options.to
+        ? undefined
+        : await this.registrationPaymentChallenge(normalizedRequest);
+    const amount = options.amount ?? challenge?.amount;
+    const to = options.to ?? challenge?.to;
+    if (!amount || !to) {
+      throw new Error("registration payment requires amount and recipient");
+    }
+
+    const payment = await buildX402PaymentMap(this.signingKey, {
+      scheme: "exact",
+      network: options.network ?? challenge?.network ?? SOLANA_MAINNET_NETWORK,
+      asset: options.asset ?? challenge?.asset ?? "USDC",
+      amount,
+      from: normalizedRequest.cryptoId,
+      to,
+      nonce:
+        options.nonce ??
+        challenge?.nonce ??
+        generateRegistrationNonce(normalizedRequest.username),
+      expiresAt: options.expiresAt ?? challenge?.expiresAt,
+      expiresInMs: options.expiresInMs,
+      onChainTx: options.onChainTx,
+      tx: options.onChainTx,
+      transaction: options.onChainTx,
+      metadata: {
+        ...challenge?.metadata,
+        identity: normalizedRequest.username,
+        purpose: "registration",
+        ...options.metadata,
+      },
+      publicKeyBase64: normalizedRequest.publicKey,
+    });
+    let identity: Identity;
+    try {
+      identity = await this.registerWithPaymentMap(
+        normalizedRequest,
+        payment,
+        options,
+      );
+    } catch (error) {
+      throw attachRegistrationPayment(error, payment);
+    }
+
+    return { identity, onChainTx: options.onChainTx, payment };
+  }
+
+  private async registrationPaymentChallenge(
+    request: RegisterRequest,
+  ): Promise<PaymentChallenge | undefined> {
+    try {
+      await this.register(request);
+    } catch (error) {
+      if (error instanceof TinyVerseError && error.status === 402) {
+        return error.paymentRequired?.payment;
+      }
+      throw error;
+    }
+    throw new Error("registration did not return a payment challenge");
+  }
+
+  private async registerWithPaymentMap(
+    request: RegisterRequest,
+    payment: X402PaymentMap,
+    options: {
+      registrationAttempts?: number;
+      registrationIntervalMs?: number;
+      registrationRetryErrors?: Array<string>;
+    },
+  ): Promise<Identity> {
+    try {
+      return await this.registerRetryingPayment({
+        ...request,
+        payment,
+      }, {
+        attempts: options.registrationAttempts,
+        intervalMs: options.registrationIntervalMs,
+        retryErrors: options.registrationRetryErrors,
+      });
+    } catch (error) {
+      const recovered = await this.createdIdentityAfterRegistrationError(
+        request.username,
+        error,
+      );
+      if (!recovered) {
+        throw error;
+      }
+      return recovered;
+    }
+  }
+
+  private async createdIdentityAfterRegistrationError(
+    username: string,
+    error: unknown,
+  ): Promise<Identity | undefined> {
+    if (!(error instanceof TinyVerseError) || error.status < 500) {
+      return undefined;
+    }
+    try {
+      const result = await this.get(username);
+      return result.available ? undefined : result.identity;
+    } catch {
+      return undefined;
+    }
   }
 
   get(name: string): Promise<AvailabilityResponse> {
@@ -184,4 +429,153 @@ export class RegistryApi {
       headers,
     );
   }
+
+  private async registerRetryingPayment(
+    request: RegisterRequest,
+    options: {
+      attempts?: number;
+      intervalMs?: number;
+      retryErrors?: Array<string>;
+    },
+  ): Promise<Identity> {
+    const attempts = options.attempts ?? DEFAULT_REGISTRATION_ATTEMPTS;
+    const intervalMs =
+      options.intervalMs ?? DEFAULT_REGISTRATION_INTERVAL_MS;
+    const retryErrors =
+      options.retryErrors ?? DEFAULT_REGISTRATION_RETRY_ERRORS;
+    let lastError: unknown;
+
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      try {
+        return await this.register(request);
+      } catch (error) {
+        lastError = error;
+        if (!isRetryablePaymentError(error, retryErrors)) {
+          throw error;
+        }
+        if (attempt + 1 < attempts && intervalMs > 0) {
+          await sleep(intervalMs);
+        }
+      }
+    }
+
+    throw lastError;
+  }
+}
+
+function normalizeHandle(name: string): string {
+  const trimmed = name.trim();
+  if (trimmed.startsWith("@")) {
+    return trimmed;
+  }
+  return `@${trimmed}`;
+}
+
+function generateRegistrationNonce(username: string): string {
+  const random = new Uint8Array(12);
+  globalThis.crypto.getRandomValues(random);
+  const suffix = Array.from(random, (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+  return `register_${username.replace(/^@+/, "")}_${suffix}`;
+}
+
+function sleep(intervalMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, intervalMs);
+  });
+}
+
+function isRetryablePaymentError(
+  error: unknown,
+  retryErrors: Array<string>,
+): boolean {
+  if (!(error instanceof TinyVerseError) || error.status !== 402) {
+    return false;
+  }
+  const message = paymentErrorMessage(error.body);
+  return retryErrors.some((retryError) =>
+    message.includes(retryError.toLowerCase()),
+  );
+}
+
+function paymentErrorMessage(body: unknown): string {
+  if (
+    typeof body === "object" &&
+    body !== null &&
+    "error" in body &&
+    typeof body.error === "string"
+  ) {
+    return body.error.toLowerCase();
+  }
+  if (typeof body === "string") {
+    return body.toLowerCase();
+  }
+  return "";
+}
+
+function attachRegistrationPayment(
+  error: unknown,
+  payment: SolanaX402PaymentExecution | X402PaymentMap,
+): unknown {
+  if (typeof error === "object" && error !== null) {
+    const failure = error as SolanaRegistrationFailure;
+    failure.registrationPayment = payment;
+    failure.onChainTx = registrationPaymentTx(payment);
+  }
+  return error;
+}
+
+function registrationPaymentTx(
+  payment: SolanaX402PaymentExecution | X402PaymentMap,
+): string | undefined {
+  if (
+    "payment" in payment &&
+    "signature" in payment &&
+    typeof payment.signature === "string"
+  ) {
+    return payment.signature;
+  }
+  const paymentMap = payment as X402PaymentMap;
+  return paymentMap["onChainTx"] ?? paymentMap["tx"] ?? paymentMap["transaction"];
+}
+
+function registrationSignaturePayload(request: RegisterRequest): string {
+  return JSON.stringify({
+    action: "identity.register",
+    fields: {
+      bio: request.bio,
+      cryptoId: request.cryptoId,
+      metadata: identityMetadataPayload(request.metadata),
+      paymentMethods: request.paymentMethods
+        ? request.paymentMethods.map(paymentMethodPayload)
+        : null,
+      publicKey: request.publicKey,
+      username: request.username,
+    },
+  });
+}
+
+function identityMetadataPayload(
+  metadata: IdentityMetadata | undefined,
+): Record<string, unknown> {
+  const payload: Record<string, unknown> = {};
+  if (metadata?.avatar !== undefined) {
+    payload["avatar"] = metadata.avatar;
+  }
+  if (metadata?.links !== undefined) {
+    payload["links"] = metadata.links;
+  }
+  if (metadata?.tags !== undefined) {
+    payload["tags"] = metadata.tags;
+  }
+  return payload;
+}
+
+function paymentMethodPayload(method: PaymentMethod): Record<string, unknown> {
+  return {
+    network: method.network,
+    address: method.address,
+    assets: method.assets,
+  };
 }

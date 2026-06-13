@@ -6,6 +6,7 @@ import { TinyVerseWebSocket } from "./websocket.js";
 import { A2AApi } from "./api/a2a.js";
 import { AdminApi } from "./api/admin.js";
 import { ArtifactsApi } from "./api/artifacts.js";
+import { BridgeApi } from "./api/bridge.js";
 import { BroadcastsApi } from "./api/broadcasts.js";
 import { ChannelsApi } from "./api/channels.js";
 import { ConversationsApi } from "./api/conversations.js";
@@ -31,6 +32,7 @@ import { RoomsApi } from "./api/rooms.js";
 import { SearchApi } from "./api/search.js";
 import { SignersApi } from "./api/signers.js";
 import { StatsApi } from "./api/stats.js";
+import { SwapApi } from "./api/swap.js";
 
 export interface TinyVerseClientOptions {
   baseUrl: string;
@@ -72,6 +74,8 @@ export class TinyVerseClient {
   readonly profiles: ProfilesApi;
   readonly explorer: ExplorerApi;
   readonly pricing: PricingApi;
+  readonly swap: SwapApi;
+  readonly bridge: BridgeApi;
   readonly moderation: ModerationApi;
   readonly stats: StatsApi;
   readonly admin: AdminApi;
@@ -118,7 +122,7 @@ export class TinyVerseClient {
     this.mcp = new McpApi(this.http);
     this.directory = new DirectoryApi(this.http);
     this.groups = new GroupsApi(this.http);
-    this.payments = new PaymentsApi(this.http);
+    this.payments = new PaymentsApi(this.http, signingKey);
     this.ledger = new LedgerApi(this.http, wsFactory);
     this.reputation = new ReputationApi(this.http, signingKey);
     this.inbox = new InboxApi(this.http, wsFactory);
@@ -138,6 +142,8 @@ export class TinyVerseClient {
     this.profiles = new ProfilesApi(this.http);
     this.explorer = new ExplorerApi(this.http, wsFactory);
     this.pricing = new PricingApi(this.http, wsFactory);
+    this.swap = new SwapApi(this.http);
+    this.bridge = new BridgeApi(this.http, wsFactory);
     this.moderation = new ModerationApi(this.http);
     this.stats = new StatsApi(this.http);
     this.admin = new AdminApi(this.http);

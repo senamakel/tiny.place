@@ -20,6 +20,7 @@ import { useMessagingStore } from "@src/store/messaging";
 import { useSignalStore } from "@src/store/signal";
 
 const INBOX_POLL_INTERVAL_MS = 5_000;
+const SOLANA_ADDRESS_PATTERN = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
 type UseDirectMessagesResult = {
 	isReady: boolean;
@@ -101,7 +102,7 @@ export function useDirectMessages(): UseDirectMessagesResult {
 			if (!trimmed) {
 				return;
 			}
-			if (trimmed.startsWith("@") || trimmed.startsWith("tiny1")) {
+			if (trimmed.startsWith("@") || SOLANA_ADDRESS_PATTERN.test(trimmed)) {
 				const card = await walletClient.directory.getAgent(trimmed);
 				addPeerToStore({
 					address: resolveEncryptionAddress(card),

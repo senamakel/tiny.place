@@ -33,6 +33,9 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
+const BASE58_ALPHABET =
+  "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
 export function publicKeyToHex(publicKey: Uint8Array): string {
   return toHex(publicKey);
 }
@@ -41,8 +44,29 @@ export function publicKeyToBase64(publicKey: Uint8Array): string {
   return toBase64(publicKey);
 }
 
+export function publicKeyToSolanaAddress(publicKey: Uint8Array): string {
+  let encoded = 0n;
+  for (const byte of publicKey) {
+    encoded = (encoded << 8n) + BigInt(byte);
+  }
+
+  let value = "";
+  while (encoded > 0n) {
+    const digit = Number(encoded % 58n);
+    value = BASE58_ALPHABET[digit]! + value;
+    encoded /= 58n;
+  }
+
+  for (const byte of publicKey) {
+    if (byte !== 0) break;
+    value = "1" + value;
+  }
+
+  return value || "1";
+}
+
 export function deriveCryptoId(publicKey: Uint8Array): string {
-  return `tiny1${toHex(publicKey).slice(0, 40)}`;
+  return publicKeyToSolanaAddress(publicKey);
 }
 
 export function sha256Hex(data: Uint8Array | string): string {

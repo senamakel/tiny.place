@@ -196,6 +196,12 @@ describe("staging: unauthenticated endpoints", () => {
     expect(result.rules.length).toBeGreaterThan(0);
   });
 
+  it("docs.constitution returns public rules", async () => {
+    const result = await client.docs.constitution();
+    expect(result).toHaveProperty("rules");
+    expect(result.rules.length).toBeGreaterThan(0);
+  });
+
   it("registry.get checks name availability", async () => {
     const result = await client.registry.get("nonexistent-name-xyz");
     expect(result).toHaveProperty("available");
@@ -358,6 +364,19 @@ describe("staging: unauthenticated endpoints", () => {
     expect(result.to.asset).toBe("USDC");
   });
 
+  it("swap.quote accepts live quote parameters", async () => {
+    const result = await client.swap.quote({
+      from: "SOL",
+      to: "USDC",
+      amount: "1000000000",
+      network: SOLANA_NETWORK,
+    });
+    expect(result).toHaveProperty("quoteId");
+    expect(result.from.amount).toBe("1000000000");
+    expect(result.from.asset).toBe("SOL");
+    expect(result.to.asset).toBe("USDC");
+  });
+
   it("pricing.bridgeRoutes accepts live route parameters", async () => {
     const result = await client.pricing.bridgeRoutes({
       from: SOLANA_NETWORK,
@@ -368,8 +387,29 @@ describe("staging: unauthenticated endpoints", () => {
     expect(Array.isArray(result.routes)).toBe(true);
   });
 
+  it("bridge.routes accepts live route parameters", async () => {
+    const result = await client.bridge.routes({
+      from: SOLANA_NETWORK,
+      to: BASE_NETWORK,
+      asset: "USDC",
+    });
+    expect(result).toHaveProperty("routes");
+    expect(Array.isArray(result.routes)).toBe(true);
+  });
+
   it("pricing.bridgeQuote accepts live quote parameters", async () => {
     const result = await client.pricing.bridgeQuote({
+      from: SOLANA_NETWORK,
+      to: BASE_NETWORK,
+      asset: "USDC",
+      amount: "10000000",
+    });
+    expect(result).toHaveProperty("quoteId");
+    expect(result.provider).toBeDefined();
+  });
+
+  it("bridge.quote accepts live quote parameters", async () => {
+    const result = await client.bridge.quote({
       from: SOLANA_NETWORK,
       to: BASE_NETWORK,
       asset: "USDC",
@@ -464,6 +504,27 @@ describe("staging: authenticated flows", () => {
         const tvError = error as TinyVerseError;
         expect(tvError.status).toBe(402);
         expect(tvError.body).toHaveProperty("payment");
+      }
+    });
+  });
+
+  describe("payment auth surfaces", () => {
+    it("lists approved signers with directory auth", async () => {
+      const result = await client.signers.list(cryptoId);
+      expect(result).toHaveProperty("signers");
+      expect(Array.isArray(result.signers)).toBe(true);
+    });
+
+    it("reaches normal not-found for missing subscriptions", async () => {
+      try {
+        await client.payments.getSubscription(
+          "missing-codex-subscription",
+          cryptoId,
+        );
+        expect.fail("should have thrown");
+      } catch (error) {
+        expect(error).toBeInstanceOf(TinyVerseError);
+        expect((error as TinyVerseError).status).toBe(404);
       }
     });
   });
@@ -907,6 +968,7 @@ describe("staging: authenticated flows", () => {
         id: `msg-signal-${Date.now()}`,
         from: publicKeyB64,
         to: secondPubKeyB64,
+        timestamp: new Date().toISOString(),
         body: encrypted.body,
         type: encrypted.type,
         deviceId: 1,

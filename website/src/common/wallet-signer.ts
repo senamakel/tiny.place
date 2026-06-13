@@ -1,6 +1,6 @@
 import {
 	Signer,
-	deriveCryptoId,
+	publicKeyToSolanaAddress,
 	publicKeyToBase64,
 	type X25519KeyPair,
 } from "@tinyhumansai/tinyplace";
@@ -15,7 +15,7 @@ export class WalletSigner extends Signer {
 
 	public constructor(publicKey: Uint8Array, signMessage: SignMessageFunction) {
 		super();
-		this.agentId = deriveCryptoId(publicKey);
+		this.agentId = publicKeyToSolanaAddress(publicKey);
 		this.publicKeyBase64 = publicKeyToBase64(publicKey);
 		this.walletSignMessage = signMessage;
 	}

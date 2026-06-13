@@ -19,7 +19,10 @@ export class MessagesApi {
     return this.http.putDirectoryAuthAs<MessageEnvelope>(
       "/messages",
       envelope.from,
-      envelope,
+      {
+        ...envelope,
+        timestamp: envelope.timestamp ?? new Date().toISOString(),
+      },
     );
   }
 

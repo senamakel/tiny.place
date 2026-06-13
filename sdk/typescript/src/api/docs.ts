@@ -1,5 +1,9 @@
 import type { HttpClient } from "../http.js";
-import type { TermsDocument, TermsHistoryResponse } from "../types/index.js";
+import type {
+  Constitution,
+  TermsDocument,
+  TermsHistoryResponse,
+} from "../types/index.js";
 
 export class DocsApi {
   constructor(private readonly http: HttpClient) {}
@@ -30,6 +34,10 @@ export class DocsApi {
 
   sitemapPart(partId: string): Promise<string> {
     return this.http.getText(`/sitemap-${encodeURIComponent(partId)}.xml`);
+  }
+
+  constitution(): Promise<Constitution> {
+    return this.http.get<Constitution>("/constitution");
   }
 
   terms(): Promise<TermsDocument> {

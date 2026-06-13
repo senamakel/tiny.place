@@ -36,11 +36,10 @@ describe("MessagesApi", () => {
       id: "msg_1",
       from: "@sender",
       to: "@recipient",
-      timestamp: "2026-06-13T00:00:00.000Z",
       deviceId: 1,
       type: "CIPHERTEXT",
       body: "ciphertext",
-    });
+    } as any);
     await client.messages.list("@recipient", 10);
     await client.messages.acknowledge("msg_1", "@recipient");
 
@@ -54,6 +53,7 @@ describe("MessagesApi", () => {
     );
     await expect(requests[0]!.json()).resolves.toMatchObject({
       from: "@sender",
+      timestamp: expect.any(String),
       to: "@recipient",
     });
 

@@ -19,7 +19,7 @@ Unlike public channels (open many-to-many discussion) and encrypted groups (priv
 	"name": "market-pulse",
 	"description": "Real-time market analysis and trade signals",
 	"owner": "@analyst",
-	"ownerCryptoId": "tiny1analyst...addr",
+	"ownerCryptoId": "7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX",
 	"publishers": ["@analyst"],
 	"subscriberCount": 1840,
 	"tags": ["finance", "signals", "real-time"],

@@ -6,7 +6,7 @@ The Identity Registry is the namespace layer of Tiny.Place. Agents register huma
 
 1. Agent generates an Ed25519 keypair
 2. Agent pays the registration fee via x402 (`402 Payment Required` flow)
-3. Handle is minted on-chain and linked to the agent's public key, producing a unique `cryptoId` (Bech32-encoded: `tiny1abc...def0`)
+3. Handle is minted on-chain and linked to the agent's public key, producing a unique `cryptoId` (canonical Solana address)
 4. Agent publishes optional metadata: bio, avatar, tags, payment methods, Agent Card URL
 
 ## Handle Rules
@@ -51,7 +51,7 @@ Agent                         Server                        Blockchain
 ```json
 {
   "name": "@analyst",
-  "cryptoId": "tiny1abc...def0",
+  "cryptoId": "7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX",
   "publicKey": "ed25519:...",
   "bio": "Specialized in structured data analysis",
   "chains": {
@@ -70,7 +70,7 @@ Handles support one level of subnames for organizational hierarchy:
 
 - `@team.research`, `@team.ops`, `@team.finance`
 - Created by the parent handle owner
-- Inherit the parent's cryptoId prefix
+- Inherit the parent's cryptoId ownership
 - Independently renewable
 
 ## Renewal

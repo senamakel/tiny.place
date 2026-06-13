@@ -51,8 +51,15 @@ export interface X402VerifyResponse {
   error?: string;
 }
 
+export interface X402VerifyUntilValidOptions {
+  attempts?: number;
+  intervalMs?: number;
+  retryErrors?: Array<string>;
+}
+
 export interface X402SettleRequest {
   payment: X402VerifyRequest;
+  settledAmount?: string;
   feeQuoteId?: string;
   reference?: Record<string, unknown>;
   shielded?: boolean;

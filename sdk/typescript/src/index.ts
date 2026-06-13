@@ -4,6 +4,7 @@ export { TinyVerseClient } from "./client.js";
 export type { TinyVerseClientOptions } from "./client.js";
 
 export { TinyVerseError } from "./http.js";
+export type { PaymentChallenge, PaymentRequiredChallenge } from "./http.js";
 export { TinyVerseWebSocket } from "./websocket.js";
 export type {
   TinyVerseWebSocketOptions,
@@ -38,26 +39,54 @@ export type {
   X402Scheme,
   X402AuthorizationFields,
   X402Authorization,
+  X402PaymentAuthorizationOptions,
+  X402PaymentMapOptions,
+  X402PaymentMap,
 } from "./x402.js";
 export {
   buildCanonicalMessage,
+  buildX402PaymentAuthorization,
+  buildX402PaymentMap,
+  buildX402PaymentPayload,
   signX402Authorization,
   x402AuthorizationToPaymentMap,
   generateNonce,
 } from "./x402.js";
+
+export {
+  executeSolanaPayment,
+  executeSolanaX402Payment,
+  SOLANA_MAINNET_NETWORK,
+  SOLANA_TOKEN_PROGRAM_ID,
+  SOLANA_USDC_MINT,
+} from "./solana.js";
+export type {
+  SolanaPaymentExecution,
+  SolanaPaymentExecutionOptions,
+  SolanaX402PaymentExecution,
+  SolanaX402PaymentExecutionOptions,
+} from "./solana.js";
 
 export type { KeyPair } from "./crypto.js";
 export {
   generateKeyPair,
   publicKeyToHex,
   publicKeyToBase64,
+  publicKeyToSolanaAddress,
   deriveCryptoId,
   sha256Hex,
   canonicalPayload,
   createSigningKey,
 } from "./crypto.js";
 
-export type { RegisterRequest } from "./api/registry.js";
+export type {
+  RegisterRequest,
+  SolanaRegistrationFailure,
+  SolanaRegistrationPaymentOptions,
+  SolanaRegistrationProofOptions,
+  SolanaRegistrationProofResult,
+  SolanaRegistrationResult,
+} from "./api/registry.js";
 
 export { RegistryApi } from "./api/registry.js";
 export { KeysApi } from "./api/keys.js";
@@ -66,6 +95,10 @@ export { McpApi } from "./api/mcp.js";
 export { DirectoryApi } from "./api/directory.js";
 export { GroupsApi } from "./api/groups.js";
 export { PaymentsApi } from "./api/payments.js";
+export type {
+  SolanaSettlementOptions,
+  SolanaSettlementResult,
+} from "./api/payments.js";
 export { LedgerApi } from "./api/ledger.js";
 export { ReputationApi } from "./api/reputation.js";
 export { InboxApi } from "./api/inbox.js";
@@ -74,12 +107,30 @@ export { ConversationsApi } from "./api/conversations.js";
 export { BroadcastsApi } from "./api/broadcasts.js";
 export { EventsApi } from "./api/events.js";
 export { MarketplaceApi } from "./api/marketplace.js";
+export type {
+  IdentityBidPaymentOptions,
+  IdentityBidPaymentResult,
+  IdentitySolanaPurchaseOptions,
+  IdentitySolanaPurchaseResult,
+  IdentityOfferPaymentOptions,
+  IdentityOfferPaymentResult,
+  ProductSolanaPurchaseOptions,
+  ProductSolanaPurchaseResult,
+} from "./api/marketplace.js";
 export { EscrowApi } from "./api/escrow.js";
 export { SearchApi } from "./api/search.js";
 export { SignersApi } from "./api/signers.js";
 export { ProfilesApi } from "./api/profiles.js";
 export { ExplorerApi } from "./api/explorer.js";
 export { PricingApi } from "./api/pricing.js";
+export { SwapApi } from "./api/swap.js";
+export type { SwapHistoryParams, SwapQuoteParams } from "./api/swap.js";
+export { BridgeApi } from "./api/bridge.js";
+export type {
+  BridgeHistoryParams,
+  BridgeQuoteParams,
+  BridgeRoutesParams,
+} from "./api/bridge.js";
 export { ModerationApi } from "./api/moderation.js";
 export { StatsApi } from "./api/stats.js";
 export { AdminApi } from "./api/admin.js";

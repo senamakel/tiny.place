@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   canonicalPayload,
   LocalSigner,
+  SOLANA_MAINNET_NETWORK,
   TinyVerseClient,
 } from "../src/index.js";
 
@@ -53,6 +54,70 @@ async function verifySignature(
 }
 
 describe("MarketplaceApi", () => {
+  function marketplaceRpcFetch(
+    calls: Array<string>,
+    transaction: string,
+  ): typeof globalThis.fetch {
+    return async (_input, init) => {
+      const body = JSON.parse(String(init?.body)) as {
+        method: string;
+        params: Array<unknown>;
+      };
+      calls.push(body.method);
+      switch (body.method) {
+        case "getTokenAccountsByOwner":
+          return Response.json({
+            jsonrpc: "2.0",
+            id: body.method,
+            result: {
+              value: [
+                {
+                  pubkey:
+                    calls.length === 1
+                      ? "89t6Va3uXRRzmPzfrt2VTPpGatBDFoj9gNeRVyeANKdK"
+                      : "FYBkeQZniT9vpdGGFiT57gbXEYLTTbeqiVmMRLvK87rQ",
+                  account: {
+                    data: {
+                      parsed: { info: { tokenAmount: { amount: "10" } } },
+                    },
+                  },
+                },
+              ],
+            },
+          });
+        case "getLatestBlockhash":
+          return Response.json({
+            jsonrpc: "2.0",
+            id: body.method,
+            result: { value: { blockhash: "11111111111111111111111111111111" } },
+          });
+        case "sendTransaction":
+          return Response.json({
+            jsonrpc: "2.0",
+            id: body.method,
+            result: transaction,
+          });
+        case "getSignatureStatuses":
+          return Response.json({
+            jsonrpc: "2.0",
+            id: body.method,
+            result: {
+              value: [{ confirmationStatus: "confirmed", err: null }],
+            },
+          });
+        default:
+          return Response.json(
+            {
+              jsonrpc: "2.0",
+              id: body.method,
+              error: { message: `unexpected method ${body.method}` },
+            },
+            { status: 500 },
+          );
+      }
+    };
+  }
+
   it("browses the unified marketplace root endpoint", async () => {
     const requests: Array<Request> = [];
     const client = new TinyVerseClient({
@@ -200,6 +265,476 @@ describe("MarketplaceApi", () => {
         productId: body.productId,
         rating: body.rating,
         reviewId: body.reviewId,
+      }),
+    ).resolves.toBe(true);
+  });
+
+  it("buys products with Solana x402 pinned to the listing price and seller", async () => {
+    const seed = new Uint8Array(32).fill(23);
+    const signer = await LocalSigner.fromSeed(seed);
+    const secretKey = new Uint8Array(64);
+    secretKey.set(seed, 0);
+    secretKey.set(signer.publicKey, 32);
+    const transaction =
+      "5q22im1eoEeoJMhsshDkoh4tNV1WPUfyaJXHwyGqcpfmtpY1ZCC665nc5chyEwwau4JoR7BUnCbxWn5BW5WzR3NC";
+    const rpcCalls: Array<string> = [];
+    const marketplaceRequests: Array<Request> = [];
+    const rpcFetch = marketplaceRpcFetch(rpcCalls, transaction);
+    const fetch: typeof globalThis.fetch = async (input, init) => {
+      const request = new Request(input, init);
+      if (request.url === "https://example.test/marketplace/products/prod_123") {
+        marketplaceRequests.push(request);
+        return Response.json({
+          productId: "prod_123",
+          seller: "@seller",
+          sellerCryptoId: "seller-address",
+          name: "Research Pack",
+          description: "Fresh market data",
+          category: "dataset",
+          price: {
+            amount: "1",
+            asset: "USDC",
+            network: SOLANA_MAINNET_NETWORK,
+          },
+          deliveryMethod: "download",
+          status: "active",
+          createdAt: "2026-06-13T00:00:00Z",
+          updatedAt: "2026-06-13T00:00:00Z",
+          salesCount: 0,
+          rating: 0,
+        });
+      }
+      if (
+        request.url ===
+        "https://example.test/marketplace/products/prod_123/buy"
+      ) {
+        marketplaceRequests.push(request);
+        return Response.json(
+          {
+            purchaseId: "buy_123",
+            productId: "prod_123",
+            buyer: "@buyer",
+            buyerCryptoId: signer.agentId,
+            seller: "@seller",
+            price: {
+              amount: "1",
+              asset: "USDC",
+              network: SOLANA_MAINNET_NETWORK,
+            },
+            createdAt: "2026-06-13T00:00:00Z",
+          },
+          { status: 201 },
+        );
+      }
+      return rpcFetch(input, init);
+    };
+    const client = new TinyVerseClient({
+      baseUrl: "https://example.test",
+      signer,
+      fetch,
+    });
+
+    const result = await client.marketplace.buyProductWithSolanaPayment(
+      "prod_123",
+      {
+        buyer: "@buyer",
+        buyerCryptoId: signer.agentId,
+      },
+      {
+        rpcUrl: "https://solana.example.test",
+        secretKey,
+        fetch,
+      },
+    );
+
+    expect(result.purchase.purchaseId).toBe("buy_123");
+    expect(result.product.productId).toBe("prod_123");
+    expect(result.payment.signature).toBe(transaction);
+    expect(marketplaceRequests).toHaveLength(2);
+    const buyRequest = marketplaceRequests[1]!;
+    expect(buyRequest.headers.get("X-Agent-ID")).toBe("@buyer");
+    const body = (await buyRequest.json()) as {
+      buyer: string;
+      buyerCryptoId: string;
+      payment: Record<string, string>;
+    };
+    expect(body.buyer).toBe("@buyer");
+    expect(body.buyerCryptoId).toBe(signer.agentId);
+    expect(body.payment).toMatchObject({
+      amount: "1",
+      asset: "USDC",
+      from: "@buyer",
+      network: SOLANA_MAINNET_NETWORK,
+      to: "@seller",
+      onChainTx: transaction,
+      transaction,
+      tx: transaction,
+      "metadata.domain": "tiny.place",
+      "metadata.kind": "product",
+      "metadata.productId": "prod_123",
+      "metadata.publicKey": signer.publicKeyBase64,
+      "metadata.onChainTx": transaction,
+      "metadata.transaction": transaction,
+      "metadata.tx": transaction,
+    });
+    expect(rpcCalls).toEqual([
+      "getTokenAccountsByOwner",
+      "getTokenAccountsByOwner",
+      "getLatestBlockhash",
+      "sendTransaction",
+      "getSignatureStatuses",
+    ]);
+  });
+
+  it("buys identity listings with Solana x402 pinned to listing price and seller", async () => {
+    const seed = new Uint8Array(32).fill(24);
+    const signer = await LocalSigner.fromSeed(seed);
+    const secretKey = new Uint8Array(64);
+    secretKey.set(seed, 0);
+    secretKey.set(signer.publicKey, 32);
+    const transaction =
+      "5q22im1eoEeoJMhsshDkoh4tNV1WPUfyaJXHwyGqcpfmtpY1ZCC665nc5chyEwwau4JoR7BUnCbxWn5BW5WzR3NC";
+    const rpcCalls: Array<string> = [];
+    const marketplaceRequests: Array<Request> = [];
+    const rpcFetch = marketplaceRpcFetch(rpcCalls, transaction);
+    const fetch: typeof globalThis.fetch = async (input, init) => {
+      const request = new Request(input, init);
+      if (request.url === "https://example.test/marketplace/identities") {
+        marketplaceRequests.push(request);
+        return Response.json({
+          identities: [
+            {
+              listingId: "listing_123",
+              type: "identity",
+              name: "@sellername",
+              seller: "@seller",
+              sellerCryptoId: "seller-address",
+              category: "identity",
+              price: {
+                amount: "1",
+                asset: "USDC",
+                network: SOLANA_MAINNET_NETWORK,
+              },
+              listingType: "fixed",
+              status: "active",
+              createdAt: "2026-06-13T00:00:00Z",
+              updatedAt: "2026-06-13T00:00:00Z",
+            },
+          ],
+        });
+      }
+      if (
+        request.url ===
+        "https://example.test/marketplace/identities/listing_123/buy"
+      ) {
+        marketplaceRequests.push(request);
+        return Response.json(
+          {
+            saleId: "sale_123",
+            listingId: "listing_123",
+            name: "@sellername",
+            seller: "@seller",
+            buyer: "@buyer",
+            buyerCryptoId: signer.agentId,
+            buyerPublicKey: signer.publicKeyBase64,
+            price: {
+              amount: "1",
+              asset: "USDC",
+              network: SOLANA_MAINNET_NETWORK,
+            },
+            createdAt: "2026-06-13T00:00:00Z",
+          },
+          { status: 201 },
+        );
+      }
+      return rpcFetch(input, init);
+    };
+    const client = new TinyVerseClient({
+      baseUrl: "https://example.test",
+      signer,
+      fetch,
+    });
+
+    const result = await client.marketplace.buyIdentityListingWithSolanaPayment(
+      "listing_123",
+      {
+        buyer: "@buyer",
+        buyerCryptoId: signer.agentId,
+        buyerPublicKey: signer.publicKeyBase64,
+      },
+      {
+        rpcUrl: "https://solana.example.test",
+        secretKey,
+        fetch,
+      },
+    );
+
+    expect(result.sale.saleId).toBe("sale_123");
+    expect(result.listing.listingId).toBe("listing_123");
+    expect(result.payment.signature).toBe(transaction);
+    expect(marketplaceRequests).toHaveLength(2);
+    const buyRequest = marketplaceRequests[1]!;
+    expect(buyRequest.headers.get("X-Agent-ID")).toBe("@buyer");
+    const body = (await buyRequest.json()) as {
+      buyer: string;
+      buyerCryptoId: string;
+      buyerPublicKey: string;
+      payment: Record<string, string>;
+      signature: string;
+    };
+    expect(body).toMatchObject({
+      buyer: "@buyer",
+      buyerCryptoId: signer.agentId,
+      buyerPublicKey: signer.publicKeyBase64,
+    });
+    await expect(
+      verifySignature(signer, body.signature, "marketplace.identity.buy", {
+        buyer: "@buyer",
+        buyerCryptoId: signer.agentId,
+        buyerPublicKey: signer.publicKeyBase64,
+        listingId: "listing_123",
+      }),
+    ).resolves.toBe(true);
+    expect(body.payment).toMatchObject({
+      amount: "1",
+      asset: "USDC",
+      from: "@buyer",
+      network: SOLANA_MAINNET_NETWORK,
+      to: "@seller",
+      onChainTx: transaction,
+      transaction,
+      tx: transaction,
+      "metadata.domain": "tiny.place",
+      "metadata.identity": "@sellername",
+      "metadata.kind": "identity-listing",
+      "metadata.listingId": "listing_123",
+      "metadata.publicKey": signer.publicKeyBase64,
+      "metadata.onChainTx": transaction,
+      "metadata.transaction": transaction,
+      "metadata.tx": transaction,
+    });
+    expect(rpcCalls).toEqual([
+      "getTokenAccountsByOwner",
+      "getTokenAccountsByOwner",
+      "getLatestBlockhash",
+      "sendTransaction",
+      "getSignatureStatuses",
+    ]);
+  });
+
+  it("creates identity offers with an upto Solana x402 authorization", async () => {
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(25));
+    const requests: Array<Request> = [];
+    const client = new TinyVerseClient({
+      baseUrl: "https://example.test",
+      signer,
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(
+          {
+            offerId: "offer_123",
+            name: "@target",
+            buyer: "@buyer",
+            buyerCryptoId: signer.agentId,
+            buyerPublicKey: signer.publicKeyBase64,
+            price: {
+              amount: "1",
+              asset: "USDC",
+              network: SOLANA_MAINNET_NETWORK,
+            },
+            status: "pending",
+            createdAt: "2026-06-13T00:00:00Z",
+            updatedAt: "2026-06-13T00:00:00Z",
+          },
+          { status: 201 },
+        );
+      },
+    });
+
+    const result = await client.marketplace.createOfferWithSolanaPayment(
+      {
+        offerId: "offer_123",
+        name: "@target",
+        buyer: "@buyer",
+        buyerCryptoId: signer.agentId,
+        buyerPublicKey: signer.publicKeyBase64,
+        price: {
+          amount: "1",
+          asset: "USDC",
+          network: SOLANA_MAINNET_NETWORK,
+        },
+      },
+      {
+        nonce: "offer-nonce",
+        expiresAt: "2026-06-13T10:00:00Z",
+      },
+    );
+
+    expect(result.offer.offerId).toBe("offer_123");
+    expect(result.payment).toMatchObject({
+      scheme: "upto",
+      network: SOLANA_MAINNET_NETWORK,
+      asset: "USDC",
+      amount: "1",
+      from: "@buyer",
+      to: "@target",
+      nonce: "offer-nonce",
+      expiresAt: "2026-06-13T10:00:00Z",
+      "metadata.domain": "tiny.place",
+      "metadata.kind": "identity-offer",
+      "metadata.name": "@target",
+      "metadata.offerId": "offer_123",
+      "metadata.publicKey": signer.publicKeyBase64,
+    });
+    expect(requests).toHaveLength(1);
+    const request = requests[0]!;
+    expect(request.headers.get("X-Agent-ID")).toBe("@buyer");
+    const body = (await request.json()) as {
+      buyer: string;
+      buyerCryptoId: string;
+      buyerPublicKey: string;
+      name: string;
+      offerId: string;
+      payment: Record<string, string>;
+      price: { amount: string; asset: string; network: string };
+      signature: string;
+    };
+    expect(body.payment).toEqual(result.payment);
+    await expect(
+      verifySignature(signer, body.signature, "marketplace.identity.offer", {
+        buyer: "@buyer",
+        buyerCryptoId: signer.agentId,
+        buyerPublicKey: signer.publicKeyBase64,
+        listingId: "",
+        name: "@target",
+        offerId: "offer_123",
+        price: {
+          amount: "1",
+          asset: "USDC",
+          network: SOLANA_MAINNET_NETWORK,
+        },
+      }),
+    ).resolves.toBe(true);
+  });
+
+  it("places identity bids with an upto Solana x402 authorization", async () => {
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(26));
+    const requests: Array<Request> = [];
+    const client = new TinyVerseClient({
+      baseUrl: "https://example.test",
+      signer,
+      fetch: async (input, init) => {
+        const request = new Request(input, init);
+        requests.push(request);
+        if (request.url === "https://example.test/marketplace/identities") {
+          return Response.json({
+            identities: [
+              {
+                listingId: "listing_bid",
+                type: "identity",
+                name: "@target",
+                seller: "@seller",
+                sellerCryptoId: "seller-address",
+                category: "identity",
+                price: {
+                  amount: "1",
+                  asset: "USDC",
+                  network: SOLANA_MAINNET_NETWORK,
+                },
+                listingType: "auction",
+                status: "active",
+                createdAt: "2026-06-13T00:00:00Z",
+                updatedAt: "2026-06-13T00:00:00Z",
+              },
+            ],
+          });
+        }
+        return Response.json({
+          listingId: "listing_bid",
+          type: "identity",
+          name: "@target",
+          seller: "@seller",
+          sellerCryptoId: "seller-address",
+          category: "identity",
+          price: {
+            amount: "1",
+            asset: "USDC",
+            network: SOLANA_MAINNET_NETWORK,
+          },
+          listingType: "auction",
+          status: "active",
+          createdAt: "2026-06-13T00:00:00Z",
+          updatedAt: "2026-06-13T00:00:00Z",
+        });
+      },
+    });
+
+    const result = await client.marketplace.placeBidWithSolanaPayment(
+      "listing_bid",
+      {
+        bidId: "bid_123",
+        bidder: "@buyer",
+        bidderCryptoId: signer.agentId,
+        bidderPublicKey: signer.publicKeyBase64,
+        price: {
+          amount: "2",
+          asset: "USDC",
+          network: SOLANA_MAINNET_NETWORK,
+        },
+      },
+      {
+        nonce: "bid-nonce",
+        expiresAt: "2026-06-13T10:00:00Z",
+      },
+    );
+
+    expect(result.listing.listingId).toBe("listing_bid");
+    expect(result.updatedListing.listingId).toBe("listing_bid");
+    expect(result.payment).toMatchObject({
+      scheme: "upto",
+      network: SOLANA_MAINNET_NETWORK,
+      asset: "USDC",
+      amount: "2",
+      from: "@buyer",
+      to: "@seller",
+      nonce: "bid-nonce",
+      expiresAt: "2026-06-13T10:00:00Z",
+      "metadata.bidId": "bid_123",
+      "metadata.domain": "tiny.place",
+      "metadata.identity": "@target",
+      "metadata.kind": "identity-bid",
+      "metadata.listingId": "listing_bid",
+      "metadata.publicKey": signer.publicKeyBase64,
+    });
+    expect(requests).toHaveLength(2);
+    const request = requests[1]!;
+    expect(request.url).toBe(
+      "https://example.test/marketplace/identities/listing_bid/bids",
+    );
+    expect(request.headers.get("X-Agent-ID")).toBe("@buyer");
+    const body = (await request.json()) as {
+      bidId: string;
+      bidder: string;
+      bidderCryptoId: string;
+      bidderPublicKey: string;
+      listingId: string;
+      payment: Record<string, string>;
+      price: { amount: string; asset: string; network: string };
+      signature: string;
+    };
+    expect(body.payment).toEqual(result.payment);
+    await expect(
+      verifySignature(signer, body.signature, "marketplace.identity.bid", {
+        bidId: "bid_123",
+        bidder: "@buyer",
+        bidderCryptoId: signer.agentId,
+        bidderPublicKey: signer.publicKeyBase64,
+        listingId: "listing_bid",
+        price: {
+          amount: "2",
+          asset: "USDC",
+          network: SOLANA_MAINNET_NETWORK,
+        },
       }),
     ).resolves.toBe(true);
   });

@@ -2,6 +2,28 @@ import { describe, expect, it } from "vitest";
 import { TinyVerseClient } from "../src/index.js";
 
 describe("DocsApi", () => {
+  it("fetches the public constitution through the docs surface", async () => {
+    const requests: Array<Request> = [];
+    const client = new TinyVerseClient({
+      baseUrl: "https://example.test",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json({
+          version: "2026-06-06",
+          effectiveDate: "2026-06-06T00:00:00Z",
+          rules: [],
+        });
+      },
+    });
+
+    const constitution = await client.docs.constitution();
+
+    expect(constitution.version).toBe("2026-06-06");
+    expect(requests).toHaveLength(1);
+    expect(requests[0]!.method).toBe("GET");
+    expect(requests[0]!.url).toBe("https://example.test/constitution");
+  });
+
   it("fetches public SEO entity pages", async () => {
     const requests: Array<Request> = [];
     const client = new TinyVerseClient({

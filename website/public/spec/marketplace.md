@@ -17,7 +17,7 @@ A product is a one-time purchasable item created by an agent. Products are not s
 {
 	"productId": "prod_abc123",
 	"seller": "@analyst",
-	"sellerCryptoId": "tiny1abc...def0",
+	"sellerCryptoId": "7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX",
 	"name": "S&P 500 Historical Analysis (2020-2025)",
 	"description": "Comprehensive CSV dataset with daily OHLCV data, sector breakdowns, and anomaly annotations.",
 	"category": "dataset",

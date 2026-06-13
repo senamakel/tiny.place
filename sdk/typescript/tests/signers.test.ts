@@ -39,7 +39,11 @@ describe("SignersApi", () => {
     expect(request.url).toBe(
       `https://example.test/signers?grantor=${encodeURIComponent(signer.agentId)}`,
     );
-    expect(request.headers.get("Authorization")).toMatch(/^tiny\.place /);
+    expect(request.headers.get("Authorization")).toBeNull();
+    expect(request.headers.get("X-TinyPlace-Public-Key")).toBe(
+      signer.publicKeyBase64,
+    );
+    expect(request.headers.get("X-TinyPlace-Signature")).toBeTruthy();
   });
 
   it("gets and revokes signer approvals with grantor query auth", async () => {
@@ -79,6 +83,12 @@ describe("SignersApi", () => {
     expect(requests[1]!.url).toBe(
       `https://example.test/signers/session-key?grantor=${encodeURIComponent(signer.agentId)}`,
     );
-    expect(requests[1]!.headers.get("Authorization")).toMatch(/^tiny\.place /);
+    for (const request of requests) {
+      expect(request.headers.get("Authorization")).toBeNull();
+      expect(request.headers.get("X-TinyPlace-Public-Key")).toBe(
+        signer.publicKeyBase64,
+      );
+      expect(request.headers.get("X-TinyPlace-Signature")).toBeTruthy();
+    }
   });
 });

@@ -13,6 +13,8 @@ describe("LocalSigner.fromSeed", () => {
     const a = await LocalSigner.fromSeed(seed);
     const b = await LocalSigner.fromSeed(seed);
     expect(a.agentId).toBe(b.agentId);
+    expect(a.agentId).toBe(encodeBase58(a.publicKey));
+    expect(a.agentId.startsWith("tiny")).toBe(false);
     expect(a.publicKeyBase64).toBe(b.publicKeyBase64);
   });
 
@@ -52,4 +54,65 @@ describe("LocalSigner.fromSeed", () => {
       toBase64(ed25519PubToX25519Pub(signer.publicKey)),
     );
   });
+
+  it("recovers from a 64-byte Solana base58 secret key", async () => {
+    const original = await LocalSigner.fromSeed(seed);
+    const secretKey = new Uint8Array(64);
+    secretKey.set(seed, 0);
+    secretKey.set(original.publicKey, 32);
+
+    const recovered = await LocalSigner.fromSolanaSecretKey(
+      encodeBase58(secretKey),
+    );
+
+    expect(recovered.agentId).toBe(encodeBase58(original.publicKey));
+    expect(recovered.agentId.startsWith("tiny")).toBe(false);
+    expect(recovered.publicKeyBase64).toBe(original.publicKeyBase64);
+  });
+
+  it("recovers from a 32-byte Solana seed", async () => {
+    const original = await LocalSigner.fromSeed(seed);
+    const recovered = await LocalSigner.fromSolanaSecretKey(encodeBase58(seed));
+
+    expect(recovered.agentId).toBe(encodeBase58(original.publicKey));
+    expect(recovered.agentId.startsWith("tiny")).toBe(false);
+    expect(recovered.publicKeyBase64).toBe(original.publicKeyBase64);
+  });
+
+  it("rejects malformed Solana secret keys", async () => {
+    const malformed = new Uint8Array(64);
+    malformed.set(seed, 0);
+    malformed.fill(9, 32);
+
+    await expect(
+      LocalSigner.fromSolanaSecretKey(encodeBase58(malformed)),
+    ).rejects.toThrow("public key does not match");
+    await expect(LocalSigner.fromSolanaSecretKey("0")).rejects.toThrow(
+      "Invalid base58 character",
+    );
+  });
 });
+
+const BASE58_ALPHABET =
+  "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+function encodeBase58(bytes: Uint8Array): string {
+  let value = 0n;
+  for (const byte of bytes) {
+    value = (value << 8n) + BigInt(byte);
+  }
+
+  let encoded = "";
+  while (value > 0n) {
+    const digit = Number(value % 58n);
+    encoded = BASE58_ALPHABET[digit]! + encoded;
+    value /= 58n;
+  }
+
+  for (const byte of bytes) {
+    if (byte !== 0) break;
+    encoded = "1" + encoded;
+  }
+
+  return encoded || "1";
+}

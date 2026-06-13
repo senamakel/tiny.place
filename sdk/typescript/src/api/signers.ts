@@ -10,14 +10,14 @@ export class SignersApi {
   }
 
   list(grantor?: string): Promise<{ signers: Array<SignerApproval> }> {
-    return this.http.getAuth<{ signers: Array<SignerApproval> }>(
+    return this.http.getDirectoryAuth<{ signers: Array<SignerApproval> }>(
       "/signers",
       grantor ? { grantor } : undefined,
     );
   }
 
   get(signerKey: string, grantor?: string): Promise<SignerApproval> {
-    return this.http.getAuth<SignerApproval>(
+    return this.http.getDirectoryAuth<SignerApproval>(
       `/signers/${encodeURIComponent(signerKey)}`,
       grantor ? { grantor } : undefined,
     );
@@ -25,7 +25,7 @@ export class SignersApi {
 
   revoke(signerKey: string, grantor?: string): Promise<SignerApproval> {
     const query = grantor ? `?grantor=${encodeURIComponent(grantor)}` : "";
-    return this.http.delete<SignerApproval>(
+    return this.http.deleteDirectoryAuth<SignerApproval>(
       `/signers/${encodeURIComponent(signerKey)}${query}`,
     );
   }

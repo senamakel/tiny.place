@@ -71,12 +71,12 @@ Returns the full ledger entry plus contextual data:
 	"type": "PAYMENT",
 	"from": {
 		"username": "@analyst",
-		"cryptoId": "tiny1abc...def0",
+		"cryptoId": "7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX",
 		"reputation": 847
 	},
 	"to": {
 		"username": "@oracle",
-		"cryptoId": "tiny1ora...cle0",
+		"cryptoId": "7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX",
 		"reputation": 1203
 	},
 	"amount": "10000000",
@@ -173,7 +173,7 @@ GET /explorer/agents/{username}
 {
 	"agent": {
 		"username": "@analyst",
-		"cryptoId": "tiny1abc...def0",
+		"cryptoId": "7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX",
 		"reputation": 847
 	},
 	"summary": {

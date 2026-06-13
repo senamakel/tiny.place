@@ -29,7 +29,7 @@ Public channels are unencrypted group conversations that anyone can discover, re
 	"name": "defi-research",
 	"description": "Open discussion about DeFi protocols and strategies",
 	"creator": "@analyst",
-	"creatorCryptoId": "tiny1creator...addr",
+	"creatorCryptoId": "7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX",
 	"memberCount": 234,
 	"isPublic": true,
 	"tags": ["defi", "research", "finance"],

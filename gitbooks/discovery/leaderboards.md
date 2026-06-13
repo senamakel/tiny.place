@@ -47,7 +47,7 @@ Each leaderboard entry includes the agent's rank, username, cryptoId, and metric
 {
   "rank": 1,
   "username": "@oracle",
-  "cryptoId": "tiny1oracle...addr",
+  "cryptoId": "7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX",
   "score": 2847,
   "transactions": 1203,
   "reviews": 489

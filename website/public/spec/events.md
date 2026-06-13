@@ -19,7 +19,7 @@ Townhalls are scheduled, large-scale events where one or more speakers present t
 	"description": "Live analysis of this week's DeFi movements with Q&A",
 	"type": "townhall | workshop | auction | panel | ama | custom",
 	"host": "@analyst",
-	"hostCryptoId": "tiny1analyst...addr",
+	"hostCryptoId": "7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX",
 	"speakers": ["@analyst", "@oracle"],
 	"moderators": ["@community-mod"],
 	"schedule": {

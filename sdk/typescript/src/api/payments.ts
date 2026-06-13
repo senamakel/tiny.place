@@ -1,4 +1,11 @@
+import type { SigningKey } from "../auth.js";
 import type { HttpClient } from "../http.js";
+import {
+  executeSolanaX402Payment,
+  SOLANA_USDC_MINT,
+  type SolanaX402PaymentExecution,
+  type SolanaX402PaymentExecutionOptions,
+} from "../solana.js";
 import type {
   DueRenewalResult,
   PaymentBatchFlushRequest,
@@ -12,10 +19,64 @@ import type {
   X402SettleResponse,
   X402VerifyRequest,
   X402VerifyResponse,
+  X402VerifyUntilValidOptions,
 } from "../types/index.js";
 
+const DEFAULT_VERIFY_ATTEMPTS = 10;
+const DEFAULT_VERIFY_INTERVAL_MS = 2000;
+const DEFAULT_RETRY_ERRORS = [
+  "transaction not found",
+  "insufficient confirmations",
+];
+
+export interface SolanaSettlementOptions
+  extends Omit<SolanaX402PaymentExecutionOptions, "payment" | "signer"> {
+  scheme?: "exact" | "upto" | "batch-settlement";
+  network: string;
+  asset: string;
+  amount: string;
+  from?: string;
+  to: string;
+  nonce?: string;
+  expiresAt?: string;
+  expiresInMs?: number;
+  metadata?: Record<string, string>;
+  settledAmount?: string;
+  feeQuoteId?: string;
+  reference?: Record<string, unknown>;
+  shielded?: boolean;
+}
+
+export interface SolanaSettlementResult {
+  execution: SolanaX402PaymentExecution;
+  settlement: X402SettleResponse;
+}
+
+function sleep(intervalMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, intervalMs);
+  });
+}
+
+function shouldRetryVerify(
+  response: X402VerifyResponse,
+  retryErrors: Array<string>,
+): boolean {
+  if (response.valid || response.error === undefined) {
+    return false;
+  }
+
+  const error = response.error.toLowerCase();
+  return retryErrors.some((retryError) =>
+    error.includes(retryError.toLowerCase()),
+  );
+}
+
 export class PaymentsApi {
-  constructor(private readonly http: HttpClient) {}
+  constructor(
+    private readonly http: HttpClient,
+    private readonly signingKey?: SigningKey,
+  ) {}
 
   verify(request: X402VerifyRequest): Promise<X402VerifyResponse> {
     return this.http.post<X402VerifyResponse>("/payments/verify", {
@@ -23,14 +84,92 @@ export class PaymentsApi {
     });
   }
 
+  async verifyUntilValid(
+    request: X402VerifyRequest,
+    options: X402VerifyUntilValidOptions = {},
+  ): Promise<X402VerifyResponse> {
+    const attempts = options.attempts ?? DEFAULT_VERIFY_ATTEMPTS;
+    const intervalMs = options.intervalMs ?? DEFAULT_VERIFY_INTERVAL_MS;
+    const retryErrors = options.retryErrors ?? DEFAULT_RETRY_ERRORS;
+    let response: X402VerifyResponse = await this.verify(request);
+
+    for (let attempt = 1; attempt < attempts; attempt += 1) {
+      if (!shouldRetryVerify(response, retryErrors)) {
+        return response;
+      }
+
+      if (intervalMs > 0) {
+        await sleep(intervalMs);
+      }
+
+      response = await this.verify(request);
+    }
+
+    return response;
+  }
+
   settle(request: X402SettleRequest): Promise<X402SettleResponse> {
-    const { payment, feeQuoteId, reference, shielded } = request;
+    const { payment, settledAmount, feeQuoteId, reference, shielded } = request;
     return this.http.post<X402SettleResponse>("/payments/settle", {
       payment,
+      settledAmount,
       feeQuoteId,
       reference,
       shielded,
     });
+  }
+
+  async settleWithSolanaPayment(
+    options: SolanaSettlementOptions,
+  ): Promise<SolanaSettlementResult> {
+    if (!this.signingKey) {
+      throw new Error("settleWithSolanaPayment requires a signing key");
+    }
+
+    const {
+      scheme,
+      network,
+      asset,
+      amount,
+      from,
+      to,
+      nonce,
+      expiresAt,
+      expiresInMs,
+      metadata,
+      settledAmount,
+      feeQuoteId,
+      reference,
+      shielded,
+      mint,
+      ...executionOptions
+    } = options;
+    const execution = await executeSolanaX402Payment({
+      ...executionOptions,
+      mint: mint ?? SOLANA_USDC_MINT,
+      signer: this.signingKey,
+      payment: {
+        scheme: scheme ?? "exact",
+        network,
+        asset,
+        amount,
+        from,
+        to,
+        nonce,
+        expiresAt,
+        expiresInMs,
+        metadata,
+      },
+    });
+    const settlement = await this.settle({
+      payment: paymentMapToVerifyRequest(execution.payment),
+      settledAmount,
+      feeQuoteId,
+      reference,
+      shielded,
+    });
+
+    return { execution, settlement };
   }
 
   supported(): Promise<{ chains: Array<SupportedChain> }> {
@@ -46,16 +185,23 @@ export class PaymentsApi {
     );
   }
 
-  getSubscription(subscriptionId: string): Promise<Subscription> {
-    return this.http.getAuth<Subscription>(
-      `/payments/subscriptions/${encodeURIComponent(subscriptionId)}`,
-    );
+  getSubscription(
+    subscriptionId: string,
+    actor?: string,
+  ): Promise<Subscription> {
+    const path = `/payments/subscriptions/${encodeURIComponent(subscriptionId)}`;
+    if (actor) {
+      return this.http.getDirectoryAuthAs<Subscription>(path, actor);
+    }
+    return this.http.getAgentAuth<Subscription>(path);
   }
 
-  cancelSubscription(subscriptionId: string): Promise<void> {
-    return this.http.delete<void>(
-      `/payments/subscriptions/${encodeURIComponent(subscriptionId)}`,
-    );
+  cancelSubscription(subscriptionId: string, actor?: string): Promise<void> {
+    const path = `/payments/subscriptions/${encodeURIComponent(subscriptionId)}`;
+    if (actor) {
+      return this.http.deleteDirectoryAuthAs<void>(path, actor);
+    }
+    return this.http.deleteAgentAuth<void>(path);
   }
 
   renewSubscription(
@@ -71,7 +217,7 @@ export class PaymentsApi {
   renewDueSubscriptions(params?: {
     limit?: number;
   }): Promise<DueRenewalResult> {
-    return this.http.post<DueRenewalResult>(
+    return this.http.postAdmin<DueRenewalResult>(
       "/payments/subscriptions/renew-due",
       params,
     );
@@ -81,9 +227,32 @@ export class PaymentsApi {
     batchId: string,
     request: PaymentBatchFlushRequest,
   ): Promise<PaymentBatchFlushResponse> {
-    return this.http.post<PaymentBatchFlushResponse>(
+    return this.http.postAdmin<PaymentBatchFlushResponse>(
       `/payments/batches/${encodeURIComponent(batchId)}/flush`,
       request,
     );
   }
+}
+
+function paymentMapToVerifyRequest(
+  payment: Record<string, string>,
+): X402VerifyRequest {
+  const metadata: Record<string, string> = {};
+  for (const [key, value] of Object.entries(payment)) {
+    if (key.startsWith("metadata.")) {
+      metadata[key.slice("metadata.".length)] = value;
+    }
+  }
+  return {
+    scheme: payment["scheme"] as X402VerifyRequest["scheme"],
+    network: payment["network"] ?? "",
+    asset: payment["asset"] ?? "",
+    amount: payment["amount"] ?? "",
+    from: payment["from"] ?? "",
+    to: payment["to"] ?? "",
+    nonce: payment["nonce"] ?? "",
+    expiresAt: payment["expiresAt"] ?? "",
+    signature: payment["signature"] ?? "",
+    metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+  };
 }

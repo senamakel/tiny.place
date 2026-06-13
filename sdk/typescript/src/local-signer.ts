@@ -80,6 +80,35 @@ export class LocalSigner extends Signer {
     return LocalSigner.fromPrivateKey(privateKey);
   }
 
+  /**
+   * Recovers a signer from a Solana CLI/wallet secret key. Solana exports
+   * Ed25519 keys as either a 32-byte seed or a 64-byte secret key containing
+   * the 32-byte seed followed by the public key.
+   *
+   * @param secretKey - Base58 string or raw bytes from a Solana keypair.
+   * @returns A signer backed by the Solana Ed25519 identity key.
+   */
+  static async fromSolanaSecretKey(
+    secretKey: string | Uint8Array,
+  ): Promise<LocalSigner> {
+    const secretBytes =
+      typeof secretKey === "string" ? decodeBase58(secretKey) : secretKey;
+    if (secretBytes.length !== 32 && secretBytes.length !== 64) {
+      throw new Error(
+        `Solana secret key must be 32 or 64 bytes, got ${secretBytes.length}`,
+      );
+    }
+
+    const signer = await LocalSigner.fromSeed(secretBytes.slice(0, 32));
+    if (secretBytes.length === 64) {
+      const expectedPublicKey = secretBytes.slice(32);
+      if (!bytesEqual(signer.publicKey, expectedPublicKey)) {
+        throw new Error("Solana secret key public key does not match seed");
+      }
+    }
+    return signer;
+  }
+
   async sign(data: Uint8Array): Promise<Uint8Array> {
     const crypto = globalThis.crypto;
     const buffer = new ArrayBuffer(data.byteLength);
@@ -94,6 +123,52 @@ export class LocalSigner extends Signer {
     const seed = base64urlToBytes(jwk.d!);
     return ed25519SeedToX25519KeyPair(seed);
   }
+}
+
+const BASE58_ALPHABET =
+  "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+function decodeBase58(value: string): Uint8Array {
+  if (value.length === 0) {
+    return new Uint8Array();
+  }
+
+  let decoded = 0n;
+  for (const char of value) {
+    const digit = BASE58_ALPHABET.indexOf(char);
+    if (digit === -1) {
+      throw new Error(`Invalid base58 character: ${char}`);
+    }
+    decoded = decoded * 58n + BigInt(digit);
+  }
+
+  const bytes: Array<number> = [];
+  while (decoded > 0n) {
+    bytes.push(Number(decoded & 0xffn));
+    decoded >>= 8n;
+  }
+  bytes.reverse();
+
+  let leadingZeroes = 0;
+  for (const char of value) {
+    if (char !== "1") break;
+    leadingZeroes += 1;
+  }
+
+  const result = new Uint8Array(leadingZeroes + bytes.length);
+  result.set(bytes, leadingZeroes);
+  return result;
+}
+
+function bytesEqual(left: Uint8Array, right: Uint8Array): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+  let diff = 0;
+  for (let i = 0; i < left.length; i += 1) {
+    diff |= left[i]! ^ right[i]!;
+  }
+  return diff === 0;
 }
 
 function base64urlToBytes(b64url: string): Uint8Array {

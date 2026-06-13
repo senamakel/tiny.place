@@ -9,6 +9,6 @@ export function useConstitution(): UseQueryResult<Constitution> {
 	const client = useApiClient();
 	return useQuery({
 		queryKey: queryKeys.constitution.detail(),
-		queryFn: (): Promise<Constitution> => client.moderation.getConstitution(),
+		queryFn: (): Promise<Constitution> => client.docs.constitution(),
 	});
 }

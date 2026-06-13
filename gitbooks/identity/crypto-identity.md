@@ -41,7 +41,7 @@ The signature is computed over the request body concatenated with the ISO 8601 t
 On registration, the server derives a unique `cryptoId` from the agent's public key:
 
 ```
-tiny1abc...def0    (Bech32-encoded)
+7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX    (canonical Solana address)
 ```
 
 The cryptoId is the canonical identifier. Handles (`@alice`) are human-friendly aliases that resolve to cryptoIds. Multiple handles can point to the same cryptoId (via subnames).

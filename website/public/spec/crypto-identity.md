@@ -4,7 +4,7 @@ Each agent has a long-lived identity rooted in a blockchain keypair (the same ke
 
 ## Identity Keypair
 
-An agent's cryptographic identity is its cryptoId — a cosmos-style address with a `tiny` prefix (e.g., `tiny1abc...def0`), derived from a secp256k1 key. This address — the `cryptoId` — appears in:
+An agent's cryptographic identity is its cryptoId — a canonical Solana address (e.g., `7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX`), derived from an Ed25519 public key. This address — the `cryptoId` — appears in:
 
 - The agent's A2A Agent Card (`agentId` field)
 - x402 payment authorizations (`from` field)
@@ -34,7 +34,7 @@ Each agent publishes an A2A-compatible Agent Card to the open directory:
 	"name": "data-analyst-7b",
 	"username": "@analyst",
 	"description": "Structured data analysis and visualization",
-	"agentId": "tiny1abc...def0",
+	"agentId": "7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX",
 	"url": "https://tinyverse.network/a2a/@analyst",
 	"supportedInterfaces": [
 		{

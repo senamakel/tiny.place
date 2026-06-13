@@ -2,6 +2,17 @@ import type { HttpClient } from "../http.js";
 import type { SigningKey } from "../auth.js";
 import { signFreshCanonicalPayload } from "../auth.js";
 import { canonicalPayload } from "../crypto.js";
+import {
+  buildX402PaymentMap,
+  type X402PaymentMap,
+  type X402PaymentMapOptions,
+} from "../x402.js";
+import {
+  executeSolanaX402Payment,
+  SOLANA_USDC_MINT,
+  type SolanaX402PaymentExecution,
+  type SolanaX402PaymentExecutionOptions,
+} from "../solana.js";
 import type { TinyVerseWebSocket } from "../websocket.js";
 import type {
   IdentityBid,
@@ -20,6 +31,59 @@ import type {
   ProductQueryParams,
   ProductReview,
 } from "../types/index.js";
+
+export interface ProductSolanaPurchaseOptions
+  extends Omit<SolanaX402PaymentExecutionOptions, "payment" | "signer"> {
+  nonce?: string;
+  expiresAt?: string;
+  expiresInMs?: number;
+  metadata?: Record<string, string>;
+}
+
+export interface ProductSolanaPurchaseResult {
+  purchase: ProductPurchase;
+  payment: SolanaX402PaymentExecution;
+  product: Product;
+}
+
+export interface IdentitySolanaPurchaseOptions
+  extends Omit<SolanaX402PaymentExecutionOptions, "payment" | "signer"> {
+  nonce?: string;
+  expiresAt?: string;
+  expiresInMs?: number;
+  metadata?: Record<string, string>;
+}
+
+export interface IdentitySolanaPurchaseResult {
+  sale: IdentitySale;
+  payment: SolanaX402PaymentExecution;
+  listing: IdentityListing;
+}
+
+export interface IdentityOfferPaymentOptions
+  extends Pick<
+    X402PaymentMapOptions,
+    "nonce" | "expiresAt" | "expiresInMs" | "metadata"
+  > {}
+
+export interface IdentityOfferPaymentResult {
+  offer: IdentityOffer;
+  payment: X402PaymentMap;
+}
+
+export interface IdentityBidPaymentOptions
+  extends Pick<
+    X402PaymentMapOptions,
+    "nonce" | "expiresAt" | "expiresInMs" | "metadata"
+  > {
+  listing?: IdentityListing;
+}
+
+export interface IdentityBidPaymentResult {
+  listing: IdentityListing;
+  updatedListing: IdentityListing;
+  payment: X402PaymentMap;
+}
 
 export class MarketplaceApi {
   constructor(
@@ -125,6 +189,45 @@ export class MarketplaceApi {
       request.buyer,
       request,
     );
+  }
+
+  async buyProductWithSolanaPayment(
+    productId: string,
+    request: Omit<ProductBuyRequest, "payment"> & { payment?: never },
+    options: ProductSolanaPurchaseOptions,
+  ): Promise<ProductSolanaPurchaseResult> {
+    if (!this.signingKey) {
+      throw new Error("buyProductWithSolanaPayment requires a signing key");
+    }
+
+    const product = await this.getProduct(productId);
+    const payment = await executeSolanaX402Payment({
+      ...options,
+      mint: options.mint ?? SOLANA_USDC_MINT,
+      signer: this.signingKey,
+      payment: {
+        scheme: "exact",
+        network: product.price.network,
+        asset: product.price.asset,
+        amount: product.price.amount,
+        from: request.buyer,
+        to: product.seller,
+        nonce: options.nonce ?? generateMarketplaceNonce("product", productId),
+        expiresAt: options.expiresAt,
+        expiresInMs: options.expiresInMs,
+        metadata: {
+          productId,
+          kind: "product",
+          ...options.metadata,
+        },
+      },
+    });
+    const purchase = await this.buyProduct(productId, {
+      ...request,
+      payment: payment.payment,
+    });
+
+    return { product, purchase, payment };
   }
 
   downloadProduct(
@@ -301,6 +404,53 @@ export class MarketplaceApi {
     );
   }
 
+  async buyIdentityListingWithSolanaPayment(
+    listingId: string,
+    request: Omit<IdentityBuyRequest, "payment"> & { payment?: never },
+    options: IdentitySolanaPurchaseOptions,
+  ): Promise<IdentitySolanaPurchaseResult> {
+    if (!this.signingKey) {
+      throw new Error("buyIdentityListingWithSolanaPayment requires a signing key");
+    }
+
+    const listings = await this.listIdentities();
+    const listing = listings.identities.find(
+      (candidate) => candidate.listingId === listingId,
+    );
+    if (!listing) {
+      throw new Error(`Identity listing not found: ${listingId}`);
+    }
+
+    const payment = await executeSolanaX402Payment({
+      ...options,
+      mint: options.mint ?? SOLANA_USDC_MINT,
+      signer: this.signingKey,
+      payment: {
+        scheme: "exact",
+        network: listing.price.network,
+        asset: listing.price.asset,
+        amount: listing.price.amount,
+        from: request.buyer,
+        to: listing.seller,
+        nonce: options.nonce ?? generateMarketplaceNonce("identity", listingId),
+        expiresAt: options.expiresAt,
+        expiresInMs: options.expiresInMs,
+        metadata: {
+          listingId,
+          identity: listing.name,
+          kind: "identity-listing",
+          ...options.metadata,
+        },
+      },
+    });
+    const sale = await this.buyIdentityListing(listingId, {
+      ...request,
+      payment: payment.payment,
+    });
+
+    return { listing, sale, payment };
+  }
+
   listBids(listingId: string): Promise<{ bids: Array<IdentityBid> }> {
     return this.http.get<{ bids: Array<IdentityBid> }>(
       `/marketplace/identities/${encodeURIComponent(listingId)}/bids`,
@@ -335,6 +485,52 @@ export class MarketplaceApi {
       `/marketplace/identities/${encodeURIComponent(listingId)}/bids`,
       bid,
     );
+  }
+
+  async placeBidWithSolanaPayment(
+    listingId: string,
+    bid: Partial<IdentityBid>,
+    options: IdentityBidPaymentOptions = {},
+  ): Promise<IdentityBidPaymentResult> {
+    if (!this.signingKey) {
+      throw new Error("placeBidWithSolanaPayment requires a signing key");
+    }
+    if (!bid.bidder || !bid.price?.amount) {
+      throw new Error("identity bid requires bidder and price.amount");
+    }
+
+    const listing = options.listing ?? (await this.identityListing(listingId));
+    const bidId = bid.bidId ?? nextMarketplaceId("bid");
+    const prepared = {
+      ...bid,
+      listingId,
+      bidId,
+    };
+    const payment = await buildX402PaymentMap(this.signingKey, {
+      scheme: "upto",
+      network: bid.price.network,
+      asset: bid.price.asset,
+      amount: bid.price.amount,
+      from: bid.bidder,
+      to: listing.seller,
+      nonce: options.nonce ?? generateMarketplaceNonce("bid", bidId),
+      expiresAt: options.expiresAt,
+      expiresInMs: options.expiresInMs,
+      metadata: {
+        bidId,
+        identity: listing.name,
+        kind: "identity-bid",
+        listingId,
+        ...options.metadata,
+      },
+      publicKeyBase64: prepared.bidderPublicKey,
+    });
+    const updatedListing = await this.placeBid(listingId, {
+      ...prepared,
+      payment,
+    });
+
+    return { listing, updatedListing, payment };
   }
 
   closeListing(
@@ -414,6 +610,51 @@ export class MarketplaceApi {
       "/marketplace/offers",
       offer,
     );
+  }
+
+  async createOfferWithSolanaPayment(
+    offer: Partial<IdentityOffer>,
+    options: IdentityOfferPaymentOptions = {},
+  ): Promise<IdentityOfferPaymentResult> {
+    if (!this.signingKey) {
+      throw new Error("createOfferWithSolanaPayment requires a signing key");
+    }
+    if (!offer.buyer || !offer.name || !offer.price?.amount) {
+      throw new Error("identity offer requires buyer, name, and price.amount");
+    }
+
+    const buyer = offer.buyer;
+    const name = offer.name;
+    const price = offer.price;
+    const offerId = offer.offerId ?? nextMarketplaceId("offer");
+    const prepared = {
+      ...offer,
+      offerId,
+    };
+    const payment = await buildX402PaymentMap(this.signingKey, {
+      scheme: "upto",
+      network: price.network,
+      asset: price.asset,
+      amount: price.amount,
+      from: buyer,
+      to: name,
+      nonce: options.nonce ?? generateMarketplaceNonce("offer", offerId),
+      expiresAt: options.expiresAt,
+      expiresInMs: options.expiresInMs,
+      metadata: {
+        kind: "identity-offer",
+        name,
+        offerId,
+        ...options.metadata,
+      },
+      publicKeyBase64: prepared.buyerPublicKey,
+    });
+    const created = await this.createOffer({
+      ...prepared,
+      payment,
+    });
+
+    return { offer: created, payment };
   }
 
   async cancelOffer(offerId: string): Promise<void> {
@@ -499,6 +740,17 @@ export class MarketplaceApi {
     return this.wsFactory?.(`/marketplace/stream?${query.toString()}`, {
       directoryAuth: true,
     });
+  }
+
+  private async identityListing(listingId: string): Promise<IdentityListing> {
+    const listings = await this.listIdentities();
+    const listing = listings.identities.find(
+      (candidate) => candidate.listingId === listingId,
+    );
+    if (!listing) {
+      throw new Error(`Identity listing not found: ${listingId}`);
+    }
+    return listing;
   }
 }
 
@@ -614,4 +866,13 @@ function nextMarketplaceId(prefix: string): string {
     byte.toString(16).padStart(2, "0"),
   ).join("");
   return `${prefix}_${Date.now().toString(36)}_${suffix}`;
+}
+
+function generateMarketplaceNonce(kind: string, id: string): string {
+  const random = new Uint8Array(12);
+  globalThis.crypto.getRandomValues(random);
+  const suffix = Array.from(random, (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+  return `${kind}_${id}_${suffix}`;
 }

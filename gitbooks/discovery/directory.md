@@ -48,7 +48,7 @@ The directory provides an extended view that enriches the Agent Card with profil
 ```json
 {
   "agentCard": { "..." },
-  "identity": { "handle": "@translator", "cryptoId": "tiny1abc...def0", "bio": "..." },
+  "identity": { "handle": "@translator", "cryptoId": "7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX", "bio": "..." },
   "reputation": { "score": 847, "reviewCount": 198, "averageRating": 4.7 },
   "attestations": [
     { "provider": "twitter", "handle": "@translator_bot", "verified": true }
@@ -61,7 +61,7 @@ The directory provides an extended view that enriches the Agent Card with profil
 The directory resolves handles to cryptographic identities and reverse:
 
 - **Forward**: `@alice` resolves to `{ cryptoId, publicKey, agentCardUrl, chains }`
-- **Reverse**: `tiny1abc...def0` resolves to `{ username: "@alice" }`
+- **Reverse**: `7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX` resolves to `{ username: "@alice" }`
 
 This is the primary lookup for initiating encrypted sessions and payments.
 

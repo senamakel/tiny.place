@@ -7,14 +7,44 @@ import {
 } from "./auth.js";
 
 export class TinyVerseError extends Error {
+  public readonly paymentRequired?: PaymentRequiredChallenge;
+  public readonly headers: Record<string, string>;
+
   constructor(
     public readonly status: number,
     public readonly body: unknown,
     message?: string,
+    options: TinyVerseErrorOptions = {},
   ) {
     super(message ?? `HTTP ${status}`);
     this.name = "TinyVerseError";
+    this.headers = options.headers ?? {};
+    this.paymentRequired =
+      options.paymentRequired ?? paymentRequiredFromBody(body);
   }
+}
+
+export interface PaymentRequiredChallenge {
+  error?: string;
+  payment: PaymentChallenge;
+}
+
+export interface PaymentChallenge {
+  scheme?: string;
+  network?: string;
+  asset?: string;
+  amount?: string;
+  from?: string;
+  to?: string;
+  nonce?: string;
+  expiresAt?: string;
+  signature?: string;
+  metadata?: Record<string, string>;
+}
+
+interface TinyVerseErrorOptions {
+  headers?: Record<string, string>;
+  paymentRequired?: PaymentRequiredChallenge;
 }
 
 export interface HttpClientOptions {
@@ -136,6 +166,10 @@ export class HttpClient {
         response.status,
         parsed,
         `HTTP ${response.status}: ${path}`,
+        {
+          headers: responseHeaders(response.headers),
+          paymentRequired: paymentRequiredFromHeader(response.headers),
+        },
       );
     }
 
@@ -343,6 +377,10 @@ export class HttpClient {
     return this.request<T>("DELETE", path, { body, directoryAuth: true });
   }
 
+  deleteAgentAuth<T>(path: string, body?: unknown): Promise<T> {
+    return this.request<T>("DELETE", path, { body, agentAuth: true });
+  }
+
   deleteDirectoryAuthAs<T>(
     path: string,
     actor: string,
@@ -354,8 +392,92 @@ export class HttpClient {
       directoryActor: actor,
     });
   }
+}
 
-  deleteAgentAuth<T>(path: string, body?: unknown): Promise<T> {
-    return this.request<T>("DELETE", path, { body, agentAuth: true });
+function responseHeaders(headers: Headers): Record<string, string> {
+  const result: Record<string, string> = {};
+  headers.forEach((value, key) => {
+    result[key] = value;
+  });
+  return result;
+}
+
+function paymentRequiredFromHeader(
+  headers: Headers,
+): PaymentRequiredChallenge | undefined {
+  const encoded = headers.get("x-payment-required");
+  if (!encoded) return undefined;
+
+  try {
+    return asPaymentRequiredChallenge(
+      JSON.parse(base64UrlDecode(encoded)),
+    );
+  } catch {
+    return undefined;
   }
+}
+
+function paymentRequiredFromBody(
+  body: unknown,
+): PaymentRequiredChallenge | undefined {
+  return asPaymentRequiredChallenge(body);
+}
+
+function asPaymentRequiredChallenge(
+  value: unknown,
+): PaymentRequiredChallenge | undefined {
+  if (typeof value !== "object" || value === null || !("payment" in value)) {
+    return undefined;
+  }
+
+  const payment = (value as { payment?: unknown }).payment;
+  if (typeof payment !== "object" || payment === null) {
+    return undefined;
+  }
+
+  const challengePayment = payment as Record<string, unknown>;
+  const error = (value as { error?: unknown }).error;
+  return {
+    ...(typeof error === "string" ? { error } : {}),
+    payment: {
+      ...stringField(challengePayment, "scheme"),
+      ...stringField(challengePayment, "network"),
+      ...stringField(challengePayment, "asset"),
+      ...stringField(challengePayment, "amount"),
+      ...stringField(challengePayment, "from"),
+      ...stringField(challengePayment, "to"),
+      ...stringField(challengePayment, "nonce"),
+      ...stringField(challengePayment, "expiresAt"),
+      ...stringField(challengePayment, "signature"),
+      ...metadataField(challengePayment),
+    },
+  };
+}
+
+function stringField(
+  source: Record<string, unknown>,
+  key: keyof PaymentChallenge,
+): Partial<PaymentChallenge> {
+  return typeof source[key] === "string" ? { [key]: source[key] } : {};
+}
+
+function metadataField(
+  source: Record<string, unknown>,
+): Pick<PaymentChallenge, "metadata"> | Record<string, never> {
+  if (typeof source["metadata"] !== "object" || source["metadata"] === null) {
+    return {};
+  }
+
+  const metadata: Record<string, string> = {};
+  for (const [key, value] of Object.entries(source["metadata"])) {
+    if (typeof value === "string") {
+      metadata[key] = value;
+    }
+  }
+  return { metadata };
+}
+
+function base64UrlDecode(value: string): string {
+  const padded = value.padEnd(value.length + ((4 - (value.length % 4)) % 4), "=");
+  return atob(padded.replace(/-/g, "+").replace(/_/g, "/"));
 }

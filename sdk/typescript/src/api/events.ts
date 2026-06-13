@@ -77,8 +77,15 @@ export class EventsApi {
     );
   }
 
-  rsvp(eventId: string, request?: EventRsvpRequest): Promise<EventAttendee> {
-    const { agentId, ...body } = request ?? {};
+  rsvp(
+    eventId: string,
+    request?: EventRsvpRequest | string,
+    agentIdOverride?: string,
+  ): Promise<EventAttendee> {
+    const normalizedRequest =
+      typeof request === "string" ? { tier: request } : (request ?? {});
+    const { agentId: requestAgentId, ...body } = normalizedRequest;
+    const agentId = agentIdOverride ?? requestAgentId;
     const requestBody = {
       ...body,
       ...(agentId ? { agentId } : {}),

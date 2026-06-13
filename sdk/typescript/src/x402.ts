@@ -20,6 +20,32 @@ export interface X402Authorization extends X402AuthorizationFields {
 
 export type X402PaymentMap = Record<string, string>;
 
+export interface X402PaymentReferenceOptions {
+  onChainTx?: string;
+  tx?: string;
+  transaction?: string;
+  ledgerTxId?: string;
+  verifiedId?: string;
+}
+
+export interface X402PaymentAuthorizationOptions {
+  scheme?: X402Scheme;
+  network: string;
+  asset: string;
+  amount: string;
+  from?: string;
+  to: string;
+  nonce?: string;
+  expiresAt?: string;
+  expiresInMs?: number;
+  metadata?: Record<string, string>;
+  domain?: string;
+  publicKeyBase64?: string;
+}
+
+export type X402PaymentMapOptions = X402PaymentAuthorizationOptions &
+  X402PaymentReferenceOptions;
+
 function sortedMetadataEntries(
   metadata: Record<string, string> | undefined,
 ): Array<{ key: string; value: string }> | undefined {
@@ -72,6 +98,59 @@ export async function signX402Authorization(
   return { ...fields, signature: toBase64(signature) };
 }
 
+export async function buildX402PaymentAuthorization(
+  key: SigningKey,
+  options: X402PaymentAuthorizationOptions,
+): Promise<X402Authorization> {
+  const publicKeyBase64 =
+    options.publicKeyBase64 ?? publicKeyBase64FromSigner(key);
+  const metadata = {
+    domain: options.domain ?? "tiny.place",
+    ...(publicKeyBase64 ? { publicKey: publicKeyBase64 } : {}),
+    ...(options.metadata ?? {}),
+  };
+  const fields: X402AuthorizationFields = {
+    scheme: options.scheme ?? "exact",
+    network: options.network,
+    asset: options.asset,
+    amount: options.amount,
+    from: options.from ?? key.agentId,
+    to: options.to,
+    nonce: options.nonce ?? generateNonce("pay"),
+    expiresAt:
+      options.expiresAt ??
+      new Date(Date.now() + (options.expiresInMs ?? 5 * 60 * 1000)).toISOString(),
+    metadata,
+  };
+  return signX402Authorization(key, fields);
+}
+
+export async function buildX402PaymentMap(
+  key: SigningKey,
+  options: X402PaymentMapOptions,
+): Promise<X402PaymentMap> {
+  const references = paymentReferences(options);
+  const authorization = await buildX402PaymentPayload(key, options);
+  return {
+    ...x402AuthorizationToPaymentMap(authorization),
+    ...references,
+  };
+}
+
+export async function buildX402PaymentPayload(
+  key: SigningKey,
+  options: X402PaymentMapOptions,
+): Promise<X402Authorization> {
+  const references = paymentReferences(options);
+  return buildX402PaymentAuthorization(key, {
+    ...options,
+    metadata: {
+      ...options.metadata,
+      ...references,
+    },
+  });
+}
+
 export function x402AuthorizationToPaymentMap(
   authorization: X402Authorization,
 ): X402PaymentMap {
@@ -94,6 +173,25 @@ export function x402AuthorizationToPaymentMap(
   return payment;
 }
 
+function paymentReferences(
+  options: X402PaymentReferenceOptions,
+): X402PaymentMap {
+  const references: X402PaymentMap = {};
+  for (const key of [
+    "onChainTx",
+    "tx",
+    "transaction",
+    "ledgerTxId",
+    "verifiedId",
+  ] as const) {
+    const value = options[key]?.trim();
+    if (value) {
+      references[key] = value;
+    }
+  }
+  return references;
+}
+
 export function generateNonce(prefix?: string): string {
   const random = new Uint8Array(12);
   globalThis.crypto.getRandomValues(random);
@@ -101,4 +199,11 @@ export function generateNonce(prefix?: string): string {
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
   return prefix ? `${prefix}_${hex}` : hex;
+}
+
+function publicKeyBase64FromSigner(key: SigningKey): string | undefined {
+  const candidate = key as SigningKey & { publicKeyBase64?: unknown };
+  return typeof candidate.publicKeyBase64 === "string"
+    ? candidate.publicKeyBase64
+    : undefined;
 }

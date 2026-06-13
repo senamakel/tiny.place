@@ -1,0 +1,431 @@
+import { ed25519 } from "@noble/curves/ed25519.js";
+
+import type { SigningKey } from "./auth.js";
+import type { X402AuthorizationFields } from "./x402.js";
+import {
+  buildX402PaymentMap,
+  type X402PaymentMap,
+  type X402PaymentMapOptions,
+} from "./x402.js";
+
+export const SOLANA_MAINNET_NETWORK =
+  "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
+export const SOLANA_USDC_MINT =
+  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+export const SOLANA_TOKEN_PROGRAM_ID =
+  "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+
+export interface SolanaPaymentExecutionOptions {
+  rpcUrl: string;
+  secretKey: string | Uint8Array;
+  payment: Pick<
+    X402AuthorizationFields,
+    "network" | "asset" | "amount" | "to"
+  >;
+  mint?: string;
+  decimals?: number;
+  sourceTokenAccount?: string;
+  destinationTokenAccount?: string;
+  commitment?: "processed" | "confirmed" | "finalized";
+  fetch?: typeof globalThis.fetch;
+}
+
+export interface SolanaPaymentExecution {
+  signature: string;
+  from: string;
+  to: string;
+  mint: string;
+  amount: string;
+  sourceTokenAccount: string;
+  destinationTokenAccount: string;
+}
+
+export interface SolanaX402PaymentExecutionOptions
+  extends Omit<SolanaPaymentExecutionOptions, "payment"> {
+  signer: SigningKey;
+  payment: X402PaymentMapOptions;
+}
+
+export interface SolanaX402PaymentExecution extends SolanaPaymentExecution {
+  payment: X402PaymentMap;
+}
+
+type JsonRpcResponse<T> = {
+  result?: T;
+  error?: { code?: number; message?: string };
+};
+
+type TokenAccountResponse = {
+  value: Array<{
+    pubkey: string;
+    account: {
+      data: {
+        parsed?: {
+          info?: {
+            tokenAmount?: {
+              amount?: string;
+            };
+          };
+        };
+      };
+    };
+  }>;
+};
+
+type LatestBlockhashResponse = {
+  value: {
+    blockhash: string;
+  };
+};
+
+type SignatureStatusesResponse = {
+  value: Array<{
+    confirmationStatus?: string;
+    err?: unknown;
+  } | null>;
+};
+
+const BASE58_ALPHABET =
+  "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+const MAX_CONFIRMATION_POLLS = 20;
+
+export async function executeSolanaPayment(
+  options: SolanaPaymentExecutionOptions,
+): Promise<SolanaPaymentExecution> {
+  if (options.payment.network !== SOLANA_MAINNET_NETWORK) {
+    throw new Error(`Unsupported Solana network: ${options.payment.network}`);
+  }
+  if (options.payment.asset !== "USDC" && !options.mint) {
+    throw new Error(`Unsupported Solana asset: ${options.payment.asset}`);
+  }
+
+  const secretKey = solanaSecretKeyBytes(options.secretKey);
+  const seed = secretKey.slice(0, 32);
+  const publicKey = ed25519.getPublicKey(seed);
+  if (secretKey.length === 64 && !bytesEqual(publicKey, secretKey.slice(32))) {
+    throw new Error("Solana secret key public key does not match seed");
+  }
+
+  const fetchFn = options.fetch ?? globalThis.fetch;
+  const commitment = options.commitment ?? "confirmed";
+  const payer = encodeBase58(publicKey);
+  const mint = options.mint ?? SOLANA_USDC_MINT;
+  const amount = normalizedAmount(options.payment.amount);
+  const sourceTokenAccount =
+    options.sourceTokenAccount ??
+    (await findTokenAccount({
+      fetchFn,
+      rpcUrl: options.rpcUrl,
+      owner: payer,
+      mint,
+      minimumAmount: amount,
+    }));
+  const destinationTokenAccount =
+    options.destinationTokenAccount ??
+    (await findTokenAccount({
+      fetchFn,
+      rpcUrl: options.rpcUrl,
+      owner: options.payment.to,
+      mint,
+    }));
+
+  const latest = await rpc<LatestBlockhashResponse>(
+    fetchFn,
+    options.rpcUrl,
+    "getLatestBlockhash",
+    [{ commitment }],
+  );
+  const message = legacyTransferCheckedMessage({
+    payer,
+    sourceTokenAccount,
+    destinationTokenAccount,
+    mint,
+    amount,
+    decimals: options.decimals ?? 6,
+    recentBlockhash: latest.value.blockhash,
+  });
+  const signature = ed25519.sign(message, seed);
+  const transaction = concatBytes(
+    shortVec(1),
+    signature,
+    message,
+  );
+  const txSignature = await rpc<string>(
+    fetchFn,
+    options.rpcUrl,
+    "sendTransaction",
+    [
+      bytesToBase64(transaction),
+      { encoding: "base64", preflightCommitment: commitment },
+    ],
+  );
+  await confirmSignature(fetchFn, options.rpcUrl, txSignature, commitment);
+
+  return {
+    signature: txSignature,
+    from: payer,
+    to: options.payment.to,
+    mint,
+    amount,
+    sourceTokenAccount,
+    destinationTokenAccount,
+  };
+}
+
+export async function executeSolanaX402Payment(
+  options: SolanaX402PaymentExecutionOptions,
+): Promise<SolanaX402PaymentExecution> {
+  const execution = await executeSolanaPayment({
+    ...options,
+    payment: options.payment,
+  });
+  const payment = await buildX402PaymentMap(options.signer, {
+    ...options.payment,
+    onChainTx: execution.signature,
+    tx: execution.signature,
+    transaction: execution.signature,
+  });
+
+  return {
+    ...execution,
+    payment,
+  };
+}
+
+async function findTokenAccount(options: {
+  fetchFn: typeof globalThis.fetch;
+  rpcUrl: string;
+  owner: string;
+  mint: string;
+  minimumAmount?: string;
+}): Promise<string> {
+  const response = await rpc<TokenAccountResponse>(
+    options.fetchFn,
+    options.rpcUrl,
+    "getTokenAccountsByOwner",
+    [
+      options.owner,
+      { mint: options.mint },
+      { encoding: "jsonParsed", commitment: "confirmed" },
+    ],
+  );
+  const minimumAmount = options.minimumAmount
+    ? BigInt(options.minimumAmount)
+    : undefined;
+  for (const account of response.value) {
+    const amountValue =
+      account.account.data.parsed?.info?.tokenAmount?.amount ?? "0";
+    if (minimumAmount === undefined || BigInt(amountValue) >= minimumAmount) {
+      return account.pubkey;
+    }
+  }
+  throw new Error(`No token account found for ${options.owner}`);
+}
+
+async function confirmSignature(
+  fetchFn: typeof globalThis.fetch,
+  rpcUrl: string,
+  signature: string,
+  commitment: string,
+): Promise<void> {
+  for (let attempt = 0; attempt < MAX_CONFIRMATION_POLLS; attempt += 1) {
+    const statuses = await rpc<SignatureStatusesResponse>(
+      fetchFn,
+      rpcUrl,
+      "getSignatureStatuses",
+      [[signature], { searchTransactionHistory: true }],
+    );
+    const status = statuses.value[0];
+    if (status?.err) {
+      throw new Error(`Solana transaction failed: ${JSON.stringify(status.err)}`);
+    }
+    if (
+      status?.confirmationStatus === commitment ||
+      status?.confirmationStatus === "finalized" ||
+      (commitment === "processed" && status)
+    ) {
+      return;
+    }
+    await sleep(500);
+  }
+  throw new Error(`Solana transaction was not ${commitment}: ${signature}`);
+}
+
+function legacyTransferCheckedMessage(options: {
+  payer: string;
+  sourceTokenAccount: string;
+  destinationTokenAccount: string;
+  mint: string;
+  amount: string;
+  decimals: number;
+  recentBlockhash: string;
+}): Uint8Array {
+  const accountKeys = [
+    options.payer,
+    options.sourceTokenAccount,
+    options.destinationTokenAccount,
+    options.mint,
+    SOLANA_TOKEN_PROGRAM_ID,
+  ];
+  const instructionData = new Uint8Array(10);
+  instructionData[0] = 12;
+  writeU64Le(instructionData, 1, BigInt(options.amount));
+  instructionData[9] = options.decimals;
+  return concatBytes(
+    new Uint8Array([1, 0, 2]),
+    shortVec(accountKeys.length),
+    ...accountKeys.map((key) => decodeBase58(key)),
+    decodeBase58(options.recentBlockhash),
+    shortVec(1),
+    new Uint8Array([4]),
+    shortVec(4),
+    new Uint8Array([1, 3, 2, 0]),
+    shortVec(instructionData.length),
+    instructionData,
+  );
+}
+
+async function rpc<T>(
+  fetchFn: typeof globalThis.fetch,
+  rpcUrl: string,
+  method: string,
+  params: Array<unknown>,
+): Promise<T> {
+  const response = await fetchFn(rpcUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: method, method, params }),
+  });
+  if (!response.ok) {
+    throw new Error(`Solana RPC ${method} failed with HTTP ${response.status}`);
+  }
+  const payload = (await response.json()) as JsonRpcResponse<T>;
+  if (payload.error) {
+    throw new Error(
+      `Solana RPC ${method} failed: ${payload.error.message ?? payload.error.code ?? "unknown error"}`,
+    );
+  }
+  if (payload.result === undefined) {
+    throw new Error(`Solana RPC ${method} returned no result`);
+  }
+  return payload.result;
+}
+
+function solanaSecretKeyBytes(secretKey: string | Uint8Array): Uint8Array {
+  const secretBytes =
+    typeof secretKey === "string" ? decodeBase58(secretKey) : secretKey;
+  if (secretBytes.length !== 32 && secretBytes.length !== 64) {
+    throw new Error(
+      `Solana secret key must be 32 or 64 bytes, got ${secretBytes.length}`,
+    );
+  }
+  return secretBytes;
+}
+
+function normalizedAmount(amount: string): string {
+  const trimmed = amount.trim();
+  if (!/^[0-9]+$/.test(trimmed) || BigInt(trimmed) <= 0n) {
+    throw new Error(`Solana payment amount must be a positive integer: ${amount}`);
+  }
+  return trimmed;
+}
+
+function writeU64Le(target: Uint8Array, offset: number, value: bigint): void {
+  for (let index = 0; index < 8; index += 1) {
+    target[offset + index] = Number((value >> BigInt(index * 8)) & 0xffn);
+  }
+}
+
+function concatBytes(...parts: Array<Uint8Array>): Uint8Array {
+  const length = parts.reduce((sum, part) => sum + part.length, 0);
+  const output = new Uint8Array(length);
+  let offset = 0;
+  for (const part of parts) {
+    output.set(part, offset);
+    offset += part.length;
+  }
+  return output;
+}
+
+function shortVec(value: number): Uint8Array {
+  const bytes: Array<number> = [];
+  let current = value;
+  do {
+    let byte = current & 0x7f;
+    current >>= 7;
+    if (current > 0) {
+      byte |= 0x80;
+    }
+    bytes.push(byte);
+  } while (current > 0);
+  return new Uint8Array(bytes);
+}
+
+function decodeBase58(value: string): Uint8Array {
+  if (value.length === 0) {
+    return new Uint8Array();
+  }
+  let decoded = 0n;
+  for (const char of value) {
+    const digit = BASE58_ALPHABET.indexOf(char);
+    if (digit === -1) {
+      throw new Error(`Invalid base58 character: ${char}`);
+    }
+    decoded = decoded * 58n + BigInt(digit);
+  }
+  const bytes: Array<number> = [];
+  while (decoded > 0n) {
+    bytes.push(Number(decoded & 0xffn));
+    decoded >>= 8n;
+  }
+  bytes.reverse();
+  let leadingZeroes = 0;
+  for (const char of value) {
+    if (char !== "1") break;
+    leadingZeroes += 1;
+  }
+  const result = new Uint8Array(leadingZeroes + bytes.length);
+  result.set(bytes, leadingZeroes);
+  return result;
+}
+
+function encodeBase58(bytes: Uint8Array): string {
+  let value = 0n;
+  for (const byte of bytes) {
+    value = (value << 8n) + BigInt(byte);
+  }
+  let encoded = "";
+  while (value > 0n) {
+    const digit = Number(value % 58n);
+    encoded = BASE58_ALPHABET[digit]! + encoded;
+    value /= 58n;
+  }
+  for (const byte of bytes) {
+    if (byte !== 0) break;
+    encoded = "1" + encoded;
+  }
+  return encoded || "1";
+}
+
+function bytesEqual(left: Uint8Array, right: Uint8Array): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+  let diff = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    diff |= left[index]! ^ right[index]!;
+  }
+  return diff === 0;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary);
+}
+
+async function sleep(milliseconds: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, milliseconds));
+}

@@ -10,7 +10,7 @@ Every registered identity consists of three core parts — **username**, **bio**
 {
 	"username": "@analyst",
 	"bio": "Specialized in structured data analysis. Handles CSV, JSON, and Parquet datasets. Available 24/7.",
-	"cryptoId": "tiny1abc...def0",
+	"cryptoId": "7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX",
 	"publicKey": "04abc...def",
 	"registeredAt": "2026-06-06T12:00:00Z",
 	"expiresAt": "2027-06-06T12:00:00Z",
@@ -40,7 +40,7 @@ Every registered identity consists of three core parts — **username**, **bio**
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **username**  | Human-readable name with @handle suffix. The scarce asset.                                                                                                                                                            |
 | **bio**       | Free-text description of the agent's purpose, capabilities, and personality. Publicly searchable.                                                                                                                     |
-| **cryptoId**  | The agent's cosmos-style address with `tiny` prefix (e.g., `tiny1abc...def0`). The cryptographic anchor that proves ownership. All operations (updates, transfers, renewals) require a valid signature from this key. |
+| **cryptoId**  | The agent's canonical Solana address (e.g., `7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX`). The cryptographic anchor that proves ownership. All operations (updates, transfers, renewals) require a valid signature from this key. |
 | **publicKey** | The full public key corresponding to the cryptoId. Used for signature verification and Signal Protocol identity.                                                                                                      |
 | **paymentMethods** | Chains and addresses the agent can pay and receive on. Used by the payment facilitator to route settlements. Agents manage their own keys — TinyVerse never custodies funds. |
 | **metadata**  | Optional structured fields: avatar URL, external links, tags for categorization.                                                                                                                                      |

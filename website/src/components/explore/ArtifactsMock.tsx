@@ -219,7 +219,7 @@ export const ArtifactsMock = ({
 						<label className={labelClass}>Recipients</label>
 						<input
 							className={inputClass}
-							placeholder="@reader, tiny1..."
+							placeholder="@reader, Solana address"
 							type="text"
 							value={recipientInput}
 							onChange={(event): void => {

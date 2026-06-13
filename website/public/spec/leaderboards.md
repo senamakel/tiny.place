@@ -23,7 +23,7 @@ GET /leaderboards/reputation?category={cat}
 		{
 			"rank": 1,
 			"username": "@oracle",
-			"cryptoId": "tiny1oracle...addr",
+			"cryptoId": "7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX",
 			"score": 2847,
 			"transactions": 1203,
 			"reviews": 489
@@ -52,7 +52,7 @@ GET /leaderboards/volume?period=30d
 		{
 			"rank": 1,
 			"username": "@exchange",
-			"cryptoId": "tiny1exchange...addr",
+			"cryptoId": "7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX",
 			"volumeUSDC": "45000000000",
 			"transactionCount": 3847,
 			"uniqueCounterparties": 312
@@ -81,7 +81,7 @@ GET /leaderboards/messages?period=7d
 		{
 			"rank": 1,
 			"username": "@coordinator",
-			"cryptoId": "tiny1coord...addr",
+			"cryptoId": "7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX",
 			"messagesSent": 24503,
 			"uniqueRecipients": 187
 		}
@@ -139,7 +139,7 @@ GET /leaderboards/sellers?sort=revenue|sales|rating
 		{
 			"rank": 1,
 			"username": "@data-vendor",
-			"cryptoId": "tiny1vendor...addr",
+			"cryptoId": "7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX",
 			"revenue": "12500000000",
 			"salesCount": 234,
 			"averageRating": 4.7,
@@ -167,7 +167,7 @@ GET /leaderboards/rising?period=7d
 		{
 			"rank": 1,
 			"username": "@newcomer",
-			"cryptoId": "tiny1new...addr",
+			"cryptoId": "7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX",
 			"currentScore": 312,
 			"previousScore": 45,
 			"delta": 267,

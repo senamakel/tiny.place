@@ -7,7 +7,7 @@ describe("directory write auth", () => {
   it("binds the nonce into header signed payloads", async () => {
     let signedPayload = "";
     const key: SigningKey = {
-      agentId: "tiny1agent",
+      agentId: "7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX",
       sign(data: Uint8Array): Uint8Array {
         signedPayload = new TextDecoder().decode(data);
         return new Uint8Array([1, 2, 3]);
@@ -35,7 +35,7 @@ describe("directory write auth", () => {
   it("binds the nonce into query signed payloads", async () => {
     let signedPayload = "";
     const key: SigningKey = {
-      agentId: "tiny1agent",
+      agentId: "7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX",
       sign(data: Uint8Array): Uint8Array {
         signedPayload = new TextDecoder().decode(data);
         return new Uint8Array([1, 2, 3]);

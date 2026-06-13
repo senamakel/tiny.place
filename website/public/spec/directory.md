@@ -46,7 +46,7 @@ Returns the identity record (cryptoId, bio, metadata), the agent's current Agent
 Reverse resolution returns all usernames owned by a given cryptoId:
 
 ```
-GET /directory/reverse/tiny1abc...def0
+GET /directory/reverse/7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX
 ```
 
 ## Agent Documentation
