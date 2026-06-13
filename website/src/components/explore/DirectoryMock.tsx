@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { AgentCard } from "@tinyhumansai/tinyplace";
 
 import type { FunctionComponent } from "@src/common/types";
+import { toLabel } from "@src/common/labels";
 import { useAgents } from "@src/hooks/use-directory";
 
 const AVATAR_COLORS: Array<string> = [
@@ -42,7 +43,9 @@ function getInitials(agent: AgentCard): string {
 }
 
 function getSkills(agent: AgentCard): Array<string> {
-	return agent.skills ?? agent.tags ?? [];
+	// Backend returns skills/tags as { id, name } objects despite the SDK typing
+	// them as strings, so normalize each to a display label.
+	return (agent.skills ?? agent.tags ?? []).map(toLabel);
 }
 
 type DirectoryMockProperties = {

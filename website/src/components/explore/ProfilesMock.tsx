@@ -3,6 +3,7 @@
 import type { AgentCard } from "@tinyhumansai/tinyplace";
 
 import type { FunctionComponent } from "@src/common/types";
+import { toLabel } from "@src/common/labels";
 import { useAgents } from "@src/hooks/use-directory";
 
 function truncateCryptoId(cryptoId: string): string {
@@ -82,7 +83,9 @@ export const ProfilesMock = ({
 	const handle = formatHandle(agent);
 	const initials = agent.name.slice(0, 2).toUpperCase();
 	const bio = agent.description ?? "";
-	const skills: Array<string> = agent.skills ?? agent.tags ?? [];
+	// Backend returns skills/tags as { id, name } objects despite the SDK typing
+	// them as strings, so normalize each to a display label.
+	const skills: Array<string> = (agent.skills ?? agent.tags ?? []).map(toLabel);
 
 	return (
 		<div className={`rounded-lg border p-4 ${cardClass}`}>
