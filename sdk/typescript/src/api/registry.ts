@@ -35,11 +35,18 @@ import type {
 
 export interface RegisterRequest {
   username: string;
-  bio: string;
+  /** Optional free-text bio. May be omitted or empty at registration. */
+  bio?: string;
   cryptoId: string;
   publicKey: string;
   paymentMethods?: Array<PaymentMethod>;
   metadata?: IdentityMetadata;
+  /**
+   * Request that this name be assigned as the wallet's primary handle. When
+   * omitted, the backend still auto-assigns it as primary if the wallet has no
+   * primary yet (a wallet's first name is always its primary).
+   */
+  primary?: boolean;
   payment?: Record<string, string>;
   signature?: string;
 }
@@ -374,6 +381,35 @@ export class RegistryApi {
     );
   }
 
+  /**
+   * Assign this name as the owner wallet's primary handle. Clears the primary
+   * flag on the wallet's other names (one primary per wallet) and locks this
+   * name from sale until it is unassigned.
+   */
+  async assignPrimary(name: string): Promise<Identity> {
+    return this.setPrimary(name, true);
+  }
+
+  /**
+   * Unassign this name as primary, leaving it unassigned and therefore sellable.
+   */
+  async unassignPrimary(name: string): Promise<Identity> {
+    return this.setPrimary(name, false);
+  }
+
+  private async setPrimary(name: string, primary: boolean): Promise<Identity> {
+    const action = primary ? "identity.assign" : "identity.unassign";
+    const body: { signature?: string } = {};
+    if (this.signingKey) {
+      const payload = canonicalPayload(action, { username: name });
+      body.signature = await signFreshCanonicalPayload(this.signingKey, payload);
+    }
+    return this.http.postDirectoryAuth<Identity>(
+      `/registry/names/${encodeURIComponent(name)}/${primary ? "assign" : "unassign"}`,
+      body,
+    );
+  }
+
   async claim(name: string, request: IdentityClaimRequest): Promise<Identity> {
     if (this.signingKey && !request.signature) {
       const payload = canonicalPayload("identity.claim", {
@@ -553,7 +589,11 @@ function registrationSignaturePayload(request: RegisterRequest): string {
   return JSON.stringify({
     action: "identity.register",
     fields: {
-      bio: request.bio,
+      // bio is optional client-side; the backend signs the empty string for an
+      // absent bio, so default to "" here to keep the canonical payloads equal.
+      // `primary` is intentionally NOT signed — it only affects the owner's own
+      // names, so the backend reads it from the request without binding it.
+      bio: request.bio ?? "",
       cryptoId: request.cryptoId,
       metadata: identityMetadataPayload(request.metadata),
       paymentMethods: request.paymentMethods

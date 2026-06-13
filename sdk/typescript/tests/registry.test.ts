@@ -110,6 +110,113 @@ describe("RegistryApi", () => {
     expect(ok).toBe(true);
   });
 
+  it("signs an omitted bio as empty string and forwards primary unsigned", async () => {
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(21));
+    const requests: Array<Request> = [];
+    const client = new TinyVerseClient({
+      baseUrl: "https://example.test",
+      signer,
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json({
+          username: "@agent",
+          bio: "",
+          cryptoId: signer.agentId,
+          publicKey: signer.publicKeyBase64,
+          registeredAt: "2026-06-13T00:00:00Z",
+          expiresAt: "2027-06-13T00:00:00Z",
+          status: "active",
+          primary: true,
+          updatedAt: "2026-06-13T00:00:00Z",
+        });
+      },
+    });
+
+    // No bio supplied; request primary.
+    await client.registry.register({
+      username: "@agent",
+      cryptoId: signer.agentId,
+      publicKey: signer.publicKeyBase64,
+      primary: true,
+    });
+
+    const body = (await requests[0]!.json()) as {
+      bio?: string;
+      primary?: boolean;
+      signature: string;
+    };
+    // primary is forwarded in the body for the backend to act on.
+    expect(body.primary).toBe(true);
+
+    // The signature covers bio:"" (matching the backend's empty-bio default) and
+    // does NOT include primary.
+    const ok = await verifyFreshSignature(
+      signer,
+      body.signature,
+      canonicalPayload("identity.register", {
+        bio: "",
+        cryptoId: signer.agentId,
+        metadata: {},
+        paymentMethods: null,
+        publicKey: signer.publicKeyBase64,
+        username: "@agent",
+      }),
+    );
+    expect(ok).toBe(true);
+  });
+
+  it("signs assign and unassign primary requests", async () => {
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(22));
+    const requests: Array<Request> = [];
+    const client = new TinyVerseClient({
+      baseUrl: "https://example.test",
+      signer,
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json({
+          username: "@agent",
+          bio: "",
+          cryptoId: signer.agentId,
+          publicKey: signer.publicKeyBase64,
+          registeredAt: "2026-06-13T00:00:00Z",
+          expiresAt: "2027-06-13T00:00:00Z",
+          status: "active",
+          primary: true,
+          updatedAt: "2026-06-13T00:00:00Z",
+        });
+      },
+    });
+
+    await client.registry.assignPrimary("@agent");
+    await client.registry.unassignPrimary("@agent");
+
+    expect(requests).toHaveLength(2);
+    expect(requests[0]!.url).toBe(
+      "https://example.test/registry/names/%40agent/assign",
+    );
+    expect(requests[1]!.url).toBe(
+      "https://example.test/registry/names/%40agent/unassign",
+    );
+
+    const assignBody = (await requests[0]!.json()) as { signature: string };
+    expect(
+      await verifyFreshSignature(
+        signer,
+        assignBody.signature,
+        canonicalPayload("identity.assign", { username: "@agent" }),
+      ),
+    ).toBe(true);
+
+    const unassignBody = (await requests[1]!.json()) as { signature: string };
+    expect(
+      await verifyFreshSignature(
+        signer,
+        unassignBody.signature,
+        canonicalPayload("identity.unassign", { username: "@agent" }),
+      ),
+    ).toBe(true);
+  });
+
   it("normalizes bare registration names before signing", async () => {
     const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(20));
     const requests: Array<Request> = [];

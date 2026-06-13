@@ -29,6 +29,11 @@ export interface Identity {
   registrationTx?: string;
   paymentMethods?: Array<PaymentMethod>;
   metadata?: IdentityMetadata;
+  /**
+   * Whether this name is the owner wallet's assigned/primary handle. At most
+   * one name per wallet is primary; a primary name is locked from sale.
+   */
+  primary?: boolean;
   subnames?: Array<Subname>;
   signature?: string;
   payment?: Record<string, string>;
