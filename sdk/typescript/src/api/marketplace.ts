@@ -115,10 +115,22 @@ export class MarketplaceApi {
     );
   }
 
-  createProductReview(
+  async createProductReview(
     productId: string,
     review: Partial<ProductReview>,
   ): Promise<ProductReview> {
+    if (this.signingKey && !review.signature) {
+      review = {
+        ...review,
+        productId,
+        reviewId: review.reviewId ?? nextMarketplaceId("rev"),
+      };
+      review.signature = await signCanonicalPayload(
+        this.signingKey,
+        productReviewSignaturePayload(review),
+      );
+    }
+
     return this.http.post<ProductReview>(
       `/marketplace/products/${encodeURIComponent(productId)}/reviews`,
       review,
@@ -258,6 +270,18 @@ function productSignaturePayload(product: ProductCreateRequest): string {
     sellerCryptoId: product.sellerCryptoId ?? "",
     stock: product.stock ?? null,
     tags: product.tags ?? null,
+  });
+}
+
+function productReviewSignaturePayload(
+  review: Partial<ProductReview>,
+): string {
+  return canonicalPayload("marketplace.product.review", {
+    buyer: review.buyer ?? "",
+    comment: review.comment ?? "",
+    productId: review.productId ?? "",
+    rating: review.rating ?? 0,
+    reviewId: review.reviewId ?? "",
   });
 }
 
