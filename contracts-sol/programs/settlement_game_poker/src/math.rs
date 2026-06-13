@@ -11,9 +11,12 @@ pub const BPS_DENOMINATOR: u64 = 10_000;
 /// (conservation) and `fee <= pot`.
 #[inline]
 pub fn pot_split(pot: u64, fee_bps: u16) -> Option<(u64, u64)> {
-    let fee = (pot as u128)
-        .checked_mul(fee_bps as u128)?
-        .checked_div(BPS_DENOMINATOR as u128)? as u64;
+    // u64 * u16 always fits in u128 and the divisor is a nonzero constant, so
+    // neither operation can overflow or divide by zero (verified by the
+    // `pot_split_conserves_value` Kani proof).
+    let fee = ((pot as u128) * (fee_bps as u128) / (BPS_DENOMINATOR as u128)) as u64;
+    // checked: a caller passing fee_bps >= 10_000 would make fee > pot; that is
+    // rejected here rather than underflowing.
     let payout = pot.checked_sub(fee)?;
     Some((payout, fee))
 }
@@ -27,6 +30,12 @@ mod tests {
         // 5% rake on a 2000 pot = 100; winner gets 1900.
         assert_eq!(pot_split(2000, 500), Some((1900, 100)));
         assert_eq!(pot_split(2000, 0), Some((2000, 0)));
+    }
+
+    #[test]
+    fn rejects_fee_over_100pct() {
+        // fee_bps above the denominator implies a fee larger than the pot.
+        assert_eq!(pot_split(100, 20_000), None);
     }
 
     #[test]

@@ -36,6 +36,7 @@ pub mod escrow {
         vault.settlement_program = settlement_program;
         vault.authority = authority;
         vault.mint = ctx.accounts.mint.key();
+        vault.token_account = ctx.accounts.vault_token.key();
         vault.fee_account = ctx.accounts.fee_account.key();
         vault.deposited = 0;
         vault.disbursed = 0;
@@ -208,6 +209,7 @@ pub struct Vault {
     pub settlement_program: Pubkey,
     pub authority: Pubkey,
     pub mint: Pubkey,
+    pub token_account: Pubkey,
     pub fee_account: Pubkey,
     pub deposited: u64,
     pub disbursed: u64,
@@ -216,7 +218,7 @@ pub struct Vault {
 }
 
 impl Vault {
-    pub const SIZE: usize = 8 + 32 + 32 + 32 + 32 + 32 + 8 + 8 + 1 + 1;
+    pub const SIZE: usize = 8 + 32 + 32 + 32 + 32 + 32 + 32 + 8 + 8 + 1 + 1;
 }
 
 #[account]
@@ -301,8 +303,7 @@ pub struct Deposit<'info> {
     pub payer_token: Account<'info, TokenAccount>,
     #[account(
         mut,
-        constraint = vault_token.owner == vault.key() @ EscrowError::InvalidVault,
-        constraint = vault_token.mint == vault.mint @ EscrowError::InvalidVault,
+        constraint = vault_token.key() == vault.token_account @ EscrowError::InvalidVault,
     )]
     pub vault_token: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
@@ -316,7 +317,7 @@ pub struct Disburse<'info> {
     pub authority: Signer<'info>,
     #[account(
         mut,
-        constraint = vault_token.owner == vault.key() @ EscrowError::InvalidVault,
+        constraint = vault_token.key() == vault.token_account @ EscrowError::InvalidVault,
     )]
     pub vault_token: Account<'info, TokenAccount>,
     #[account(mut)]

@@ -17,9 +17,12 @@ pub fn rake(available: u64, fee_bps: u16, take_fee: bool) -> Option<(u64, u64)> 
     if !take_fee {
         return Some((available, 0));
     }
-    let fee = (available as u128)
-        .checked_mul(fee_bps as u128)?
-        .checked_div(BPS_DENOMINATOR as u128)? as u64;
+    // u64 * u16 always fits in u128 and the divisor is a nonzero constant, so
+    // neither operation can overflow or divide by zero (verified by the
+    // `rake_conserves_value` Kani proof).
+    let fee = ((available as u128) * (fee_bps as u128) / (BPS_DENOMINATOR as u128)) as u64;
+    // checked: a caller passing fee_bps >= 10_000 would make fee > available;
+    // that is rejected here rather than underflowing.
     let amount = available.checked_sub(fee)?;
     Some((amount, fee))
 }
@@ -39,6 +42,13 @@ mod tests {
         assert_eq!(rake(1000, 250, true), Some((975, 25)));
         // Zero fee_bps means no fee even when taking.
         assert_eq!(rake(1000, 0, true), Some((1000, 0)));
+    }
+
+    #[test]
+    fn rake_rejects_fee_over_100pct() {
+        // fee_bps above the denominator would imply a fee larger than the pot;
+        // rejected rather than underflowing. (Handlers prevent this upstream.)
+        assert_eq!(rake(100, 20_000, true), None);
     }
 
     #[test]

@@ -5,3 +5,8 @@ members = [
     "programs/settlement_game_poker",
 ]
 resolver = "2"
+
+# Register `cfg(kani)` (set by the Kani verifier) as a known cfg so normal
+# builds don't warn on the formal-verification proof harnesses.
+[workspace.lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }

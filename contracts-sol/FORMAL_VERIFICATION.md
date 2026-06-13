@@ -39,6 +39,20 @@ Unit tests (no extra tooling):
 cargo test --manifest-path contracts-sol/Cargo.toml
 ```
 
+## Coverage
+
+```bash
+cargo llvm-cov --manifest-path contracts-sol/Cargo.toml --summary-only
+```
+
+The pure `math` modules — the funds-handling arithmetic — are at **100%**
+region/line coverage and are additionally proven by Kani. The instruction
+handlers in each `lib.rs` are not exercised by host `cargo test` (they require
+the Solana runtime: `Clock`, CPI, account constraints), so their line coverage
+is ~0% here. Covering them to 100% requires the Anchor integration suite
+(`tests/*.ts`) run against a local validator (`anchor test`), which is the
+remaining work item — see invariants marked *constraint-enforced* below.
+
 ## Invariants
 
 ### Escrow (custody)
@@ -47,11 +61,11 @@ cargo test --manifest-path contracts-sol/Cargo.toml
 | --- | --- | --- | --- |
 | **E1 Solvency** | A vault's `disbursed` never exceeds `deposited`; `disbursed` is monotonically non-decreasing. | `math::apply_disburse` is the sole writer of `disbursed`. | Kani `disburse_preserves_solvency`; test `disburse_never_exceeds_deposited` |
 | **E2 No overspend** | Each disburse releases `amount + fee ≤ deposited − disbursed` (the available balance). | `math::apply_disburse` returns `None` otherwise → `InsufficientFunds`. | Kani `disburse_never_overspends`; test `disburse_rejects_overspend` |
-| **E3 No overflow** | All vault accounting uses checked arithmetic; no wraparound. | `checked_add`/`checked_sub` in `math::apply_disburse`. | Kani (implied by E1/E2 over full `u64` domain); test `disburse_rejects_overflow` |
+| **E3 No overflow** | Vault accounting never wraps. Input-dependent sums use `checked_*` (graceful reject); a sum proven safe by the surrounding guards (`disbursed + total`) is direct and verified overflow-free by Kani. | `math::apply_disburse`. | Kani `disburse_preserves_solvency` (checks overflow over full `u64` domain); tests `disburse_rejects_overflow`, `disburse_rejects_inconsistent_accounting` |
 | **E4 Replay safety** | A deposit `nonce` is accepted only if strictly greater than the payer's last; replays/stale nonces are rejected. | `math::nonce_ok` gate in `deposit`. | Kani `nonce_rejects_replay`; test `nonce_monotonic` |
 | **E5 Authorized disburse** | `disburse` succeeds only when signed by the vault's bound settlement authority. | `require!(authority.key() == vault.authority)`; `vault.authority` is fixed at `create_vault` to `PDA(["vault_authority"], settlement_program)`. | constraint-enforced (TS integration) |
 | **E6 Fee routing** | Fees can only be sent to the vault's registered `fee_account`. | `require!(fee_token.key() == vault.fee_account)`. | constraint-enforced (TS integration) |
-| **E7 Vault isolation** | A disburse can only move funds from the vault's own token account. | `constraint = vault_token.owner == vault.key()`. | constraint-enforced (TS integration) |
+| **E7 Vault isolation** | Every deposit and disburse uses the one token account pinned at `create_vault`, so on-chain balances can't desync from `deposited`/`disbursed`. | `constraint = vault_token.key() == vault.token_account` on both `deposit` and `disburse`. | constraint-enforced (TS integration) |
 
 ### settlement_job
 

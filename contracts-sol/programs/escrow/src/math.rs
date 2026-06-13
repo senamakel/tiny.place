@@ -27,7 +27,10 @@ pub fn apply_disburse(deposited: u64, disbursed: u64, amount: u64, fee: u64) -> 
     if total > avail {
         return None;
     }
-    let new_disbursed = disbursed.checked_add(total)?;
+    // Safe: total <= avail and disbursed + avail == deposited <= u64::MAX, so
+    // this sum cannot overflow. Verified by the `disburse_preserves_solvency`
+    // Kani proof (which checks arithmetic overflow over all inputs).
+    let new_disbursed = disbursed + total;
     Some(new_disbursed)
 }
 
@@ -68,8 +71,16 @@ mod tests {
 
     #[test]
     fn disburse_rejects_overflow() {
+        // amount + fee overflows u64.
         assert_eq!(apply_disburse(u64::MAX, 0, u64::MAX, 1), None);
         assert_eq!(apply_disburse(u64::MAX, u64::MAX - 1, 1, 1), None);
+    }
+
+    #[test]
+    fn disburse_rejects_inconsistent_accounting() {
+        // disbursed > deposited (should be impossible on-chain) is rejected
+        // rather than underflowing.
+        assert_eq!(apply_disburse(50, 100, 0, 0), None);
     }
 
     #[test]
@@ -80,10 +91,14 @@ mod tests {
             (100, 50, 30, 20),
             (1, 0, 1, 0),
             (u64::MAX, 1000, 1000, 1000),
+            (100, 0, 200, 0), // overspend -> None, exercises the rejected path
         ] {
-            if let Some(new) = apply_disburse(dep, dis, amt, fee) {
-                assert!(new <= dep, "solvency broken: {new} > {dep}");
-                assert!(new >= dis, "disbursed went backwards");
+            match apply_disburse(dep, dis, amt, fee) {
+                Some(new) => {
+                    assert!(new <= dep, "solvency broken: {new} > {dep}");
+                    assert!(new >= dis, "disbursed went backwards");
+                }
+                None => assert!(amt + fee > dep - dis, "rejected a valid disburse"),
             }
         }
     }
