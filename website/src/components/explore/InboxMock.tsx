@@ -12,6 +12,10 @@ import {
 	useMarkAllInboxRead,
 	useMarkInboxRead,
 } from "@src/hooks/use-inbox";
+import {
+	firstActiveIdentity,
+	useOwnedIdentities,
+} from "@src/hooks/use-marketplace";
 import { useAuthStore } from "@src/store/auth";
 
 const filterOptions = ["All", "Tasks", "Payments", "Invites"] as const;
@@ -65,9 +69,10 @@ export const InboxMock = ({
 	isDark: boolean;
 }): FunctionComponent => {
 	const [activeFilter, setActiveFilter] = useState<Filter>("All");
-	const [ownerInput, setOwnerInput] = useState("");
 	const agentId = useAuthStore((state) => state.agentId);
-	const owner = ownerInput.trim() || agentId || undefined;
+	const ownedIdentities = useOwnedIdentities(agentId);
+	const inboxIdentity = firstActiveIdentity(ownedIdentities.data?.identities);
+	const owner = inboxIdentity?.username ?? agentId;
 	const { data, isLoading, isError, error } = useInbox({ limit: 50 }, owner);
 	const markRead = useMarkInboxRead();
 	const archiveItem = useArchiveInboxItem();
@@ -138,19 +143,6 @@ export const InboxMock = ({
 					)}
 				</span>
 				<div className="flex gap-1">
-					<input
-						placeholder="@owner"
-						type="text"
-						value={ownerInput}
-						className={`w-36 rounded-md border px-2 py-1 text-[10px] ${
-							isDark
-								? "border-neutral-800 bg-neutral-900 text-white placeholder:text-neutral-600"
-								: "border-neutral-200 bg-white text-black placeholder:text-neutral-400"
-						}`}
-						onChange={(event): void => {
-							setOwnerInput(event.target.value);
-						}}
-					/>
 					{filterOptions.map(
 						(filter): React.ReactElement => (
 							<button
