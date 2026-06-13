@@ -1,7 +1,6 @@
 import {
 	SignalSession,
 	ed25519PubToX25519Pub,
-	fromBase64,
 	generatePreKeys,
 	generateSignedPreKey,
 	serializePreKey,
@@ -29,6 +28,12 @@ let messageCounter = 0;
 function nextMessageId(): string {
 	messageCounter += 1;
 	return `msg_${new Date().getTime()}_${messageCounter}`;
+}
+
+function decodeBase64(base64: string): Uint8Array {
+	const binaryString = globalThis.atob(base64);
+
+	return Uint8Array.from(binaryString, (character) => character.charCodeAt(0));
 }
 
 /**
@@ -117,7 +122,7 @@ export async function sendDirectMessage(
 	const bundle = hasSession
 		? undefined
 		: await encClient.keys.getBundle(toEncKeyB64);
-	const recipientX25519 = ed25519PubToX25519Pub(fromBase64(toEncKeyB64));
+	const recipientX25519 = ed25519PubToX25519Pub(decodeBase64(toEncKeyB64));
 
 	const encrypted = await session.encrypt(
 		toEncKeyB64,
@@ -162,7 +167,7 @@ export async function fetchInbox(
 	for (const envelope of messages) {
 		let plaintext: Uint8Array;
 		try {
-			const senderX25519 = ed25519PubToX25519Pub(fromBase64(envelope.from));
+			const senderX25519 = ed25519PubToX25519Pub(decodeBase64(envelope.from));
 			// eslint-disable-next-line no-await-in-loop
 			plaintext = await session.decrypt(envelope.from, senderX25519, envelope);
 		} catch (error) {
