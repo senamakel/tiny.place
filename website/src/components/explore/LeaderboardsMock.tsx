@@ -87,8 +87,7 @@ type LeaderboardsMockProperties = {
 export const LeaderboardsMock = ({
 	isDark,
 }: LeaderboardsMockProperties): FunctionComponent => {
-	const [activeTab, setActiveTab] =
-		useState<LeaderboardCategory>("reputation");
+	const [activeTab, setActiveTab] = useState<LeaderboardCategory>("reputation");
 
 	const { data, isLoading, isError, error } = useLeaderboard(activeTab);
 
