@@ -1,8 +1,49 @@
-import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import type { AvailabilityResponse } from "@tinyhumansai/tinyplace";
+import {
+	useMutation,
+	useQuery,
+	useQueryClient,
+	type UseMutationResult,
+	type UseQueryResult,
+} from "@tanstack/react-query";
+import {
+	generateNonce,
+	signX402Authorization,
+	TinyVerseError,
+	x402AuthorizationToPaymentMap,
+	type AvailabilityResponse,
+	type Identity,
+	type RenewalRequest,
+	type X402AuthorizationFields,
+} from "@tinyhumansai/tinyplace";
 
 import { useApiClient } from "@src/common/api-context";
 import { queryKeys } from "@src/common/query-keys";
+import { useAuthStore } from "@src/store/auth";
+
+type RegistryPaymentChallenge = {
+	error: string;
+	payment: Omit<X402AuthorizationFields, "expiresAt" | "nonce"> &
+		Partial<Pick<X402AuthorizationFields, "expiresAt" | "nonce">>;
+};
+
+function registryPaymentChallenge(
+	error: unknown
+): RegistryPaymentChallenge | null {
+	if (!(error instanceof TinyVerseError) || error.status !== 402) {
+		return null;
+	}
+	if (!error.body || typeof error.body !== "object") {
+		return null;
+	}
+	const body = error.body as Partial<RegistryPaymentChallenge>;
+	if (!body.payment || typeof body.payment !== "object") {
+		return null;
+	}
+	return {
+		error: body.error ?? "Payment required",
+		payment: body.payment,
+	};
+}
 
 /**
  * Checks whether an identity handle is available to register. Disabled until a
@@ -21,5 +62,63 @@ export function useHandleAvailability(
 		queryFn: (): Promise<AvailabilityResponse> =>
 			client.registry.get(normalized),
 		enabled: normalized.length > 0,
+	});
+}
+
+export function useRenewIdentity(): UseMutationResult<
+	Identity,
+	Error,
+	{ name: string; request?: RenewalRequest }
+> {
+	const client = useApiClient();
+	const signer = useAuthStore((state) => state.signer);
+	const agentId = useAuthStore((state) => state.agentId);
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async ({ name, request }): Promise<Identity> => {
+			const normalized = name.trim().replace(/^@+/, "");
+			if (!normalized) {
+				throw new Error("Identity name is required");
+			}
+			const handle = `@${normalized}`;
+			try {
+				return await client.registry.renew(handle, request ?? {});
+			} catch (error) {
+				const challenge = registryPaymentChallenge(error);
+				if (!challenge) {
+					throw error;
+				}
+				if (!signer || !agentId) {
+					throw new Error("Connect your wallet first");
+				}
+				const challengePayment = challenge.payment;
+				const signedPayment = await signX402Authorization(signer, {
+					...challengePayment,
+					expiresAt:
+						challengePayment.expiresAt ??
+						new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+					from: challengePayment.from || agentId,
+					metadata: {
+						...challengePayment.metadata,
+						domain: challengePayment.metadata?.["domain"] ?? "tiny.place",
+						identity: challengePayment.metadata?.["identity"] ?? handle,
+						purpose: challengePayment.metadata?.["purpose"] ?? "renewal",
+					},
+					nonce: challengePayment.nonce || generateNonce("renew"),
+				});
+				return client.registry.renew(handle, {
+					...(request ?? {}),
+					payment: x402AuthorizationToPaymentMap(signedPayment),
+				});
+			}
+		},
+		onSuccess: (identity): void => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.registry.availability(
+					identity.username.trim().replace(/^@+/, "")
+				),
+			});
+		},
 	});
 }
