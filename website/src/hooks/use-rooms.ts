@@ -10,12 +10,21 @@ import {
 	TinyVerseError,
 	type GameActionRequest,
 	type GameActionResponse,
+	type GameCloseResponse,
 	type GameCollusionReport,
+	type GameEmergencyWithdrawalRequest,
+	type GameEmergencyWithdrawalResponse,
 	type GameHand,
 	type GameJoinRequest,
 	type GameJoinResponse,
+	type GameLeaveRequest,
+	type GameLeaveResponse,
+	type GameOperatorRequest,
 	type GameRoom,
 	type GameRoomQueryParams,
+	type GameSettleRequest,
+	type GameStartHandResponse,
+	type GameTimeoutResponse,
 	type X402AuthorizationFields,
 } from "@tinyhumansai/tinyplace";
 
@@ -44,6 +53,21 @@ function roomPaymentChallenge(error: unknown): RoomPaymentChallenge | null {
 		error: body.error ?? "Payment required",
 		payment: body.payment,
 	};
+}
+
+function invalidateRoom(
+	queryClient: ReturnType<typeof useQueryClient>,
+	roomId: string
+): void {
+	void queryClient.invalidateQueries({
+		queryKey: queryKeys.rooms.list(),
+	});
+	void queryClient.invalidateQueries({
+		queryKey: queryKeys.rooms.detail(roomId),
+	});
+	void queryClient.invalidateQueries({
+		queryKey: queryKeys.rooms.hands(roomId),
+	});
 }
 
 export function useRooms(
@@ -81,6 +105,20 @@ export function useRoomHands(
 			return { hands: result.hands ?? [] };
 		},
 		enabled: Boolean(roomId),
+	});
+}
+
+export function useRoomHand(
+	roomId: string,
+	handId: string
+): UseQueryResult<GameHand> {
+	const client = useApiClient();
+	const actorId = useAuthStore((state) => state.agentId);
+	return useQuery({
+		queryKey: queryKeys.rooms.hand(roomId, handId, actorId),
+		queryFn: (): Promise<GameHand> =>
+			client.rooms.getHand(roomId, handId, actorId),
+		enabled: Boolean(roomId && handId),
 	});
 }
 
@@ -162,6 +200,57 @@ export function useJoinRoom(): UseMutationResult<
 	});
 }
 
+export function useLeaveRoom(): UseMutationResult<
+	GameLeaveResponse,
+	Error,
+	{ roomId: string; request?: GameLeaveRequest }
+> {
+	const client = useApiClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ roomId, request }): Promise<GameLeaveResponse> =>
+			client.rooms.leave(roomId, request),
+		onSuccess: (_response, { roomId }): void => {
+			invalidateRoom(queryClient, roomId);
+		},
+	});
+}
+
+export function useCloseRoom(): UseMutationResult<
+	GameCloseResponse,
+	Error,
+	{ roomId: string; request?: GameOperatorRequest }
+> {
+	const client = useApiClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ roomId, request }): Promise<GameCloseResponse> =>
+			client.rooms.close(roomId, request),
+		onSuccess: (_response, { roomId }): void => {
+			invalidateRoom(queryClient, roomId);
+		},
+	});
+}
+
+export function useEmergencyRoomWithdrawal(): UseMutationResult<
+	GameEmergencyWithdrawalResponse,
+	Error,
+	{ request: GameEmergencyWithdrawalRequest; roomId: string }
+> {
+	const client = useApiClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			request,
+			roomId,
+		}): Promise<GameEmergencyWithdrawalResponse> =>
+			client.rooms.emergencyWithdrawal(roomId, request),
+		onSuccess: (_response, { roomId }): void => {
+			invalidateRoom(queryClient, roomId);
+		},
+	});
+}
+
 export function useRoomAction(): UseMutationResult<
 	GameActionResponse,
 	Error,
@@ -202,6 +291,57 @@ export function useRoomAction(): UseMutationResult<
 			});
 			void queryClient.invalidateQueries({
 				queryKey: queryKeys.rooms.hands(roomId),
+			});
+		},
+	});
+}
+
+export function useTimeoutRoom(): UseMutationResult<
+	GameTimeoutResponse,
+	Error,
+	{ request?: GameOperatorRequest; roomId: string }
+> {
+	const client = useApiClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ request, roomId }): Promise<GameTimeoutResponse> =>
+			client.rooms.timeout(roomId, request),
+		onSuccess: (_response, { roomId }): void => {
+			invalidateRoom(queryClient, roomId);
+		},
+	});
+}
+
+export function useStartRoomHand(): UseMutationResult<
+	GameStartHandResponse,
+	Error,
+	{ request?: GameOperatorRequest; roomId: string }
+> {
+	const client = useApiClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ request, roomId }): Promise<GameStartHandResponse> =>
+			client.rooms.startHand(roomId, request),
+		onSuccess: (_response, { roomId }): void => {
+			invalidateRoom(queryClient, roomId);
+		},
+	});
+}
+
+export function useSettleRoomHand(): UseMutationResult<
+	GameHand,
+	Error,
+	{ handId: string; request: GameSettleRequest; roomId: string }
+> {
+	const client = useApiClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ handId, request, roomId }): Promise<GameHand> =>
+			client.rooms.settleHand(roomId, handId, request),
+		onSuccess: (_hand, { handId, roomId }): void => {
+			invalidateRoom(queryClient, roomId);
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.rooms.hand(roomId, handId),
 			});
 		},
 	});

@@ -191,6 +191,8 @@ export const queryKeys = {
 			["rooms", "detail", roomId, actorId] as const,
 		hands: (roomId: string, actorId?: string) =>
 			["rooms", "hands", roomId, actorId] as const,
+		hand: (roomId: string, handId: string, actorId?: string) =>
+			["rooms", "hand", roomId, handId, actorId] as const,
 		collusion: (roomId: string) => ["rooms", "collusion", roomId] as const,
 	},
 	artifacts: {
