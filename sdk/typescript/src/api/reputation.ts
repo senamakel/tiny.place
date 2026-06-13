@@ -1,4 +1,7 @@
 import type { HttpClient } from "../http.js";
+import type { SigningKey } from "../auth.js";
+import { signCanonicalPayload } from "../auth.js";
+import { canonicalPayload } from "../crypto.js";
 import type {
   Attestation,
   AttestationCreate,
@@ -7,10 +10,15 @@ import type {
   ReputationReview,
   ReputationReviewCreate,
   ReputationScore,
+  ReputationVouch,
+  ReputationVouchCreate,
 } from "../types/index.js";
 
 export class ReputationApi {
-  constructor(private readonly http: HttpClient) {}
+  constructor(
+    private readonly http: HttpClient,
+    private readonly signingKey?: SigningKey,
+  ) {}
 
   getScore(agentId: string): Promise<ReputationScore> {
     return this.http.get<ReputationScore>(
@@ -40,17 +48,54 @@ export class ReputationApi {
     );
   }
 
-  createReview(review: ReputationReviewCreate): Promise<ReputationReview> {
+  async createReview(
+    review: ReputationReviewCreate,
+  ): Promise<ReputationReview> {
+    if (this.signingKey && !review.signature) {
+      review = {
+        ...review,
+        reviewId: review.reviewId ?? nextReputationId("rev"),
+      };
+      review.signature = await signCanonicalPayload(
+        this.signingKey,
+        reputationReviewSignaturePayload(review),
+      );
+    }
+
     return this.http.post<ReputationReview>("/reputation/reviews", review);
   }
 
-  createAttestation(attestation: AttestationCreate): Promise<Attestation> {
+  async createAttestation(
+    attestation: AttestationCreate,
+  ): Promise<Attestation> {
+    if (this.signingKey && !attestation.signature) {
+      attestation = {
+        ...attestation,
+        attestationId:
+          attestation.attestationId ?? nextReputationId("att"),
+      };
+      attestation.signature = await signCanonicalPayload(
+        this.signingKey,
+        attestationSignaturePayload(attestation),
+      );
+    }
+
     return this.http.post<Attestation>("/reputation/attestations", attestation);
   }
 
-  deleteAttestation(attestationId: string): Promise<void> {
+  async deleteAttestation(attestationId: string): Promise<void> {
+    if (!this.signingKey) {
+      return this.http.delete<void>(
+        `/reputation/attestations/${encodeURIComponent(attestationId)}`,
+      );
+    }
+
+    const signature = await signCanonicalPayload(
+      this.signingKey,
+      attestationRevokeSignaturePayload(attestationId),
+    );
     return this.http.delete<void>(
-      `/reputation/attestations/${encodeURIComponent(attestationId)}`,
+      `/reputation/attestations/${encodeURIComponent(attestationId)}?signature=${encodeURIComponent(signature)}`,
     );
   }
 
@@ -81,18 +126,34 @@ export class ReputationApi {
     );
   }
 
-  createVouch(
-    vouch: Record<string, unknown>,
-  ): Promise<Record<string, unknown>> {
-    return this.http.post<Record<string, unknown>>(
-      "/reputation/vouches",
-      vouch,
-    );
+  async createVouch(vouch: ReputationVouchCreate): Promise<ReputationVouch> {
+    if (this.signingKey && !vouch.signature) {
+      vouch = {
+        ...vouch,
+        vouchId: vouch.vouchId ?? nextReputationId("vouch"),
+      };
+      vouch.signature = await signCanonicalPayload(
+        this.signingKey,
+        vouchSignaturePayload(vouch),
+      );
+    }
+
+    return this.http.post<ReputationVouch>("/reputation/vouches", vouch);
   }
 
-  deleteVouch(vouchId: string): Promise<void> {
+  async deleteVouch(vouchId: string): Promise<void> {
+    if (!this.signingKey) {
+      return this.http.delete<void>(
+        `/reputation/vouches/${encodeURIComponent(vouchId)}`,
+      );
+    }
+
+    const signature = await signCanonicalPayload(
+      this.signingKey,
+      vouchRevokeSignaturePayload(vouchId),
+    );
     return this.http.delete<void>(
-      `/reputation/vouches/${encodeURIComponent(vouchId)}`,
+      `/reputation/vouches/${encodeURIComponent(vouchId)}?signature=${encodeURIComponent(signature)}`,
     );
   }
 
@@ -169,4 +230,61 @@ export class ReputationApi {
       params as Record<string, unknown>,
     );
   }
+}
+
+function reputationReviewSignaturePayload(
+  review: ReputationReviewCreate,
+): string {
+  return canonicalPayload("reputation.review", {
+    comment: review.comment ?? "",
+    context: review.context ?? "",
+    rating: review.rating,
+    reviewer: review.reviewer,
+    subject: review.subject,
+    transactionRef: review.transactionRef,
+  });
+}
+
+function vouchSignaturePayload(vouch: ReputationVouchCreate): string {
+  return canonicalPayload("reputation.vouch", {
+    comment: vouch.comment ?? "",
+    context: vouch.context ?? "",
+    subject: vouch.subject,
+    vouchId: vouch.vouchId ?? "",
+    voucher: vouch.voucher,
+    weight: vouch.weight,
+  });
+}
+
+function vouchRevokeSignaturePayload(vouchId: string): string {
+  return canonicalPayload("reputation.vouch.revoke", {
+    vouchId,
+  });
+}
+
+function attestationSignaturePayload(
+  attestation: AttestationCreate,
+): string {
+  return canonicalPayload("reputation.attestation", {
+    agent: attestation.agent,
+    agentCryptoId: attestation.agentCryptoId,
+    handle: attestation.handle,
+    platform: attestation.platform,
+    proofUrl: attestation.proofUrl ?? "",
+  });
+}
+
+function attestationRevokeSignaturePayload(attestationId: string): string {
+  return canonicalPayload("reputation.attestation.revoke", {
+    attestationId,
+  });
+}
+
+function nextReputationId(prefix: string): string {
+  const random = new Uint8Array(6);
+  globalThis.crypto.getRandomValues(random);
+  const suffix = Array.from(random, (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+  return `${prefix}_${Date.now().toString(36)}_${suffix}`;
 }

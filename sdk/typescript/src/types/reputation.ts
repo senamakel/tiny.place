@@ -19,6 +19,7 @@ export interface ReputationReview {
 }
 
 export interface ReputationReviewCreate {
+  reviewId?: string;
   reviewer: string;
   subject: string;
   rating: number;
@@ -26,6 +27,32 @@ export interface ReputationReviewCreate {
   context?: string;
   transactionRef: string;
   signature?: string;
+}
+
+export interface ReputationVouch {
+  vouchId: string;
+  voucher: string;
+  subject: string;
+  weight: number;
+  context?: string;
+  comment?: string;
+  status: string;
+  signature?: string;
+  createdAt: string;
+  updatedAt: string;
+  expiresAt?: string;
+  revokedAt?: string;
+}
+
+export interface ReputationVouchCreate {
+  vouchId?: string;
+  voucher: string;
+  subject: string;
+  weight: number;
+  context?: string;
+  comment?: string;
+  signature?: string;
+  expiresAt?: string;
 }
 
 export interface Attestation {
@@ -41,6 +68,7 @@ export interface Attestation {
 }
 
 export interface AttestationCreate {
+  attestationId?: string;
   agent: string;
   agentCryptoId: string;
   platform: string;
