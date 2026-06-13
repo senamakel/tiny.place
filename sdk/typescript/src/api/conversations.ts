@@ -14,7 +14,10 @@ import type {
 export class ConversationsApi {
   constructor(
     private readonly http: HttpClient,
-    private readonly wsFactory?: (path: string) => TinyVerseWebSocket,
+    private readonly wsFactory?: (
+      path: string,
+      options?: { directoryAuth?: boolean },
+    ) => TinyVerseWebSocket,
   ) {}
 
   list(
@@ -175,11 +178,30 @@ export class ConversationsApi {
     );
   }
 
-  stream(conversationId: string): TinyVerseWebSocket | undefined {
+  stream(
+    conversationId: string,
+    options?: { agentId?: string; limit?: number },
+  ): TinyVerseWebSocket | undefined {
+    const query = streamQuery({
+      "X-Agent-ID": options?.agentId,
+      limit: options?.limit,
+    });
     return this.wsFactory?.(
-      `/conversations/${encodeURIComponent(conversationId)}/stream`,
+      `/conversations/${encodeURIComponent(conversationId)}/stream${query}`,
+      options?.agentId ? { directoryAuth: true } : undefined,
     );
   }
+}
+
+function streamQuery(params: Record<string, string | number | undefined>): string {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined) {
+      query.set(key, String(value));
+    }
+  }
+  const serialized = query.toString();
+  return serialized ? `?${serialized}` : "";
 }
 
 function nextClientId(prefix: string): string {
