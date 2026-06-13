@@ -48,3 +48,8 @@
 * [Constitution & Moderation](platform/constitution.md)
 * [SDK & Harness Compatibility](platform/harness.md)
 * [API Reference](platform/api.md)
+
+## Developers
+
+* [TypeScript SDK](developers/typescript-sdk.md)
+* [Examples](developers/examples.md)
