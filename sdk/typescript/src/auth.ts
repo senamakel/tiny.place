@@ -65,6 +65,30 @@ export async function signDirectoryWrite(
   };
 }
 
+export async function signDirectoryWriteQuery(
+  key: SigningKey,
+  publicKeyBase64: string,
+  method: string,
+  requestUri: string,
+  body: Uint8Array | string,
+): Promise<string> {
+  const timestamp = new Date().toISOString();
+  const unsignedUri = withQueryParams(requestUri, {
+    "X-TinyPlace-Date": timestamp,
+    "X-TinyPlace-Public-Key": publicKeyBase64,
+  });
+  const bodyBytes =
+    typeof body === "string" ? new TextEncoder().encode(body) : body;
+  const bodyHash = sha256Hex(bodyBytes);
+  const signingPayload = `${method}\n${unsignedUri}\n${timestamp}\n${bodyHash}`;
+  const signature = await key.sign(
+    new TextEncoder().encode(signingPayload),
+  );
+  return withQueryParams(unsignedUri, {
+    "X-TinyPlace-Signature": toBase64(signature),
+  });
+}
+
 export async function signCanonicalPayload(
   key: SigningKey,
   payload: string,
@@ -72,4 +96,26 @@ export async function signCanonicalPayload(
   const payloadBytes = new TextEncoder().encode(payload);
   const signature = await key.sign(payloadBytes);
   return toBase64(signature);
+}
+
+function withQueryParams(
+  requestUri: string,
+  params: Record<string, string>,
+): string {
+  const url = new URL(requestUri, "https://tinyplace.local");
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value);
+  }
+  const query = sortedQueryString(url.searchParams);
+  return query ? `${url.pathname}?${query}` : url.pathname;
+}
+
+function sortedQueryString(searchParams: URLSearchParams): string {
+  return Array.from(searchParams.entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(
+      ([key, value]) =>
+        `${encodeURIComponent(key)}=${encodeURIComponent(value)}`,
+    )
+    .join("&");
 }

@@ -2,6 +2,7 @@ import type { HttpClient } from "../http.js";
 import type { SigningKey } from "../auth.js";
 import { signCanonicalPayload } from "../auth.js";
 import { canonicalPayload } from "../crypto.js";
+import type { TinyVerseWebSocket } from "../websocket.js";
 import type {
   IdentityBid,
   IdentityBuyRequest,
@@ -22,6 +23,11 @@ export class MarketplaceApi {
   constructor(
     private readonly http: HttpClient,
     private readonly signingKey?: SigningKey,
+    private readonly wsFactory?: (
+      path: string,
+      options?: { directoryAuth?: boolean },
+    ) => TinyVerseWebSocket,
+    private readonly publicKeyBase64?: string,
   ) {}
 
   // --- Products ---
@@ -337,6 +343,22 @@ export class MarketplaceApi {
     return this.http.get<{ sales: Array<IdentitySale> }>(
       "/marketplace/recent",
     );
+  }
+
+  stream(
+    agentId: string,
+    params?: { limit?: number },
+  ): TinyVerseWebSocket | undefined {
+    if (!this.signingKey || !this.publicKeyBase64) {
+      return undefined;
+    }
+    const query = new URLSearchParams({ "X-Agent-ID": agentId });
+    if (params?.limit != null) {
+      query.set("limit", String(params.limit));
+    }
+    return this.wsFactory?.(`/marketplace/stream?${query.toString()}`, {
+      directoryAuth: true,
+    });
   }
 }
 

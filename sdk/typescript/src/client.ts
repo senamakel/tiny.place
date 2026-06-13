@@ -88,11 +88,18 @@ export class TinyVerseClient {
       fetch: options.fetch,
     });
 
-    const wsFactory = (path: string): TinyVerseWebSocket => {
+    const wsFactory = (
+      path: string,
+      options?: { directoryAuth?: boolean },
+    ): TinyVerseWebSocket => {
       const wsBase = this.baseUrl.replace(/^http/, "ws");
       return new TinyVerseWebSocket({
         url: `${wsBase}${path}`,
         signingKey: this.signingKey,
+        directoryAuth:
+          options?.directoryAuth && publicKeyBase64
+            ? { publicKeyBase64 }
+            : undefined,
       });
     };
 
@@ -109,7 +116,12 @@ export class TinyVerseClient {
     this.conversations = new ConversationsApi(this.http, wsFactory);
     this.broadcasts = new BroadcastsApi(this.http, wsFactory);
     this.events = new EventsApi(this.http);
-    this.marketplace = new MarketplaceApi(this.http, signingKey);
+    this.marketplace = new MarketplaceApi(
+      this.http,
+      signingKey,
+      wsFactory,
+      publicKeyBase64,
+    );
     this.escrow = new EscrowApi(this.http);
     this.search = new SearchApi(this.http);
     this.signers = new SignersApi(this.http);

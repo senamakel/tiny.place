@@ -1,11 +1,14 @@
 import type { SigningKey } from "./auth.js";
-import { signRequest } from "./auth.js";
+import { signDirectoryWriteQuery, signRequest } from "./auth.js";
 
 export type WebSocketEventHandler<T = unknown> = (data: T) => void;
 
 export interface TinyVerseWebSocketOptions {
   url: string;
   signingKey?: SigningKey;
+  directoryAuth?: {
+    publicKeyBase64: string;
+  };
   reconnect?: boolean;
   reconnectInterval?: number;
   maxReconnectAttempts?: number;
@@ -19,6 +22,9 @@ export class TinyVerseWebSocket {
 
   private readonly url: string;
   private readonly signingKey?: SigningKey;
+  private readonly directoryAuth?: {
+    publicKeyBase64: string;
+  };
   private readonly reconnect: boolean;
   private readonly reconnectInterval: number;
   private readonly maxReconnectAttempts: number;
@@ -26,6 +32,7 @@ export class TinyVerseWebSocket {
   constructor(options: TinyVerseWebSocketOptions) {
     this.url = options.url;
     this.signingKey = options.signingKey;
+    this.directoryAuth = options.directoryAuth;
     this.reconnect = options.reconnect ?? true;
     this.reconnectInterval = options.reconnectInterval ?? 3000;
     this.maxReconnectAttempts = options.maxReconnectAttempts ?? 10;
@@ -35,7 +42,9 @@ export class TinyVerseWebSocket {
     this.closed = false;
     let wsUrl = this.url;
 
-    if (this.signingKey) {
+    if (this.signingKey && this.directoryAuth) {
+      wsUrl = await this.signDirectoryWriteUrl(wsUrl);
+    } else if (this.signingKey) {
       const authHeaders = await signRequest(this.signingKey, "");
       const auth = encodeURIComponent(authHeaders.Authorization);
       const separator = wsUrl.includes("?") ? "&" : "?";
@@ -96,6 +105,21 @@ export class TinyVerseWebSocket {
         handler(data);
       }
     }
+  }
+
+  private async signDirectoryWriteUrl(wsUrl: string): Promise<string> {
+    if (!this.signingKey || !this.directoryAuth) {
+      return wsUrl;
+    }
+    const url = new URL(wsUrl);
+    const signedRequestUri = await signDirectoryWriteQuery(
+      this.signingKey,
+      this.directoryAuth.publicKeyBase64,
+      "GET",
+      `${url.pathname}${url.search}`,
+      "",
+    );
+    return `${url.origin}${signedRequestUri}`;
   }
 
   send(data: unknown): void {
