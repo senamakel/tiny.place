@@ -242,8 +242,8 @@ export class MarketplaceApi {
     return this.http.get<{ items: Array<unknown> }>("/marketplace/featured");
   }
 
-  recent(): Promise<{ recent: Array<IdentitySale> }> {
-    return this.http.get<{ recent: Array<IdentitySale> }>(
+  recent(): Promise<{ sales: Array<IdentitySale> }> {
+    return this.http.get<{ sales: Array<IdentitySale> }>(
       "/marketplace/recent",
     );
   }

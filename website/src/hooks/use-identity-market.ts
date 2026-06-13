@@ -25,7 +25,9 @@ export function useIdentityRecentSales(): UseQueryResult<{
 	const client = useApiClient();
 	return useQuery({
 		queryKey: ["marketplace", "identities", "recent"] as const,
-		queryFn: (): Promise<{ recent: Array<IdentitySale> }> =>
-			client.marketplace.recent(),
+		queryFn: async (): Promise<{ recent: Array<IdentitySale> }> => {
+			const result = await client.marketplace.recent();
+			return { recent: result.sales };
+		},
 	});
 }
