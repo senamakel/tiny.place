@@ -23,6 +23,8 @@ import { useApiClient } from "@src/common/api-context";
 import { queryKeys } from "@src/common/query-keys";
 import { useAuthStore } from "@src/store/auth";
 
+import { buildSubscriptionAuthorizationFields } from "./subscription-authorization";
+
 function subscriptionId(): string {
 	return `sub_${generateNonce().replace(/_/g, "")}`;
 }
@@ -94,22 +96,15 @@ export function useCreateSubscription(): UseMutationResult<
 				if (!signer) {
 					throw new Error("Connect your wallet first");
 				}
-				const authorization = await signX402Authorization(signer, {
-					scheme: "upto",
-					network: request.plan.network,
-					asset: request.plan.asset,
-					amount: request.plan.amount,
-					from: subscriber,
-					to: request.provider,
-					nonce: `subscription:${nextSubscriptionId}:authorization`,
-					expiresAt: "",
-					metadata: {
-						domain: "tiny.place",
+				const authorization = await signX402Authorization(
+					signer,
+					buildSubscriptionAuthorizationFields({
 						subscriptionId: nextSubscriptionId,
-						kind: "subscription_authorization",
-						interval: request.plan.interval,
-					},
-				});
+						plan: request.plan,
+						from: subscriber,
+						to: request.provider,
+					})
+				);
 				return client.payments.createSubscription({
 					...request,
 					subscriptionId: nextSubscriptionId,
@@ -158,22 +153,15 @@ export function useRenewSubscription(): UseMutationResult<
 				throw new Error("Connect your wallet first");
 			}
 			const subscription = await client.payments.getSubscription(id);
-			const authorization = await signX402Authorization(signer, {
-				scheme: "upto",
-				network: subscription.plan.network,
-				asset: subscription.plan.asset,
-				amount: subscription.plan.amount,
-				from: subscription.subscriber,
-				to: subscription.provider,
-				nonce: `subscription:${subscription.subscriptionId}:authorization`,
-				expiresAt: "",
-				metadata: {
-					domain: "tiny.place",
+			const authorization = await signX402Authorization(
+				signer,
+				buildSubscriptionAuthorizationFields({
 					subscriptionId: subscription.subscriptionId,
-					kind: "subscription_authorization",
-					interval: subscription.plan.interval,
-				},
-			});
+					plan: subscription.plan,
+					from: subscription.subscriber,
+					to: subscription.provider,
+				})
+			);
 			return client.payments.renewSubscription(id, {
 				paymentAuthorization: authorization.signature,
 				settledAmount: request?.settledAmount,

@@ -23,6 +23,10 @@ import {
 
 import { useApiClient } from "@src/common/api-context";
 import { queryKeys } from "@src/common/query-keys";
+import {
+	assertValidX402Challenge,
+	type ExpectedX402Payment,
+} from "@src/common/x402-challenge";
 import { useAuthStore } from "@src/store/auth";
 
 /** Lists identities currently listed for sale on the marketplace. */
@@ -108,9 +112,11 @@ async function signIdentityPaymentChallenge(
 	signer: NonNullable<ReturnType<typeof useAuthStore.getState>["signer"]>,
 	challenge: IdentityPaymentChallenge,
 	fallbackFrom: string,
-	noncePrefix: string
+	noncePrefix: string,
+	expected: ExpectedX402Payment = {}
 ): Promise<Record<string, string>> {
 	const challengePayment = challenge.payment;
+	assertValidX402Challenge(challengePayment, expected);
 	const signedPayment = await signX402Authorization(signer, {
 		...challengePayment,
 		expiresAt:
@@ -209,7 +215,26 @@ export function useBuyIdentityListing(): UseMutationResult<
 					throw error;
 				}
 
+				// Bind the 402 challenge to the listing the user chose to buy: the
+				// challenge amount/asset/network must match the cached listing price
+				// before the wallet signs, so a tampered challenge can't redirect or
+				// inflate the payment.
+				const cached = queryClient.getQueryData<{
+					listings: Array<IdentityListing>;
+				}>(queryKeys.marketplace.identityListings());
+				const listing = cached?.listings.find(
+					(item) => item.listingId === listingId
+				);
+				const expected: ExpectedX402Payment = listing
+					? {
+							amount: listing.price.amount,
+							asset: listing.price.asset,
+							network: listing.price.network,
+						}
+					: {};
+
 				const challengePayment = challenge.payment;
+				assertValidX402Challenge(challengePayment, expected);
 				const signedPayment = await signX402Authorization(signer, {
 					...challengePayment,
 					expiresAt:
@@ -275,7 +300,14 @@ export function usePlaceIdentityBid(): UseMutationResult<
 						signer,
 						challenge,
 						bid.bidder,
-						"identity-bid"
+						"identity-bid",
+						bid.price
+							? {
+									amount: bid.price.amount,
+									asset: bid.price.asset,
+									network: bid.price.network,
+								}
+							: {}
 					),
 				});
 			}
@@ -446,7 +478,18 @@ export function useCreateIdentityOffer(): UseMutationResult<
 					throw error;
 				}
 
+				// The challenge must match the price the user offered, so it can't be
+				// silently inflated or redirected before the wallet signs.
+				const expected: ExpectedX402Payment = offer.price
+					? {
+							amount: offer.price.amount,
+							asset: offer.price.asset,
+							network: offer.price.network,
+						}
+					: {};
+
 				const challengePayment = challenge.payment;
+				assertValidX402Challenge(challengePayment, expected);
 				const signedPayment = await signX402Authorization(signer, {
 					...challengePayment,
 					expiresAt:

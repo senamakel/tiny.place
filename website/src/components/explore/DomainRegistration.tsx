@@ -11,37 +11,15 @@ import {
 	type X402AuthorizationFields,
 } from "@tinyhumansai/tinyplace";
 import type { FunctionComponent } from "@src/common/types";
+import {
+	formatFee,
+	getAnnualFee,
+	PRICING_TIERS,
+} from "@src/components/explore/domain-pricing";
 import { useApiClient } from "@src/common/api-context";
+import { assertValidX402Challenge } from "@src/common/x402-challenge";
 import { useHandleAvailability } from "@src/hooks/use-registry";
 import { useAuthStore } from "@src/store/auth";
-
-const PRICING_TIERS: Array<{ label: string; fee: string; example: string }> = [
-	{ label: "1 char", fee: "2 USDC", example: "@x" },
-	{ label: "2 chars", fee: "1 USDC", example: "@ai" },
-	{ label: "3 chars", fee: "0.5 USDC", example: "@bot" },
-	{ label: "4 chars", fee: "0.1 USDC", example: "@data" },
-	{ label: "5+ chars", fee: "0.005 USDC", example: "@analyst" },
-];
-
-function getAnnualFee(name: string): string {
-	const label = name.replace(/^@/, "");
-	switch (label.length) {
-		case 1:
-			return "2000";
-		case 2:
-			return "1000";
-		case 3:
-			return "500";
-		case 4:
-			return "100";
-		default:
-			return "0.005";
-	}
-}
-
-function formatFee(amount: string): string {
-	return `${Number(amount).toLocaleString()} USDC`;
-}
 
 function normalizedHandle(value: string): string {
 	const normalized = value.trim().replace(/^@+/, "");
@@ -116,6 +94,11 @@ export const DomainRegistration = ({
 				}
 				setPaymentChallenge(challenge);
 				const challengePayment = challenge.payment;
+				// The exact registration fee is authoritative from the server (and is
+				// in the asset's minor units, not the decimal-USDC preview), so we
+				// can't bind an exact amount client-side here. Guard at minimum that
+				// the money-bearing fields are present and well-formed before signing.
+				assertValidX402Challenge(challengePayment);
 				const metadata = {
 					...challengePayment.metadata,
 					domain: challengePayment.metadata?.["domain"] ?? "tiny.place",

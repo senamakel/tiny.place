@@ -17,6 +17,7 @@ import {
 
 import { useApiClient } from "@src/common/api-context";
 import { queryKeys } from "@src/common/query-keys";
+import { assertValidX402Challenge } from "@src/common/x402-challenge";
 import { useAuthStore } from "@src/store/auth";
 
 type GroupPaymentChallenge = {
@@ -121,6 +122,7 @@ export function useJoinGroup(): UseMutationResult<
 					throw new Error("Connect your wallet first");
 				}
 				const challengePayment = challenge.payment;
+				assertValidX402Challenge(challengePayment);
 				const signedPayment = await signX402Authorization(signer, {
 					...challengePayment,
 					expiresAt: challengePayment.expiresAt ?? "",
@@ -173,6 +175,7 @@ export function useRenewGroupSubscription(): UseMutationResult<
 					throw new Error("Connect your wallet first");
 				}
 				const challengePayment = challenge.payment;
+				assertValidX402Challenge(challengePayment);
 				const signedPayment = await signX402Authorization(signer, {
 					...challengePayment,
 					expiresAt: challengePayment.expiresAt ?? "",
