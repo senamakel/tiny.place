@@ -1,546 +1,379 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Token, TokenAccount, Transfer};
-
-pub mod x402;
+use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
 declare_id!("FNCnjUKR1YbEJwcjWWHJzWxgp2vbSjjHcBZaAshybhLq");
 
-/// Basis-points denominator: `fee_bps` of 250 == 2.50%.
-pub const BPS_DENOMINATOR: u64 = 10_000;
+/// Seed a settlement program must use for the PDA that authorizes disbursement.
+/// Escrow recomputes `PDA([VAULT_AUTHORITY_SEED], settlement_program)` and
+/// requires it to sign `disburse`, so the custody/policy binding is trustless:
+/// only the registered settlement program can move a vault's funds.
+pub const VAULT_AUTHORITY_SEED: &[u8] = b"vault_authority";
 
+/// The escrow program is pure custody + accounting. It holds funds in per-vault
+/// token accounts, accepts x402 deposits, and releases funds **only** when the
+/// registered settlement program (settlement_job, settlement_game_poker, …)
+/// authorizes a `disburse` — specifying recipient, amount, and fee. It contains
+/// no job or game logic of its own.
 #[program]
 pub mod escrow {
     use super::*;
 
-    /// Anyone can open an escrow against this singleton program. Escrows are
-    /// keyed by a caller-supplied `escrow_id` (PDA `["escrow", escrow_id]`), so
-    /// a single deployed program holds an unbounded, id-mapped set of escrows.
-    pub fn create(
-        ctx: Context<Create>,
-        escrow_id: [u8; 32],
-        amount: u64,
-        fee_bps: u16,
+    /// Open a vault bound to a settlement program. The vault's disburse
+    /// authority is fixed to that program's `vault_authority` PDA. Typically
+    /// invoked via CPI by the settlement program at job/game creation.
+    pub fn create_vault(
+        ctx: Context<CreateVault>,
+        vault_id: [u8; 32],
+        settlement_program: Pubkey,
     ) -> Result<()> {
-        require!(amount > 0, EscrowError::InvalidAmount);
-        require!((fee_bps as u64) < BPS_DENOMINATOR, EscrowError::InvalidFee);
+        let (authority, _) =
+            Pubkey::find_program_address(&[VAULT_AUTHORITY_SEED], &settlement_program);
 
-        let escrow = &mut ctx.accounts.escrow;
-        escrow.escrow_id = escrow_id;
-        escrow.client = ctx.accounts.client.key();
-        escrow.provider = ctx.accounts.provider.key();
-        escrow.admin = ctx.accounts.admin.key();
-        escrow.mint = ctx.accounts.mint.key();
-        escrow.fee_account = ctx.accounts.fee_account.key();
-        escrow.amount = amount;
-        escrow.fee_bps = fee_bps;
-        escrow.state = EscrowState::Open;
-        escrow.bump = ctx.bumps.escrow;
+        let vault = &mut ctx.accounts.vault;
+        vault.vault_id = vault_id;
+        vault.settlement_program = settlement_program;
+        vault.authority = authority;
+        vault.mint = ctx.accounts.mint.key();
+        vault.fee_account = ctx.accounts.fee_account.key();
+        vault.deposited = 0;
+        vault.disbursed = 0;
+        vault.state = VaultState::Open;
+        vault.bump = ctx.bumps.vault;
 
-        emit!(Created {
-            escrow: escrow.key(),
-            escrow_id,
-            client: escrow.client,
-            provider: escrow.provider,
-            amount,
+        emit!(VaultOpened {
+            vault: vault.key(),
+            vault_id,
+            settlement_program,
+            authority,
+            mint: vault.mint,
         });
         Ok(())
     }
 
-    pub fn fund(ctx: Context<Fund>) -> Result<()> {
-        let escrow = &ctx.accounts.escrow;
-        require!(escrow.state == EscrowState::Open, EscrowError::InvalidState);
+    /// Initialize a per-payer x402 nonce tracker (one-time, before first deposit).
+    pub fn init_nonce(ctx: Context<InitNonce>) -> Result<()> {
+        let tracker = &mut ctx.accounts.nonce_tracker;
+        tracker.owner = ctx.accounts.owner.key();
+        tracker.last_nonce = 0;
+        tracker.bump = ctx.bumps.nonce_tracker;
+        Ok(())
+    }
+
+    /// x402-compatible deposit into a vault. Replay-protected by a per-payer
+    /// monotonic nonce and an expiry. Anyone may deposit; settlement programs
+    /// wrap this via CPI so they can record their own per-depositor entries
+    /// atomically.
+    pub fn deposit(ctx: Context<Deposit>, payload: PaymentPayload) -> Result<()> {
+        let clock = Clock::get()?;
+        require!(clock.unix_timestamp <= payload.expiry, EscrowError::Expired);
+        require!(
+            ctx.accounts.vault.state == VaultState::Open,
+            EscrowError::VaultClosed
+        );
+        require!(
+            payload.payer == ctx.accounts.payer.key(),
+            EscrowError::Unauthorized
+        );
+        require!(payload.amount > 0, EscrowError::InvalidAmount);
+
+        let tracker = &mut ctx.accounts.nonce_tracker;
+        require!(payload.nonce > tracker.last_nonce, EscrowError::NonceUsed);
+        tracker.last_nonce = payload.nonce;
 
         token::transfer(
             CpiContext::new(
                 ctx.accounts.token_program.to_account_info(),
                 Transfer {
-                    from: ctx.accounts.client_token.to_account_info(),
-                    to: ctx.accounts.vault.to_account_info(),
-                    authority: ctx.accounts.client.to_account_info(),
+                    from: ctx.accounts.payer_token.to_account_info(),
+                    to: ctx.accounts.vault_token.to_account_info(),
+                    authority: ctx.accounts.payer.to_account_info(),
                 },
             ),
-            escrow.amount,
+            payload.amount,
         )?;
 
-        emit!(Funded {
-            escrow: ctx.accounts.escrow.key(),
-            amount: escrow.amount,
+        let vault = &mut ctx.accounts.vault;
+        vault.deposited = vault
+            .deposited
+            .checked_add(payload.amount)
+            .ok_or(EscrowError::MathOverflow)?;
+
+        emit!(Deposited {
+            vault: vault.key(),
+            payer: payload.payer,
+            amount: payload.amount,
+            payment_id: payment_id(&payload),
+            deposited: vault.deposited,
         });
         Ok(())
     }
 
-    pub fn mark_delivered(ctx: Context<MarkDelivered>) -> Result<()> {
-        let escrow = &mut ctx.accounts.escrow;
-        require!(escrow.state == EscrowState::Open, EscrowError::InvalidState);
+    /// Release `amount` to a recipient and `fee` to the vault's fee account.
+    /// Authorized only by the settlement program's `vault_authority` PDA signer.
+    /// The escrow signs the actual SPL transfer with its own vault PDA.
+    pub fn disburse(ctx: Context<Disburse>, amount: u64, fee: u64) -> Result<()> {
         require!(
-            ctx.accounts.provider.key() == escrow.provider,
+            ctx.accounts.authority.key() == ctx.accounts.vault.authority,
             EscrowError::Unauthorized
         );
-
-        escrow.state = EscrowState::Delivered;
-
-        emit!(Delivered {
-            escrow: ctx.accounts.escrow.key(),
-        });
-        Ok(())
-    }
-
-    /// Client accepts delivery; the staked funds are released to the provider,
-    /// minus the platform rake which is routed to the configured fee account.
-    pub fn approve(ctx: Context<Approve>) -> Result<()> {
         require!(
-            ctx.accounts.escrow.state == EscrowState::Delivered,
-            EscrowError::InvalidState
-        );
-        require!(
-            ctx.accounts.client.key() == ctx.accounts.escrow.client,
-            EscrowError::Unauthorized
+            ctx.accounts.fee_token.key() == ctx.accounts.vault.fee_account,
+            EscrowError::InvalidFeeAccount
         );
 
-        let (net, fee) = split_fee(ctx.accounts.escrow.amount, ctx.accounts.escrow.fee_bps)?;
-        release_from_vault(
-            &ctx.accounts.escrow,
-            ctx.accounts.token_program.to_account_info(),
-            ctx.accounts.vault.to_account_info(),
-            ctx.accounts.provider_token.to_account_info(),
-            ctx.accounts.fee_token.to_account_info(),
-            net,
-            fee,
-        )?;
+        let total = amount.checked_add(fee).ok_or(EscrowError::MathOverflow)?;
+        let available = ctx
+            .accounts
+            .vault
+            .deposited
+            .checked_sub(ctx.accounts.vault.disbursed)
+            .ok_or(EscrowError::MathOverflow)?;
+        require!(total <= available, EscrowError::InsufficientFunds);
 
-        let escrow = &mut ctx.accounts.escrow;
-        escrow.state = EscrowState::Resolved;
+        let vault_id = ctx.accounts.vault.vault_id;
+        let seeds: &[&[u8]] = &[b"vault", vault_id.as_ref(), &[ctx.accounts.vault.bump]];
+        let signer_seeds = &[seeds];
 
-        emit!(Released {
-            escrow: escrow.key(),
-            to: escrow.provider,
-            amount: net,
-            fee,
-        });
-        Ok(())
-    }
+        if amount > 0 {
+            token::transfer(
+                CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info(),
+                    Transfer {
+                        from: ctx.accounts.vault_token.to_account_info(),
+                        to: ctx.accounts.recipient_token.to_account_info(),
+                        authority: ctx.accounts.vault.to_account_info(),
+                    },
+                    signer_seeds,
+                ),
+                amount,
+            )?;
+        }
+        if fee > 0 {
+            token::transfer(
+                CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info(),
+                    Transfer {
+                        from: ctx.accounts.vault_token.to_account_info(),
+                        to: ctx.accounts.fee_token.to_account_info(),
+                        authority: ctx.accounts.vault.to_account_info(),
+                    },
+                    signer_seeds,
+                ),
+                fee,
+            )?;
+        }
 
-    pub fn dispute(ctx: Context<Dispute>) -> Result<()> {
-        let escrow = &mut ctx.accounts.escrow;
-        require!(
-            escrow.state == EscrowState::Delivered,
-            EscrowError::InvalidState
-        );
-        let signer = ctx.accounts.signer.key();
-        require!(
-            signer == escrow.client || signer == escrow.provider,
-            EscrowError::Unauthorized
-        );
+        let vault = &mut ctx.accounts.vault;
+        vault.disbursed = vault
+            .disbursed
+            .checked_add(total)
+            .ok_or(EscrowError::MathOverflow)?;
 
-        escrow.state = EscrowState::Disputed;
-
-        emit!(Disputed {
-            escrow: ctx.accounts.escrow.key(),
-            by: signer,
-        });
-        Ok(())
-    }
-
-    /// Admin/arbitrator resolves a dispute, directing funds to the recipient
-    /// (client or provider) minus the platform rake.
-    pub fn resolve(ctx: Context<Resolve>) -> Result<()> {
-        require!(
-            ctx.accounts.escrow.state == EscrowState::Disputed,
-            EscrowError::InvalidState
-        );
-        require!(
-            ctx.accounts.admin.key() == ctx.accounts.escrow.admin,
-            EscrowError::Unauthorized
-        );
-
-        let (net, fee) = split_fee(ctx.accounts.escrow.amount, ctx.accounts.escrow.fee_bps)?;
-        release_from_vault(
-            &ctx.accounts.escrow,
-            ctx.accounts.token_program.to_account_info(),
-            ctx.accounts.vault.to_account_info(),
-            ctx.accounts.recipient_token.to_account_info(),
-            ctx.accounts.fee_token.to_account_info(),
-            net,
-            fee,
-        )?;
-
-        let escrow = &mut ctx.accounts.escrow;
-        escrow.state = EscrowState::Resolved;
-
-        emit!(Resolved {
-            escrow: escrow.key(),
+        emit!(Disbursed {
+            vault: vault.key(),
             to: ctx.accounts.recipient_token.key(),
-            amount: net,
+            amount,
             fee,
-        });
-        Ok(())
-    }
-
-    pub fn init_nonce(ctx: Context<InitNonce>) -> Result<()> {
-        x402::handle_init_nonce(ctx)
-    }
-
-    pub fn settle(ctx: Context<Settle>, payload: x402::PaymentPayload) -> Result<()> {
-        x402::handle_settle(ctx, payload)
-    }
-
-    pub fn settle_to_escrow(
-        ctx: Context<SettleToEscrow>,
-        payload: x402::PaymentPayload,
-    ) -> Result<()> {
-        x402::handle_settle_to_escrow(ctx, payload)
-    }
-
-    /// Client reclaims funds while the escrow is still Open. No rake on refunds.
-    pub fn refund(ctx: Context<Refund>) -> Result<()> {
-        require!(
-            ctx.accounts.escrow.state == EscrowState::Open,
-            EscrowError::InvalidState
-        );
-        require!(
-            ctx.accounts.client.key() == ctx.accounts.escrow.client,
-            EscrowError::Unauthorized
-        );
-
-        let amount = ctx.accounts.escrow.amount;
-        release_from_vault(
-            &ctx.accounts.escrow,
-            ctx.accounts.token_program.to_account_info(),
-            ctx.accounts.vault.to_account_info(),
-            ctx.accounts.client_token.to_account_info(),
-            ctx.accounts.client_token.to_account_info(),
-            amount,
-            0,
-        )?;
-
-        let escrow = &mut ctx.accounts.escrow;
-        escrow.state = EscrowState::Refunded;
-
-        emit!(Refunded {
-            escrow: escrow.key(),
-            amount,
+            disbursed: vault.disbursed,
         });
         Ok(())
     }
 }
 
-/// Split `amount` into `(net, fee)` where `fee = amount * fee_bps / 10_000`.
-fn split_fee(amount: u64, fee_bps: u16) -> Result<(u64, u64)> {
-    let fee = (amount as u128)
-        .checked_mul(fee_bps as u128)
-        .and_then(|value| value.checked_div(BPS_DENOMINATOR as u128))
-        .ok_or(EscrowError::MathOverflow)? as u64;
-    let net = amount.checked_sub(fee).ok_or(EscrowError::MathOverflow)?;
-    Ok((net, fee))
+/// Deterministic id for an x402 payment, for off-chain reconciliation.
+fn payment_id(payload: &PaymentPayload) -> [u8; 32] {
+    let mut data = Vec::new();
+    data.extend_from_slice(&payload.amount.to_le_bytes());
+    data.extend_from_slice(payload.payer.as_ref());
+    data.extend_from_slice(payload.payee.as_ref());
+    data.extend_from_slice(&payload.nonce.to_le_bytes());
+    data.extend_from_slice(&payload.expiry.to_le_bytes());
+    anchor_lang::solana_program::keccak::hash(&data).to_bytes()
 }
 
-/// Move `net` to `recipient` and `fee` to `fee_recipient`, signed by the escrow PDA.
-fn release_from_vault<'info>(
-    escrow: &Account<'info, EscrowAccount>,
-    token_program: AccountInfo<'info>,
-    vault: AccountInfo<'info>,
-    recipient: AccountInfo<'info>,
-    fee_recipient: AccountInfo<'info>,
-    net: u64,
-    fee: u64,
-) -> Result<()> {
-    let seeds: &[&[u8]] = &[b"escrow", escrow.escrow_id.as_ref(), &[escrow.bump]];
-    let signer_seeds = &[seeds];
-
-    token::transfer(
-        CpiContext::new_with_signer(
-            token_program.clone(),
-            Transfer {
-                from: vault.clone(),
-                to: recipient,
-                authority: escrow.to_account_info(),
-            },
-            signer_seeds,
-        ),
-        net,
-    )?;
-
-    if fee > 0 {
-        token::transfer(
-            CpiContext::new_with_signer(
-                token_program,
-                Transfer {
-                    from: vault,
-                    to: fee_recipient,
-                    authority: escrow.to_account_info(),
-                },
-                signer_seeds,
-            ),
-            fee,
-        )?;
-    }
-
-    Ok(())
-}
+// --- State ---
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
-pub enum EscrowState {
+pub enum VaultState {
     Open,
-    Delivered,
-    Resolved,
-    Disputed,
-    Refunded,
+    Closed,
 }
 
+/// A custody vault: funds live in a separate `vault_token` account whose
+/// authority is the vault PDA. `deposited - disbursed` is the available balance.
 #[account]
-pub struct EscrowAccount {
-    pub escrow_id: [u8; 32],
-    pub client: Pubkey,
-    pub provider: Pubkey,
-    pub admin: Pubkey,
+pub struct Vault {
+    pub vault_id: [u8; 32],
+    pub settlement_program: Pubkey,
+    pub authority: Pubkey,
     pub mint: Pubkey,
     pub fee_account: Pubkey,
-    pub amount: u64,
-    pub fee_bps: u16,
-    pub state: EscrowState,
+    pub deposited: u64,
+    pub disbursed: u64,
+    pub state: VaultState,
     pub bump: u8,
 }
 
-impl EscrowAccount {
-    pub const SIZE: usize = 8 + 32 + 32 + 32 + 32 + 32 + 32 + 8 + 2 + 1 + 1;
+impl Vault {
+    pub const SIZE: usize = 8 + 32 + 32 + 32 + 32 + 32 + 8 + 8 + 1 + 1;
+}
+
+#[account]
+pub struct NonceTracker {
+    pub owner: Pubkey,
+    pub last_nonce: u64,
+    pub bump: u8,
+}
+
+impl NonceTracker {
+    pub const SIZE: usize = 8 + 32 + 8 + 1;
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct PaymentPayload {
+    pub amount: u64,
+    pub payer: Pubkey,
+    pub payee: Pubkey,
+    pub nonce: u64,
+    pub expiry: i64,
 }
 
 // --- Contexts ---
 
 #[derive(Accounts)]
-#[instruction(escrow_id: [u8; 32])]
-pub struct Create<'info> {
+#[instruction(vault_id: [u8; 32])]
+pub struct CreateVault<'info> {
     #[account(
         init,
         payer = creator,
-        space = EscrowAccount::SIZE,
-        seeds = [b"escrow", escrow_id.as_ref()],
+        space = Vault::SIZE,
+        seeds = [b"vault", vault_id.as_ref()],
         bump
     )]
-    pub escrow: Account<'info, EscrowAccount>,
-    /// The fee-payer opening the escrow; need not be a party to it.
+    pub vault: Account<'info, Vault>,
+    #[account(
+        init,
+        payer = creator,
+        token::mint = mint,
+        token::authority = vault,
+    )]
+    pub vault_token: Account<'info, TokenAccount>,
     #[account(mut)]
     pub creator: Signer<'info>,
-    /// CHECK: client pubkey, not signing
-    pub client: AccountInfo<'info>,
-    /// CHECK: provider pubkey, not signing
-    pub provider: AccountInfo<'info>,
-    /// CHECK: admin pubkey, not signing
-    pub admin: AccountInfo<'info>,
-    /// CHECK: token mint
-    pub mint: AccountInfo<'info>,
-    /// CHECK: token account that receives the platform rake on release
+    pub mint: Account<'info, Mint>,
+    /// CHECK: token account that receives the fee on disburse; verified by key on disburse
     pub fee_account: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
+    pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
 }
-
-#[derive(Accounts)]
-pub struct Fund<'info> {
-    pub escrow: Account<'info, EscrowAccount>,
-    #[account(mut)]
-    pub client: Signer<'info>,
-    #[account(mut, constraint = client_token.owner == client.key())]
-    pub client_token: Account<'info, TokenAccount>,
-    #[account(mut)]
-    pub vault: Account<'info, TokenAccount>,
-    pub token_program: Program<'info, Token>,
-}
-
-#[derive(Accounts)]
-pub struct MarkDelivered<'info> {
-    #[account(mut)]
-    pub escrow: Account<'info, EscrowAccount>,
-    pub provider: Signer<'info>,
-}
-
-#[derive(Accounts)]
-pub struct Approve<'info> {
-    #[account(mut)]
-    pub escrow: Account<'info, EscrowAccount>,
-    pub client: Signer<'info>,
-    #[account(mut)]
-    pub provider_token: Account<'info, TokenAccount>,
-    #[account(mut, constraint = fee_token.key() == escrow.fee_account @ EscrowError::InvalidFeeAccount)]
-    pub fee_token: Account<'info, TokenAccount>,
-    #[account(mut)]
-    pub vault: Account<'info, TokenAccount>,
-    pub token_program: Program<'info, Token>,
-}
-
-#[derive(Accounts)]
-pub struct Dispute<'info> {
-    #[account(mut)]
-    pub escrow: Account<'info, EscrowAccount>,
-    pub signer: Signer<'info>,
-}
-
-#[derive(Accounts)]
-pub struct Resolve<'info> {
-    #[account(mut)]
-    pub escrow: Account<'info, EscrowAccount>,
-    pub admin: Signer<'info>,
-    #[account(mut)]
-    pub recipient_token: Account<'info, TokenAccount>,
-    #[account(mut, constraint = fee_token.key() == escrow.fee_account @ EscrowError::InvalidFeeAccount)]
-    pub fee_token: Account<'info, TokenAccount>,
-    #[account(mut)]
-    pub vault: Account<'info, TokenAccount>,
-    pub token_program: Program<'info, Token>,
-}
-
-#[derive(Accounts)]
-pub struct Refund<'info> {
-    #[account(mut)]
-    pub escrow: Account<'info, EscrowAccount>,
-    pub client: Signer<'info>,
-    #[account(mut, constraint = client_token.owner == client.key())]
-    pub client_token: Account<'info, TokenAccount>,
-    #[account(mut)]
-    pub vault: Account<'info, TokenAccount>,
-    pub token_program: Program<'info, Token>,
-}
-
-// --- x402 contexts (handlers live in `x402.rs`) ---
 
 #[derive(Accounts)]
 pub struct InitNonce<'info> {
     #[account(
         init,
         payer = owner,
-        space = x402::NonceTracker::SIZE,
+        space = NonceTracker::SIZE,
         seeds = [b"nonce", owner.key().as_ref()],
         bump
     )]
-    pub nonce_tracker: Account<'info, x402::NonceTracker>,
+    pub nonce_tracker: Account<'info, NonceTracker>,
     #[account(mut)]
     pub owner: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
-#[instruction(payload: x402::PaymentPayload)]
-pub struct Settle<'info> {
-    #[account(
-        init,
-        payer = payer,
-        space = x402::PaymentRecord::SIZE,
-        seeds = [b"payment", payload.payer.as_ref(), &payload.nonce.to_le_bytes()],
-        bump
-    )]
-    pub payment_record: Account<'info, x402::PaymentRecord>,
+#[instruction(payload: PaymentPayload)]
+pub struct Deposit<'info> {
+    #[account(mut)]
+    pub vault: Account<'info, Vault>,
     #[account(
         mut,
         seeds = [b"nonce", payload.payer.as_ref()],
         bump = nonce_tracker.bump,
     )]
-    pub nonce_tracker: Account<'info, x402::NonceTracker>,
+    pub nonce_tracker: Account<'info, NonceTracker>,
     #[account(mut)]
     pub payer: Signer<'info>,
-    #[account(mut, constraint = payer_token.owner == payer.key())]
+    #[account(mut, constraint = payer_token.owner == payer.key() @ EscrowError::Unauthorized)]
     pub payer_token: Account<'info, TokenAccount>,
-    #[account(mut)]
-    pub payee_token: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        constraint = vault_token.owner == vault.key() @ EscrowError::InvalidVault,
+        constraint = vault_token.mint == vault.mint @ EscrowError::InvalidVault,
+    )]
+    pub vault_token: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
-#[instruction(payload: x402::PaymentPayload)]
-pub struct SettleToEscrow<'info> {
-    #[account(
-        init,
-        payer = payer,
-        space = x402::PaymentRecord::SIZE,
-        seeds = [b"payment", payload.payer.as_ref(), &payload.nonce.to_le_bytes()],
-        bump
-    )]
-    pub payment_record: Account<'info, x402::PaymentRecord>,
+pub struct Disburse<'info> {
+    #[account(mut)]
+    pub vault: Account<'info, Vault>,
+    /// The settlement program's `vault_authority` PDA, signing via CPI.
+    pub authority: Signer<'info>,
     #[account(
         mut,
-        seeds = [b"nonce", payload.payer.as_ref()],
-        bump = nonce_tracker.bump,
+        constraint = vault_token.owner == vault.key() @ EscrowError::InvalidVault,
     )]
-    pub nonce_tracker: Account<'info, x402::NonceTracker>,
+    pub vault_token: Account<'info, TokenAccount>,
     #[account(mut)]
-    pub payer: Signer<'info>,
-    #[account(mut, constraint = payer_token.owner == payer.key())]
-    pub payer_token: Account<'info, TokenAccount>,
+    pub recipient_token: Account<'info, TokenAccount>,
     #[account(mut)]
-    pub escrow: Account<'info, EscrowAccount>,
-    #[account(mut)]
-    pub vault: Account<'info, TokenAccount>,
+    pub fee_token: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
 }
 
 // --- Events ---
 
 #[event]
-pub struct Created {
-    pub escrow: Pubkey,
-    pub escrow_id: [u8; 32],
-    pub client: Pubkey,
-    pub provider: Pubkey,
+pub struct VaultOpened {
+    pub vault: Pubkey,
+    pub vault_id: [u8; 32],
+    pub settlement_program: Pubkey,
+    pub authority: Pubkey,
+    pub mint: Pubkey,
+}
+
+#[event]
+pub struct Deposited {
+    pub vault: Pubkey,
+    pub payer: Pubkey,
     pub amount: u64,
+    pub payment_id: [u8; 32],
+    pub deposited: u64,
 }
 
 #[event]
-pub struct Funded {
-    pub escrow: Pubkey,
-    pub amount: u64,
-}
-
-#[event]
-pub struct Delivered {
-    pub escrow: Pubkey,
-}
-
-#[event]
-pub struct Released {
-    pub escrow: Pubkey,
+pub struct Disbursed {
+    pub vault: Pubkey,
     pub to: Pubkey,
     pub amount: u64,
     pub fee: u64,
-}
-
-#[event]
-pub struct Disputed {
-    pub escrow: Pubkey,
-    pub by: Pubkey,
-}
-
-#[event]
-pub struct Resolved {
-    pub escrow: Pubkey,
-    pub to: Pubkey,
-    pub amount: u64,
-    pub fee: u64,
-}
-
-#[event]
-pub struct Refunded {
-    pub escrow: Pubkey,
-    pub amount: u64,
+    pub disbursed: u64,
 }
 
 // --- Errors ---
 
 #[error_code]
 pub enum EscrowError {
-    #[msg("Invalid escrow state for this operation")]
-    InvalidState,
     #[msg("Unauthorized caller")]
     Unauthorized,
+    #[msg("Vault is closed")]
+    VaultClosed,
+    #[msg("Vault token account does not belong to this vault")]
+    InvalidVault,
+    #[msg("Fee token account does not match the vault fee account")]
+    InvalidFeeAccount,
     #[msg("Payment has expired")]
     Expired,
     #[msg("Nonce already used")]
     NonceUsed,
-    #[msg("Amount mismatch")]
+    #[msg("Amount must be positive")]
     InvalidAmount,
-    #[msg("Fee basis points must be below 10000")]
-    InvalidFee,
-    #[msg("Fee token account does not match the escrow fee account")]
-    InvalidFeeAccount,
+    #[msg("Insufficient available funds in vault")]
+    InsufficientFunds,
     #[msg("Arithmetic overflow")]
     MathOverflow,
 }

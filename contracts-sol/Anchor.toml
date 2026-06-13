@@ -6,7 +6,8 @@ skip-lint = false
 
 [programs.localnet]
 escrow = "FNCnjUKR1YbEJwcjWWHJzWxgp2vbSjjHcBZaAshybhLq"
-game = "CATBJS1qmZCCHJzNmdEwXNsBn1QYJoBuCg7yi8FTL8mG"
+settlement_job = "6SAJ45pSHykE984VqDL54GmakdaT7C55xCJJEZnFXcyg"
+settlement_game_poker = "CATBJS1qmZCCHJzNmdEwXNsBn1QYJoBuCg7yi8FTL8mG"
 
 [registry]
 url = "https://api.apr.dev"

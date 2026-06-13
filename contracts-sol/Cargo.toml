@@ -1,3 +1,7 @@
 [workspace]
-members = ["programs/escrow", "programs/game"]
+members = [
+    "programs/escrow",
+    "programs/settlement_job",
+    "programs/settlement_game_poker",
+]
 resolver = "2"
