@@ -28,6 +28,8 @@ export interface X402VerifyRequest {
   amount: string;
   from: string;
   to: string;
+  payer?: string;
+  payee?: string;
   nonce: string;
   expiresAt: string;
   signature: string;
@@ -37,9 +39,12 @@ export interface X402VerifyRequest {
 export interface X402VerifyResponse {
   valid: boolean;
   intentId?: string;
+  verifiedId?: string;
   network?: string;
   asset?: string;
   amount?: string;
+  expiresAt?: string;
+  feeQuoteId?: string;
   feeRate?: string;
   feeAmount?: string;
   netAmount?: string;

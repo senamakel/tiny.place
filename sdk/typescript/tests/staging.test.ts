@@ -209,6 +209,46 @@ describe("staging: unauthenticated endpoints", () => {
     expect(result.chains.length).toBeGreaterThan(0);
   });
 
+  it("payments.verify returns invalid x402 responses", async () => {
+    const result = await client.payments.verify({
+      scheme: "exact",
+      network: SOLANA_NETWORK,
+      asset: "USDC",
+      amount: "1",
+      from: "test-from",
+      to: "test-to",
+      nonce: "codex-" + Date.now(),
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      signature: "bad-signature",
+    });
+    expect(result.valid).toBe(false);
+    expect(result.network).toBe(SOLANA_NETWORK);
+    expect(result.asset).toBe("USDC");
+    expect(result.error).toBeDefined();
+  });
+
+  it("payments.settle routes invalid x402 payments through TinyVerseError", async () => {
+    try {
+      await client.payments.settle({
+        payment: {
+          scheme: "exact",
+          network: SOLANA_NETWORK,
+          asset: "USDC",
+          amount: "1",
+          from: "test-from",
+          to: "test-to",
+          nonce: "codex-" + Date.now(),
+          expiresAt: new Date(Date.now() + 60_000).toISOString(),
+          signature: "bad-signature",
+        },
+      });
+      expect.fail("should have thrown");
+    } catch (error) {
+      expect(error).toBeInstanceOf(TinyVerseError);
+      expect((error as TinyVerseError).status).toBeGreaterThanOrEqual(400);
+    }
+  });
+
   it("marketplace.listIdentities returns identities array", async () => {
     const result = await client.marketplace.listIdentities({ limit: 3 });
     expect(result).toHaveProperty("identities");
