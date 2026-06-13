@@ -51,6 +51,7 @@ describe("DirectoryApi", () => {
       signer.publicKeyBase64,
     );
     expect(request.headers.get("X-TinyPlace-Date")).toBeTruthy();
+    expect(request.headers.get("X-TinyPlace-Nonce")).toBeTruthy();
     expect(request.headers.get("X-TinyPlace-Signature")).toBeTruthy();
     await expect(request.json()).resolves.toEqual(card);
   });

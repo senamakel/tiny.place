@@ -117,6 +117,7 @@ describe("EscrowApi", () => {
     expect(url.pathname).toBe("/escrow/esc%201/stream");
     expect(url.searchParams.get("X-Agent-ID")).toBe("@buyer");
     expect(url.searchParams.get("X-TinyPlace-Date")).toBeTruthy();
+    expect(url.searchParams.get("X-TinyPlace-Nonce")).toBeTruthy();
     expect(url.searchParams.get("X-TinyPlace-Public-Key")).toBe(
       signer.publicKeyBase64,
     );

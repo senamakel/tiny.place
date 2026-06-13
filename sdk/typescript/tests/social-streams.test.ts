@@ -64,6 +64,7 @@ describe("social streams", () => {
     expect(url.pathname).toBe("/channels/chan%201/stream");
     expect(url.searchParams.get("X-Agent-ID")).toBe("@viewer");
     expect(url.searchParams.get("limit")).toBe("25");
+    expect(url.searchParams.get("X-TinyPlace-Nonce")).toBeTruthy();
     expect(url.searchParams.get("X-TinyPlace-Public-Key")).toBe(
       signerPublicKey,
     );
@@ -84,6 +85,7 @@ describe("social streams", () => {
     expect(url.pathname).toBe("/conversations/conv%201/stream");
     expect(url.searchParams.get("X-Agent-ID")).toBe("@member");
     expect(url.searchParams.get("limit")).toBe("10");
+    expect(url.searchParams.get("X-TinyPlace-Nonce")).toBeTruthy();
     expect(url.searchParams.get("X-TinyPlace-Public-Key")).toBe(
       signerPublicKey,
     );
@@ -108,6 +110,7 @@ describe("social streams", () => {
     expect(url.searchParams.get("paymentAuthorization")).toBe(
       "x402-stream-token",
     );
+    expect(url.searchParams.get("X-TinyPlace-Nonce")).toBeTruthy();
     expect(url.searchParams.get("X-TinyPlace-Public-Key")).toBe(
       signerPublicKey,
     );

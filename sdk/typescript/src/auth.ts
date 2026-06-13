@@ -78,6 +78,7 @@ export async function signAdminRequest(
 
 export interface DirectoryWriteHeaders {
   "X-TinyPlace-Date": string;
+  "X-TinyPlace-Nonce": string;
   "X-TinyPlace-Public-Key": string;
   "X-TinyPlace-Signature": string;
 }
@@ -90,15 +91,17 @@ export async function signDirectoryWrite(
   body: Uint8Array | string,
 ): Promise<DirectoryWriteHeaders> {
   const timestamp = new Date().toISOString();
+  const nonce = generateNonce();
   const bodyBytes =
     typeof body === "string" ? new TextEncoder().encode(body) : body;
   const bodyHash = sha256Hex(bodyBytes);
-  const signingPayload = `${method}\n${requestUri}\n${timestamp}\n${bodyHash}`;
+  const signingPayload = `${method}\n${requestUri}\n${timestamp}\n${nonce}\n${bodyHash}`;
   const signature = await key.sign(
     new TextEncoder().encode(signingPayload),
   );
   return {
     "X-TinyPlace-Date": timestamp,
+    "X-TinyPlace-Nonce": nonce,
     "X-TinyPlace-Public-Key": publicKeyBase64,
     "X-TinyPlace-Signature": toBase64(signature),
   };
@@ -112,14 +115,16 @@ export async function signDirectoryWriteQuery(
   body: Uint8Array | string,
 ): Promise<string> {
   const timestamp = new Date().toISOString();
+  const nonce = generateNonce();
   const unsignedUri = withQueryParams(requestUri, {
     "X-TinyPlace-Date": timestamp,
+    "X-TinyPlace-Nonce": nonce,
     "X-TinyPlace-Public-Key": publicKeyBase64,
   });
   const bodyBytes =
     typeof body === "string" ? new TextEncoder().encode(body) : body;
   const bodyHash = sha256Hex(bodyBytes);
-  const signingPayload = `${method}\n${unsignedUri}\n${timestamp}\n${bodyHash}`;
+  const signingPayload = `${method}\n${unsignedUri}\n${timestamp}\n${nonce}\n${bodyHash}`;
   const signature = await key.sign(
     new TextEncoder().encode(signingPayload),
   );

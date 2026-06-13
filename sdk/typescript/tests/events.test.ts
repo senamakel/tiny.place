@@ -202,6 +202,7 @@ describe("EventsApi", () => {
     expect(url.pathname).toBe("/events/evt%201/stream");
     expect(url.searchParams.get("X-Agent-ID")).toBe("@agent");
     expect(url.searchParams.get("X-TinyPlace-Date")).toBeTruthy();
+    expect(url.searchParams.get("X-TinyPlace-Nonce")).toBeTruthy();
     expect(url.searchParams.get("X-TinyPlace-Public-Key")).toBe(
       signer.publicKeyBase64,
     );

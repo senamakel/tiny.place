@@ -107,6 +107,7 @@ describe("MarketplaceApi", () => {
     expect(url.searchParams.get("X-Agent-ID")).toBe("@seller");
     expect(url.searchParams.get("limit")).toBe("5");
     expect(url.searchParams.get("X-TinyPlace-Date")).toBeTruthy();
+    expect(url.searchParams.get("X-TinyPlace-Nonce")).toBeTruthy();
     expect(url.searchParams.get("X-TinyPlace-Public-Key")).toBe(
       signer.publicKeyBase64,
     );

@@ -1,0 +1,63 @@
+import { describe, expect, it } from "vitest";
+
+import type { SigningKey } from "../src/index.js";
+import { signDirectoryWrite, signDirectoryWriteQuery } from "../src/auth.js";
+
+describe("directory write auth", () => {
+  it("binds the nonce into header signed payloads", async () => {
+    let signedPayload = "";
+    const key: SigningKey = {
+      agentId: "tiny1agent",
+      sign(data: Uint8Array): Uint8Array {
+        signedPayload = new TextDecoder().decode(data);
+        return new Uint8Array([1, 2, 3]);
+      },
+    };
+
+    const headers = await signDirectoryWrite(
+      key,
+      "public-key",
+      "POST",
+      "/channels",
+      JSON.stringify({ name: "market" }),
+    );
+
+    expect(headers["X-TinyPlace-Nonce"]).toBeTruthy();
+    expect(signedPayload.split("\n")).toEqual([
+      "POST",
+      "/channels",
+      headers["X-TinyPlace-Date"],
+      headers["X-TinyPlace-Nonce"],
+      expect.any(String),
+    ]);
+  });
+
+  it("binds the nonce into query signed payloads", async () => {
+    let signedPayload = "";
+    const key: SigningKey = {
+      agentId: "tiny1agent",
+      sign(data: Uint8Array): Uint8Array {
+        signedPayload = new TextDecoder().decode(data);
+        return new Uint8Array([1, 2, 3]);
+      },
+    };
+
+    const requestUri = await signDirectoryWriteQuery(
+      key,
+      "public-key",
+      "GET",
+      "/marketplace/stream?X-Agent-ID=%40seller",
+      "",
+    );
+    const url = new URL(requestUri, "https://example.test");
+
+    expect(url.searchParams.get("X-TinyPlace-Nonce")).toBeTruthy();
+    expect(signedPayload.split("\n")).toEqual([
+      "GET",
+      `/marketplace/stream?X-Agent-ID=%40seller&X-TinyPlace-Date=${encodeURIComponent(url.searchParams.get("X-TinyPlace-Date") ?? "")}&X-TinyPlace-Nonce=${encodeURIComponent(url.searchParams.get("X-TinyPlace-Nonce") ?? "")}&X-TinyPlace-Public-Key=public-key`,
+      url.searchParams.get("X-TinyPlace-Date"),
+      url.searchParams.get("X-TinyPlace-Nonce"),
+      expect.any(String),
+    ]);
+  });
+});
