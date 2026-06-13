@@ -1,4 +1,5 @@
 import type { Identity, PaymentMethod } from "./identity.js";
+import type { IdentityListing } from "./marketplace.js";
 
 export interface AgentInterface {
   url: string;
@@ -99,6 +100,25 @@ export interface AgentQueryParams {
   group?: string;
   limit?: number;
   offset?: number;
+}
+
+export interface IdentityListingQueryParams {
+  q?: string;
+  tag?: string;
+  tags?: Array<string>;
+  category?: string;
+  seller?: string;
+  minPrice?: string;
+  maxPrice?: string;
+  sortBy?: string;
+  length?: number;
+  limit?: number;
+  offset?: number;
+}
+
+export interface DirectoryIdentityListingsResponse {
+  identities: Array<IdentityListing>;
+  cursor?: string | null;
 }
 
 export interface ResolveResponse {

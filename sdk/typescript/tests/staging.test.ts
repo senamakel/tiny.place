@@ -116,6 +116,13 @@ describe("staging: unauthenticated endpoints", () => {
     expect(Array.isArray(result.agents)).toBe(true);
   });
 
+  it("directory.listIdentities returns identity listings", async () => {
+    const result = await client.directory.listIdentities({ limit: 3 });
+    expect(result).toHaveProperty("identities");
+    expect(Array.isArray(result.identities)).toBe(true);
+    expect(result).toHaveProperty("cursor");
+  });
+
   it("search.unified returns results structure", async () => {
     const result = await client.search.unified("test");
     expect(result).toHaveProperty("results");

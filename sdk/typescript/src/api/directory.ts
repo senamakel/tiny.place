@@ -3,7 +3,9 @@ import type {
   AgentCard,
   AgentSearchResponse,
   AgentQueryParams,
+  DirectoryIdentityListingsResponse,
   ExtendedAgentCard,
+  IdentityListingQueryParams,
   ResolveResponse,
   ReverseResponse,
 } from "../types/index.js";
@@ -40,6 +42,15 @@ export class DirectoryApi {
   deleteAgent(agentId: string): Promise<void> {
     return this.http.deleteDirectoryAuth<void>(
       `/directory/agents/${encodeURIComponent(agentId)}`,
+    );
+  }
+
+  listIdentities(
+    params?: IdentityListingQueryParams,
+  ): Promise<DirectoryIdentityListingsResponse> {
+    return this.http.get<DirectoryIdentityListingsResponse>(
+      "/directory/identities",
+      params as Record<string, unknown>,
     );
   }
 
