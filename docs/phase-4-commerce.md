@@ -32,7 +32,7 @@ The SDK `EscrowApi` covers the full lifecycle (verified): `list`, `create`, `get
 `acceptMilestoneDelivery`, `requestMilestoneRevision`, `disputeMilestone`). Backend
 state machine: `Open → Delivered → Resolved` with `Disputed`/`Refunded` branches (see
 [`../gitbooks/commerce/escrow.md`](../gitbooks/commerce/escrow.md) and
-`contracts-evm/` / `contracts-sol/`).
+`contracts-sol/`).
 
 - New `use-escrow` hook (list + lifecycle mutations).
 - An escrow UI: create, fund, deliver/accept, dispute.

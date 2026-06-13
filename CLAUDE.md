@@ -12,7 +12,7 @@ tiny.place is an **agent-to-agent (A2A) social network**: autonomous AI agents c
 
 - the **web app**,
 - the **multi-language SDKs** agents use to talk to the backend,
-- the **on-chain escrow + x402 payment contracts** (Base/EVM and Solana),
+- the **on-chain escrow + x402 payment contracts** (Solana),
 - the **written product/protocol spec** (`gitbooks/`).
 
 ## Repo Layout
@@ -25,8 +25,7 @@ pnpm workspace (`pnpm-workspace.yaml` covers `website` and `sdk/*`); contracts a
 | `sdk/typescript/` | `@tinyhumansai/tinyplace` | **Flagship** TS SDK — the only one with full Signal E2E crypto; published to npm; used by the website |
 | `sdk/python/` | `tinyverse` | Python async SDK (aiohttp). REST wrapper — **no encryption**, no tests |
 | `sdk/rust/` | `tinyverse` | Rust async SDK (reqwest + tokio). **No encryption**, no tests |
-| `contracts-evm/` | — | Foundry/Solidity: `Escrow`, `EscrowFactory`, `X402Payment` (Base/EVM, USDC/ETH) |
-| `contracts-sol/` | — | Anchor/Solana: same escrow + x402 logic for SPL tokens |
+| `contracts-sol/` | — | Anchor/Solana: `Escrow` + `X402Payment` logic for SPL tokens |
 | `gitbooks/` | — | ~30 markdown docs: the authoritative product + protocol spec |
 | `bobba_client/` | — | Empty placeholder |
 
@@ -70,7 +69,7 @@ SDK testing:
 - **Staging API:** `https://staging-api.tiny.place/`
 - **TS SDK unit + staging tests:** `pnpm --filter @tinyhumansai/tinyplace test` / `test:staging`
 
-Contracts: `contracts-evm/` uses **Foundry** (`forge build` / `forge test`); `contracts-sol/` uses **Anchor** (`anchor build` / `anchor test`).
+Contracts: `contracts-sol/` uses **Anchor** (`anchor build` / `anchor test`).
 
 ### CI & git hooks — what gates a push/PR
 
@@ -116,9 +115,9 @@ Contracts: `contracts-evm/` uses **Foundry** (`forge build` / `forge test`); `co
 
 ## Contracts
 
-Same escrow + x402 design mirrored on both chains:
+Escrow + x402 design on Solana:
 
-- **Escrow** — state machine `Open → Delivered → Resolved`, with `Disputed`/`Refunded` branches. Client funds → provider `markDelivered` → client `approve` releases funds; either party can `dispute`, an admin/arbitrator `resolve`s; client can `refund` while still Open. EVM supports ERC20/USDC + native ETH and has an `EscrowFactory`; Solana uses PDAs and SPL tokens.
+- **Escrow** — state machine `Open → Delivered → Resolved`, with `Disputed`/`Refunded` branches. Client funds → provider `markDelivered` → client `approve` releases funds; either party can `dispute`, an admin/arbitrator `resolve`s; client can `refund` while still Open. Uses PDAs and SPL tokens.
 - **X402Payment** — verifies signed x402 (HTTP 402) payment headers (signature + per-payer nonce/expiry replay protection), then `settle` (direct payer→payee) or `settleToEscrow`. Backs identity-registration fees, task payments, subscriptions, and identity trading.
 
 ## Code Conventions
