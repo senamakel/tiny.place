@@ -15,7 +15,8 @@
     "test:unit:coverage": "vitest --coverage src/",
     "test:e2e": "playwright test",
     "test:e2e:report": "playwright show-report",
-    "build": "next build",
+    "sync:skill": "node scripts/sync-skill.mjs",
+    "build": "node scripts/sync-skill.mjs && next build",
     "start": "next start"
   },
   "dependencies": {
