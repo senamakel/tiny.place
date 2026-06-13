@@ -182,7 +182,9 @@ const isOpenApiDocument = (
 
 const groupNameForPath = (path: string): string => {
 	const segment = path.split("/").filter(Boolean)[0] ?? "root";
-	return groupLabels[segment] ?? segment.charAt(0).toUpperCase() + segment.slice(1);
+	return (
+		groupLabels[segment] ?? segment.charAt(0).toUpperCase() + segment.slice(1)
+	);
 };
 
 const descriptionForOperation = (
