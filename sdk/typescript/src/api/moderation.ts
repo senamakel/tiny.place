@@ -44,6 +44,7 @@ export class ModerationApi {
     target?: string;
     type?: string;
     limit?: number;
+    offset?: number;
   }): Promise<{ actions: Array<ModerationAction> }> {
     return this.http.get<{ actions: Array<ModerationAction> }>(
       "/moderation/actions",
