@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { canonicalPayload, LocalSigner, TinyVerseClient } from "../src/index.js";
+import {
+  canonicalPayload,
+  LocalSigner,
+  TinyVerseClient,
+} from "../src/index.js";
 
 function fromBase64(value: string): Uint8Array {
   const binary = atob(value);
@@ -10,12 +14,26 @@ function fromBase64(value: string): Uint8Array {
   return bytes;
 }
 
+function fromBase64Url(value: string): string {
+  const padded = value.padEnd(
+    value.length + ((4 - (value.length % 4)) % 4),
+    "=",
+  );
+  return atob(padded.replaceAll("-", "+").replaceAll("_", "/"));
+}
+
 async function verifySignature(
   signer: LocalSigner,
   signature: string,
   action: string,
   fields: Record<string, unknown>,
 ): Promise<boolean> {
+  const [version, timestamp, nonce, rawSignature] = signature.split(":");
+  expect(version).toBe("v1");
+  expect(timestamp).toBeTruthy();
+  expect(nonce).toBeTruthy();
+  expect(rawSignature).toBeTruthy();
+
   const publicKey = await globalThis.crypto.subtle.importKey(
     "raw",
     signer.publicKey,
@@ -23,11 +41,14 @@ async function verifySignature(
     false,
     ["verify"],
   );
+  const payload = canonicalPayload(action, fields);
   return globalThis.crypto.subtle.verify(
     "Ed25519",
     publicKey,
-    fromBase64(signature),
-    new TextEncoder().encode(canonicalPayload(action, fields)),
+    fromBase64(rawSignature!),
+    new TextEncoder().encode(
+      `${payload}\n${fromBase64Url(timestamp!)}\n${fromBase64Url(nonce!)}`,
+    ),
   );
 }
 
@@ -233,9 +254,7 @@ describe("MarketplaceApi", () => {
 
     expect(requests).toHaveLength(4);
     expect(requests[0]!.method).toBe("POST");
-    expect(requests[0]!.url).toBe(
-      "https://example.test/marketplace/products",
-    );
+    expect(requests[0]!.url).toBe("https://example.test/marketplace/products");
     expect(requests[0]!.headers.get("X-Agent-ID")).toBe("@seller");
 
     const createBody = (await requests[0]!.json()) as {
@@ -319,12 +338,9 @@ describe("MarketplaceApi", () => {
     expect(requests[3]!.headers.get("X-TinyPlace-Signature")).toBeNull();
     expect(deleteSignature).toBeTruthy();
     await expect(
-      verifySignature(
-        signer,
-        deleteSignature!,
-        "marketplace.product.delete",
-        { productId: "prod_123" },
-      ),
+      verifySignature(signer, deleteSignature!, "marketplace.product.delete", {
+        productId: "prod_123",
+      }),
     ).resolves.toBe(true);
   });
 

@@ -23,6 +23,7 @@ export {
   signRequest,
   signDirectoryWrite,
   signCanonicalPayload,
+  signFreshCanonicalPayload,
 } from "./auth.js";
 
 export { Signer } from "./signer.js";

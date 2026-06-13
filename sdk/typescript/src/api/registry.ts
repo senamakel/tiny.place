@@ -1,5 +1,5 @@
 import type { SigningKey } from "../auth.js";
-import { signCanonicalPayload } from "../auth.js";
+import { signFreshCanonicalPayload } from "../auth.js";
 import { canonicalPayload } from "../crypto.js";
 import type { HttpClient } from "../http.js";
 import type {
@@ -45,7 +45,7 @@ export class RegistryApi {
         publicKey: request.publicKey,
         username: request.username,
       });
-      signature = await signCanonicalPayload(this.signingKey, payload);
+      signature = await signFreshCanonicalPayload(this.signingKey, payload);
     }
 
     return this.http.postPublic<Identity>("/registry/names", {
@@ -78,7 +78,7 @@ export class RegistryApi {
       });
       update = {
         ...update,
-        signature: await signCanonicalPayload(this.signingKey, payload),
+        signature: await signFreshCanonicalPayload(this.signingKey, payload),
       };
     }
     return this.http.put<Identity>(
@@ -92,7 +92,7 @@ export class RegistryApi {
     update: ProfileVisibilityUpdate,
   ): Promise<ProfileVisibility> {
     if (this.signingKey && !update.signature) {
-      const payload = canonicalPayload("identity.profile_visibility", {
+      const payload = canonicalPayload("identity.profile.visibility", {
         activity: update.activity ?? null,
         agentCard: update.agentCard ?? null,
         attestations: update.attestations ?? null,
@@ -103,7 +103,7 @@ export class RegistryApi {
       });
       update = {
         ...update,
-        signature: await signCanonicalPayload(this.signingKey, payload),
+        signature: await signFreshCanonicalPayload(this.signingKey, payload),
       };
     }
     return this.http.put<ProfileVisibility>(
@@ -117,7 +117,7 @@ export class RegistryApi {
       const payload = canonicalPayload("identity.renew", { username: name });
       request = {
         ...request,
-        signature: await signCanonicalPayload(this.signingKey, payload),
+        signature: await signFreshCanonicalPayload(this.signingKey, payload),
       };
     }
     return this.http.post<Identity>(
@@ -126,10 +126,7 @@ export class RegistryApi {
     );
   }
 
-  async claim(
-    name: string,
-    request: IdentityClaimRequest,
-  ): Promise<Identity> {
+  async claim(name: string, request: IdentityClaimRequest): Promise<Identity> {
     if (this.signingKey && !request.signature) {
       const payload = canonicalPayload("identity.claim", {
         cryptoId: request.cryptoId,
@@ -138,7 +135,7 @@ export class RegistryApi {
       });
       request = {
         ...request,
-        signature: await signCanonicalPayload(this.signingKey, payload),
+        signature: await signFreshCanonicalPayload(this.signingKey, payload),
       };
     }
     return this.http.post<Identity>(
@@ -160,7 +157,7 @@ export class RegistryApi {
       });
       request = {
         ...request,
-        signature: await signCanonicalPayload(this.signingKey, payload),
+        signature: await signFreshCanonicalPayload(this.signingKey, payload),
       };
     }
     return this.http.post<Subname>(
@@ -177,7 +174,7 @@ export class RegistryApi {
         username: name,
       });
       body = {
-        signature: await signCanonicalPayload(this.signingKey, payload),
+        signature: await signFreshCanonicalPayload(this.signingKey, payload),
       };
     }
     return this.http.delete<void>(

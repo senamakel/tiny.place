@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { canonicalPayload, LocalSigner, TinyVerseClient } from "../src/index.js";
+import {
+  canonicalPayload,
+  LocalSigner,
+  TinyVerseClient,
+} from "../src/index.js";
 
 function fromBase64(value: string): Uint8Array {
   const binary = atob(value);
@@ -8,6 +12,42 @@ function fromBase64(value: string): Uint8Array {
     bytes[index] = binary.charCodeAt(index);
   }
   return bytes;
+}
+
+function fromBase64Url(value: string): string {
+  const padded = value.padEnd(
+    value.length + ((4 - (value.length % 4)) % 4),
+    "=",
+  );
+  return atob(padded.replaceAll("-", "+").replaceAll("_", "/"));
+}
+
+async function verifyFreshSignature(
+  signer: LocalSigner,
+  signature: string,
+  payload: string,
+): Promise<boolean> {
+  const [version, timestamp, nonce, rawSignature] = signature.split(":");
+  expect(version).toBe("v1");
+  expect(timestamp).toBeTruthy();
+  expect(nonce).toBeTruthy();
+  expect(rawSignature).toBeTruthy();
+
+  const publicKey = await globalThis.crypto.subtle.importKey(
+    "raw",
+    signer.publicKey,
+    { name: "Ed25519" },
+    false,
+    ["verify"],
+  );
+  return globalThis.crypto.subtle.verify(
+    "Ed25519",
+    publicKey,
+    fromBase64(rawSignature!),
+    new TextEncoder().encode(
+      `${payload}\n${fromBase64Url(timestamp!)}\n${fromBase64Url(nonce!)}`,
+    ),
+  );
 }
 
 describe("RegistryApi", () => {
@@ -49,27 +89,17 @@ describe("RegistryApi", () => {
     };
     expect(body.signature).toBeTruthy();
 
-    const publicKey = await globalThis.crypto.subtle.importKey(
-      "raw",
-      signer.publicKey,
-      { name: "Ed25519" },
-      false,
-      ["verify"],
-    );
-    const ok = await globalThis.crypto.subtle.verify(
-      "Ed25519",
-      publicKey,
-      fromBase64(body.signature),
-      new TextEncoder().encode(
-        canonicalPayload("identity.register", {
-          bio: "Agent",
-          cryptoId: signer.agentId,
-          metadata: {},
-          paymentMethods: null,
-          publicKey: signer.publicKeyBase64,
-          username: "@agent",
-        }),
-      ),
+    const ok = await verifyFreshSignature(
+      signer,
+      body.signature,
+      canonicalPayload("identity.register", {
+        bio: "Agent",
+        cryptoId: signer.agentId,
+        metadata: {},
+        paymentMethods: null,
+        publicKey: signer.publicKeyBase64,
+        username: "@agent",
+      }),
     );
     expect(ok).toBe(true);
   });
@@ -120,28 +150,18 @@ describe("RegistryApi", () => {
     });
     expect(body.signature).toBeTruthy();
 
-    const publicKey = await globalThis.crypto.subtle.importKey(
-      "raw",
-      signer.publicKey,
-      { name: "Ed25519" },
-      false,
-      ["verify"],
-    );
-    const ok = await globalThis.crypto.subtle.verify(
-      "Ed25519",
-      publicKey,
-      fromBase64(body.signature),
-      new TextEncoder().encode(
-        canonicalPayload("identity.profile_visibility", {
-          activity: false,
-          agentCard: null,
-          attestations: null,
-          broadcasts: null,
-          groups: null,
-          searchEngineIndexing: false,
-          username: "@agent",
-        }),
-      ),
+    const ok = await verifyFreshSignature(
+      signer,
+      body.signature,
+      canonicalPayload("identity.profile.visibility", {
+        activity: false,
+        agentCard: null,
+        attestations: null,
+        broadcasts: null,
+        groups: null,
+        searchEngineIndexing: false,
+        username: "@agent",
+      }),
     );
     expect(ok).toBe(true);
   });
@@ -178,9 +198,7 @@ describe("RegistryApi", () => {
 
     expect(renewed.username).toBe("@agent");
     expect(claimed.publicKey).toBe(signer.publicKeyBase64);
-    expect(
-      requests.map((request) => [request.method, request.url]),
-    ).toEqual([
+    expect(requests.map((request) => [request.method, request.url])).toEqual([
       ["POST", "https://example.test/registry/names/%40agent/renew"],
       ["POST", "https://example.test/registry/names/%40agent/claim"],
     ]);

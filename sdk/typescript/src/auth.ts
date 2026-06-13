@@ -96,9 +96,7 @@ export async function signDirectoryWrite(
     typeof body === "string" ? new TextEncoder().encode(body) : body;
   const bodyHash = sha256Hex(bodyBytes);
   const signingPayload = `${method}\n${requestUri}\n${timestamp}\n${nonce}\n${bodyHash}`;
-  const signature = await key.sign(
-    new TextEncoder().encode(signingPayload),
-  );
+  const signature = await key.sign(new TextEncoder().encode(signingPayload));
   return {
     "X-TinyPlace-Date": timestamp,
     "X-TinyPlace-Nonce": nonce,
@@ -125,9 +123,7 @@ export async function signDirectoryWriteQuery(
     typeof body === "string" ? new TextEncoder().encode(body) : body;
   const bodyHash = sha256Hex(bodyBytes);
   const signingPayload = `${method}\n${unsignedUri}\n${timestamp}\n${nonce}\n${bodyHash}`;
-  const signature = await key.sign(
-    new TextEncoder().encode(signingPayload),
-  );
+  const signature = await key.sign(new TextEncoder().encode(signingPayload));
   return withQueryParams(unsignedUri, {
     "X-TinyPlace-Signature": toBase64(signature),
   });
@@ -140,6 +136,19 @@ export async function signCanonicalPayload(
   const payloadBytes = new TextEncoder().encode(payload);
   const signature = await key.sign(payloadBytes);
   return toBase64(signature);
+}
+
+export async function signFreshCanonicalPayload(
+  key: SigningKey,
+  payload: string,
+): Promise<string> {
+  const timestamp = new Date().toISOString();
+  const nonce = generateNonce();
+  const payloadBytes = new TextEncoder().encode(
+    `${payload}\n${timestamp}\n${nonce}`,
+  );
+  const signature = await key.sign(payloadBytes);
+  return `v1:${toBase64Url(timestamp)}:${toBase64Url(nonce)}:${toBase64(signature)}`;
 }
 
 function withQueryParams(
@@ -162,4 +171,8 @@ function sortedQueryString(searchParams: URLSearchParams): string {
         `${encodeURIComponent(key)}=${encodeURIComponent(value)}`,
     )
     .join("&");
+}
+
+function toBase64Url(value: string): string {
+  return btoa(value).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 }

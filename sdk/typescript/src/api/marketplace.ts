@@ -1,6 +1,6 @@
 import type { HttpClient } from "../http.js";
 import type { SigningKey } from "../auth.js";
-import { signCanonicalPayload } from "../auth.js";
+import { signFreshCanonicalPayload } from "../auth.js";
 import { canonicalPayload } from "../crypto.js";
 import type { TinyVerseWebSocket } from "../websocket.js";
 import type {
@@ -49,7 +49,7 @@ export class MarketplaceApi {
         ...product,
         productId: product.productId ?? nextMarketplaceId("prod"),
       };
-      product.signature = await signCanonicalPayload(
+      product.signature = await signFreshCanonicalPayload(
         this.signingKey,
         productSignaturePayload(product),
       );
@@ -63,7 +63,10 @@ export class MarketplaceApi {
       );
     }
 
-    return this.http.postDirectoryAuth<Product>("/marketplace/products", product);
+    return this.http.postDirectoryAuth<Product>(
+      "/marketplace/products",
+      product,
+    );
   }
 
   getProduct(productId: string): Promise<Product> {
@@ -76,7 +79,7 @@ export class MarketplaceApi {
     if (this.signingKey && !update.signature) {
       update = {
         ...update,
-        signature: await signCanonicalPayload(
+        signature: await signFreshCanonicalPayload(
           this.signingKey,
           productSignaturePayload(update),
         ),
@@ -104,7 +107,7 @@ export class MarketplaceApi {
       );
     }
 
-    const signature = await signCanonicalPayload(
+    const signature = await signFreshCanonicalPayload(
       this.signingKey,
       productDeleteSignaturePayload(productId),
     );
@@ -168,7 +171,7 @@ export class MarketplaceApi {
         productId,
         reviewId: review.reviewId ?? nextMarketplaceId("rev"),
       };
-      review.signature = await signCanonicalPayload(
+      review.signature = await signFreshCanonicalPayload(
         this.signingKey,
         productReviewSignaturePayload(review),
       );
@@ -208,7 +211,7 @@ export class MarketplaceApi {
         ...listing,
         listingId: listing.listingId ?? nextMarketplaceId("listing"),
       };
-      listing.signature = await signCanonicalPayload(
+      listing.signature = await signFreshCanonicalPayload(
         this.signingKey,
         identityListingSignaturePayload(listing),
       );
@@ -235,7 +238,7 @@ export class MarketplaceApi {
       );
     }
 
-    const signature = await signCanonicalPayload(
+    const signature = await signFreshCanonicalPayload(
       this.signingKey,
       identityListingCancelSignaturePayload(listingId),
     );
@@ -251,7 +254,7 @@ export class MarketplaceApi {
     if (this.signingKey && !request.signature) {
       request = {
         ...request,
-        signature: await signCanonicalPayload(
+        signature: await signFreshCanonicalPayload(
           this.signingKey,
           identityBuySignaturePayload(listingId, request),
         ),
@@ -288,7 +291,7 @@ export class MarketplaceApi {
         listingId,
         bidId: bid.bidId ?? nextMarketplaceId("bid"),
       };
-      bid.signature = await signCanonicalPayload(
+      bid.signature = await signFreshCanonicalPayload(
         this.signingKey,
         identityBidSignaturePayload(bid),
       );
@@ -367,7 +370,7 @@ export class MarketplaceApi {
         ...offer,
         offerId: offer.offerId ?? nextMarketplaceId("offer"),
       };
-      offer.signature = await signCanonicalPayload(
+      offer.signature = await signFreshCanonicalPayload(
         this.signingKey,
         identityOfferSignaturePayload(offer),
       );
@@ -394,7 +397,7 @@ export class MarketplaceApi {
       );
     }
 
-    const signature = await signCanonicalPayload(
+    const signature = await signFreshCanonicalPayload(
       this.signingKey,
       identityOfferCancelSignaturePayload(offerId),
     );
@@ -410,7 +413,7 @@ export class MarketplaceApi {
     if (this.signingKey && !request.signature) {
       request = {
         ...request,
-        signature: await signCanonicalPayload(
+        signature: await signFreshCanonicalPayload(
           this.signingKey,
           identityOfferAcceptSignaturePayload(offerId, request.seller),
         ),
@@ -453,9 +456,7 @@ export class MarketplaceApi {
   }
 
   recent(): Promise<{ sales: Array<IdentitySale> }> {
-    return this.http.get<{ sales: Array<IdentitySale> }>(
-      "/marketplace/recent",
-    );
+    return this.http.get<{ sales: Array<IdentitySale> }>("/marketplace/recent");
   }
 
   stream(
@@ -498,9 +499,7 @@ function productDeleteSignaturePayload(productId: string): string {
   });
 }
 
-function productReviewSignaturePayload(
-  review: Partial<ProductReview>,
-): string {
+function productReviewSignaturePayload(review: Partial<ProductReview>): string {
   return canonicalPayload("marketplace.product.review", {
     buyer: review.buyer ?? "",
     comment: review.comment ?? "",
@@ -554,9 +553,7 @@ function identityBidSignaturePayload(bid: Partial<IdentityBid>): string {
   });
 }
 
-function identityOfferSignaturePayload(
-  offer: Partial<IdentityOffer>,
-): string {
+function identityOfferSignaturePayload(offer: Partial<IdentityOffer>): string {
   return canonicalPayload("marketplace.identity.offer", {
     buyer: offer.buyer ?? "",
     buyerCryptoId: offer.buyerCryptoId ?? "",
