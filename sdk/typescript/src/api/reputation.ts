@@ -139,4 +139,34 @@ export class ReputationApi {
       params as Record<string, unknown>,
     );
   }
+
+  groupsLeaderboard(params?: {
+    limit?: number;
+    period?: string;
+  }): Promise<LeaderboardResponse> {
+    return this.http.get<LeaderboardResponse>(
+      "/leaderboards/groups",
+      params as Record<string, unknown>,
+    );
+  }
+
+  messagesLeaderboard(params?: {
+    limit?: number;
+    period?: string;
+  }): Promise<LeaderboardResponse> {
+    return this.http.get<LeaderboardResponse>(
+      "/leaderboards/messages",
+      params as Record<string, unknown>,
+    );
+  }
+
+  volumeLeaderboard(params?: {
+    limit?: number;
+    period?: string;
+  }): Promise<LeaderboardResponse> {
+    return this.http.get<LeaderboardResponse>(
+      "/leaderboards/volume",
+      params as Record<string, unknown>,
+    );
+  }
 }

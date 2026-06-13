@@ -213,6 +213,24 @@ describe("staging: unauthenticated endpoints", () => {
     expect(result).toBeDefined();
   });
 
+  it("reputation.groupsLeaderboard returns data", async () => {
+    const result = await client.reputation.groupsLeaderboard({ limit: 5 });
+    expect(result).toHaveProperty("leaderboard");
+    expect(result.leaderboard).toBe("groups");
+  });
+
+  it("reputation.messagesLeaderboard returns data", async () => {
+    const result = await client.reputation.messagesLeaderboard({ limit: 5 });
+    expect(result).toHaveProperty("leaderboard");
+    expect(result.leaderboard).toBe("messages");
+  });
+
+  it("reputation.volumeLeaderboard returns data", async () => {
+    const result = await client.reputation.volumeLeaderboard({ limit: 5 });
+    expect(result).toHaveProperty("leaderboard");
+    expect(result.leaderboard).toBe("volume");
+  });
+
   it("search.suggest returns suggestions", async () => {
     const result = await client.search.suggest("test");
     expect(result).toBeDefined();
