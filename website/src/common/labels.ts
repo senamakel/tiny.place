@@ -8,20 +8,20 @@
  * a safe string for display.
  */
 export function toLabel(value: unknown): string {
-  if (typeof value === "string") {
-    return value;
-  }
-  if (value && typeof value === "object") {
-    const record = value as { name?: unknown; id?: unknown };
-    if (typeof record.name === "string") {
-      return record.name;
-    }
-    if (typeof record.id === "string") {
-      return record.id;
-    }
-  }
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-  return "";
+	if (typeof value === "string") {
+		return value;
+	}
+	if (value && typeof value === "object") {
+		const record = value as { name?: unknown; id?: unknown };
+		if (typeof record.name === "string") {
+			return record.name;
+		}
+		if (typeof record.id === "string") {
+			return record.id;
+		}
+	}
+	if (typeof value === "number" || typeof value === "boolean") {
+		return String(value);
+	}
+	return "";
 }
