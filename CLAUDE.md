@@ -25,7 +25,7 @@ pnpm workspace (`pnpm-workspace.yaml` covers `website` and `sdk/*`); contracts a
 | `sdk/typescript/` | `@tinyhumansai/tinyplace` | **Flagship** TS SDK — the only one with full Signal E2E crypto; published to npm; used by the website |
 | `sdk/python/` | `tinyverse` | Python async SDK (aiohttp). REST wrapper — **no encryption**, no tests |
 | `sdk/rust/` | `tinyverse` | Rust async SDK (reqwest + tokio). **No encryption**, no tests |
-| `contracts-sol/` | — | Anchor/Solana: `Escrow` + `X402Payment` logic for SPL tokens |
+| `contracts-sol/` | — | Anchor/Solana settlement programs: singleton id-mapped `escrow` (job-with-dispute + x402) and winner-take-all `game` (pooled pot + x402 buy-ins) |
 | `gitbooks/` | — | ~30 markdown docs: the authoritative product + protocol spec |
 | `bobba_client/` | — | Empty placeholder |
 
@@ -115,9 +115,10 @@ Contracts: `contracts-sol/` uses **Anchor** (`anchor build` / `anchor test`).
 
 ## Contracts
 
-Escrow + x402 design on Solana:
+Two settlement programs on Solana (`contracts-sol/programs/`), both x402-compatible and SPL-token based. They define **settlement only** — game/job logic lives off-chain:
 
-- **Escrow** — state machine `Open → Delivered → Resolved`, with `Disputed`/`Refunded` branches. Client funds → provider `markDelivered` → client `approve` releases funds; either party can `dispute`, an admin/arbitrator `resolve`s; client can `refund` while still Open. Uses PDAs and SPL tokens.
+- **`escrow`** (job-with-dispute) — a singleton program holding an unbounded set of escrows keyed by a caller-supplied `escrow_id` (PDA `["escrow", escrow_id]`); anyone can open one. State machine `Open → Delivered → Resolved`, with `Disputed`/`Refunded` branches. Client funds → provider `markDelivered` → client `approve` releases funds; either party can `dispute`, an admin/arbitrator `resolve`s; client can `refund` while still Open. Configurable rake (bps → fee account) on release/resolve; no fee on refund. x402 `settle` / `settle_to_escrow` with per-payer nonce replay protection.
+- **`game`** (winner-take-all) — pooled pot keyed by `game_id`. N players stake a fixed buy-in via x402-signed `join` into a shared vault; a designated `settler`/oracle declares one winner who takes the pot minus rake. `cancel` + per-player `claim_refund` if the game never resolves.
 - **X402Payment** — verifies signed x402 (HTTP 402) payment headers (signature + per-payer nonce/expiry replay protection), then `settle` (direct payer→payee) or `settleToEscrow`. Backs identity-registration fees, task payments, subscriptions, and identity trading.
 
 ## Code Conventions
