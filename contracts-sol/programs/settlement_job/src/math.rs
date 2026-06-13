@@ -51,6 +51,31 @@ mod tests {
         assert_eq!(rake(100, 20_000, true), None);
     }
 
+    fn xorshift(state: &mut u64) -> u64 {
+        let mut x = *state;
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        *state = x;
+        x
+    }
+
+    #[test]
+    fn fuzz_rake_conserves() {
+        let mut s = 0xDEADBEEFCAFEBABEu64;
+        for _ in 0..200_000 {
+            let available = xorshift(&mut s);
+            let fee_bps = (xorshift(&mut s) % BPS_DENOMINATOR) as u16; // valid range
+            let take_fee = xorshift(&mut s) & 1 == 0;
+            let (amount, fee) = rake(available, fee_bps, take_fee).expect("valid fee_bps never fails");
+            assert_eq!(amount + fee, available, "J1 conservation");
+            assert!(fee <= available, "J3 fee bound");
+            if !take_fee {
+                assert_eq!(fee, 0, "J2 no fee on refund");
+            }
+        }
+    }
+
     #[test]
     fn rake_conserves_funds() {
         for &avail in &[0u64, 1, 999, 1000, u64::MAX] {

@@ -103,6 +103,35 @@ mod tests {
         }
     }
 
+    // Deterministic xorshift RNG so this fuzz loop is reproducible in CI.
+    fn xorshift(state: &mut u64) -> u64 {
+        let mut x = *state;
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        *state = x;
+        x
+    }
+
+    #[test]
+    fn fuzz_disburse_invariants() {
+        let mut s = 0x9E3779B97F4A7C15u64;
+        for _ in 0..200_000 {
+            let deposited = xorshift(&mut s);
+            // Keep the precondition disbursed <= deposited (true on-chain).
+            let disbursed = xorshift(&mut s) % (deposited.max(1));
+            let amount = xorshift(&mut s);
+            let fee = xorshift(&mut s);
+            if let Some(new) = apply_disburse(deposited, disbursed, amount, fee) {
+                let total = amount.checked_add(fee).expect("total must not overflow when accepted");
+                assert!(total <= deposited - disbursed, "E2 no-overspend");
+                assert_eq!(new, disbursed + total, "disbursed advances by exactly total");
+                assert!(new <= deposited, "E1 solvency");
+                assert!(new >= disbursed, "disbursed monotonic");
+            }
+        }
+    }
+
     #[test]
     fn nonce_monotonic() {
         assert!(nonce_ok(0, 1));

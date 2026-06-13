@@ -33,10 +33,20 @@ cargo kani -p settlement_job          # conservation, no-fee-on-refund
 cargo kani -p settlement_game_poker   # pot conservation
 ```
 
-Unit tests (no extra tooling):
+Unit tests + randomized fuzz loops (no extra tooling — the `fuzz_*` tests run
+200k deterministic iterations each):
 
 ```bash
 cargo test --manifest-path contracts-sol/Cargo.toml
+```
+
+Coverage-guided fuzzing (libFuzzer, needs nightly + `cargo install cargo-fuzz`):
+
+```bash
+cd contracts-sol
+cargo +nightly fuzz run disburse    # escrow solvency / no-overspend
+cargo +nightly fuzz run rake        # job fund conservation
+cargo +nightly fuzz run pot_split   # poker pot conservation
 ```
 
 ## Coverage

@@ -4,6 +4,9 @@ members = [
     "programs/settlement_job",
     "programs/settlement_game_poker",
 ]
+# The cargo-fuzz crate has its own build (nightly + libFuzzer); keep it out of
+# the normal workspace build/test/coverage.
+exclude = ["fuzz"]
 resolver = "2"
 
 # Register `cfg(kani)` (set by the Kani verifier) as a known cfg so normal

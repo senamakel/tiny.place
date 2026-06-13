@@ -38,6 +38,27 @@ mod tests {
         assert_eq!(pot_split(100, 20_000), None);
     }
 
+    fn xorshift(state: &mut u64) -> u64 {
+        let mut x = *state;
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        *state = x;
+        x
+    }
+
+    #[test]
+    fn fuzz_pot_split_conserves() {
+        let mut s = 0x0123456789ABCDEFu64;
+        for _ in 0..200_000 {
+            let pot = xorshift(&mut s);
+            let fee_bps = (xorshift(&mut s) % BPS_DENOMINATOR) as u16;
+            let (payout, fee) = pot_split(pot, fee_bps).expect("valid fee_bps never fails");
+            assert_eq!(payout + fee, pot, "P1 conservation");
+            assert!(fee <= pot, "P2 fee bound");
+        }
+    }
+
     #[test]
     fn conserves_pot() {
         for &pot in &[0u64, 1, 333, 2000, u64::MAX] {
