@@ -1,8 +1,17 @@
-import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import {
+	useMutation,
+	useQuery,
+	useQueryClient,
+	type UseMutationResult,
+	type UseQueryResult,
+} from "@tanstack/react-query";
 import type {
 	BroadcastChannel,
+	BroadcastCreateRequest,
 	BroadcastMessage,
 	BroadcastQueryParams,
+	BroadcastSubscriber,
+	BroadcastSubscribeRequest,
 } from "@tinyhumansai/tinyplace";
 
 import { useApiClient } from "@src/common/api-context";
@@ -33,13 +42,95 @@ export function useBroadcast(
 
 export function useBroadcastMessages(
 	broadcastId: string,
-	parameters?: { limit?: number; offset?: number }
+	parameters?: {
+		agentId?: string;
+		limit?: number;
+		offset?: number;
+		paymentAuthorization?: string;
+	}
 ): UseQueryResult<{ messages: Array<BroadcastMessage> }> {
 	const client = useApiClient();
 	return useQuery({
-		queryKey: ["broadcasts", "messages", broadcastId, parameters] as const,
+		queryKey: queryKeys.broadcasts.messages(broadcastId, parameters),
 		queryFn: (): Promise<{ messages: Array<BroadcastMessage> }> =>
 			client.broadcasts.listMessages(broadcastId, parameters),
 		enabled: Boolean(broadcastId),
+	});
+}
+
+export function useCreateBroadcast(): UseMutationResult<
+	BroadcastChannel,
+	Error,
+	BroadcastCreateRequest
+> {
+	const client = useApiClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (request): Promise<BroadcastChannel> =>
+			client.broadcasts.create(request),
+		onSuccess: (broadcast): void => {
+			void queryClient.invalidateQueries({
+				queryKey: ["broadcasts", "list"],
+			});
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.broadcasts.detail(broadcast.broadcastId),
+			});
+		},
+	});
+}
+
+export function useSubscribeBroadcast(): UseMutationResult<
+	BroadcastSubscriber,
+	Error,
+	{ broadcastId: string } & BroadcastSubscribeRequest
+> {
+	const client = useApiClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ broadcastId, ...request }): Promise<BroadcastSubscriber> =>
+			client.broadcasts.subscribe(broadcastId, request),
+		onSuccess: (subscription): void => {
+			void queryClient.invalidateQueries({
+				queryKey: ["broadcasts", "list"],
+			});
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.broadcasts.detail(subscription.broadcastId),
+			});
+		},
+	});
+}
+
+export function usePostBroadcastMessage(): UseMutationResult<
+	BroadcastMessage,
+	Error,
+	{
+		body: string;
+		broadcastId: string;
+		contentType?: string;
+		publisher: string;
+	}
+> {
+	const client = useApiClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			body,
+			broadcastId,
+			contentType,
+			publisher,
+		}): Promise<BroadcastMessage> =>
+			client.broadcasts.postMessage(broadcastId, {
+				body,
+				contentType: contentType ?? "text/plain",
+				publisher,
+			}),
+		onSuccess: (message): void => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.broadcasts.messages(message.broadcastId),
+			});
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.broadcasts.detail(message.broadcastId),
+			});
+		},
 	});
 }

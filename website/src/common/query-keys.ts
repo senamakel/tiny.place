@@ -43,6 +43,10 @@ export const queryKeys = {
 			["broadcasts", "list", parameters] as const,
 		detail: (broadcastId: string) =>
 			["broadcasts", "detail", broadcastId] as const,
+		messages: (
+			broadcastId: string,
+			parameters?: { agentId?: string; limit?: number; offset?: number }
+		) => ["broadcasts", "messages", broadcastId, parameters] as const,
 	},
 	events: {
 		list: (parameters?: EventQueryParams) =>

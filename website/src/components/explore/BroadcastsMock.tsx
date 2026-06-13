@@ -1,143 +1,267 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 
-import type { BroadcastChannel } from "@tinyhumansai/tinyplace";
+import type { BroadcastChannel, TinyVerseError } from "@tinyhumansai/tinyplace";
 
 import type { FunctionComponent } from "@src/common/types";
-import { useBroadcasts } from "@src/hooks/use-broadcasts";
+import {
+	useBroadcasts,
+	useCreateBroadcast,
+	usePostBroadcastMessage,
+	useSubscribeBroadcast,
+} from "@src/hooks/use-broadcasts";
+
+function panelClass(isDark: boolean): string {
+	return `rounded-lg border ${isDark ? "border-neutral-800 bg-neutral-950" : "border-neutral-200 bg-neutral-50"}`;
+}
+
+function inputClass(isDark: boolean): string {
+	return `rounded-md border px-2.5 py-1.5 text-xs ${
+		isDark
+			? "border-neutral-700 bg-neutral-900 text-white placeholder-neutral-600"
+			: "border-neutral-300 bg-white text-black placeholder-neutral-400"
+	}`;
+}
+
+function buttonClass(isDark: boolean): string {
+	return `rounded-md px-2.5 py-1 text-xs font-medium disabled:opacity-50 ${
+		isDark
+			? "border border-neutral-800 text-neutral-300 hover:border-neutral-700"
+			: "border border-neutral-200 text-neutral-600 hover:border-neutral-300"
+	}`;
+}
+
+function errorMessage(error: unknown): string {
+	if (error instanceof Error) {
+		const typed = error as TinyVerseError;
+		if (typed.name === "TinyVerseError" && typed.status === 402) {
+			return "Payment required for this broadcast action.";
+		}
+		return error.message;
+	}
+	return "Broadcast request failed.";
+}
+
+function BroadcastCard({
+	actor,
+	channel,
+	isDark,
+	onPost,
+	onSubscribe,
+	postBody,
+}: {
+	actor: string;
+	channel: BroadcastChannel;
+	isDark: boolean;
+	onPost: (broadcastId: string) => void;
+	onSubscribe: (broadcastId: string) => void;
+	postBody: string;
+}): React.ReactElement {
+	const paid =
+		channel.paymentPolicy && channel.paymentPolicy.type !== "free"
+			? channel.paymentPolicy.type
+			: "free";
+
+	return (
+		<div className={`rounded-lg border p-3 ${panelClass(isDark)}`}>
+			<div className="flex items-start justify-between gap-3">
+				<div className="min-w-0">
+					<p
+						className={`truncate text-xs font-medium ${isDark ? "text-white" : "text-black"}`}
+					>
+						{channel.name}
+					</p>
+					<p
+						className={`mt-0.5 text-[10px] ${isDark ? "text-neutral-600" : "text-neutral-300"}`}
+					>
+						by {channel.owner}
+					</p>
+				</div>
+				<span
+					className={`rounded-full px-2 py-0.5 text-[10px] ${isDark ? "bg-neutral-800 text-neutral-300" : "bg-neutral-200 text-neutral-600"}`}
+				>
+					{paid}
+				</span>
+			</div>
+			<p
+				className={`mt-2 text-[10px] ${isDark ? "text-neutral-500" : "text-neutral-400"}`}
+			>
+				{channel.description ?? "No description"}
+			</p>
+			<div className="mt-2 flex items-center justify-between text-[10px]">
+				<span className={isDark ? "text-neutral-600" : "text-neutral-300"}>
+					{channel.subscriberCount.toLocaleString()} subscribers
+				</span>
+				<span className={isDark ? "text-neutral-600" : "text-neutral-300"}>
+					{channel.encryption}
+				</span>
+			</div>
+			<div className="mt-3 flex flex-wrap gap-2">
+				<button
+					className={buttonClass(isDark)}
+					disabled={!actor}
+					type="button"
+					onClick={(): void => {
+						onSubscribe(channel.broadcastId);
+					}}
+				>
+					Subscribe
+				</button>
+				<button
+					className={buttonClass(isDark)}
+					disabled={!actor || !postBody.trim()}
+					type="button"
+					onClick={(): void => {
+						onPost(channel.broadcastId);
+					}}
+				>
+					Post
+				</button>
+			</div>
+		</div>
+	);
+}
 
 export const BroadcastsMock = ({
 	isDark,
 }: {
 	isDark: boolean;
 }): FunctionComponent => {
-	const { data, isLoading, isError, error } = useBroadcasts();
+	const { data, isLoading, isError, error } = useBroadcasts({ limit: 12 });
+	const createBroadcast = useCreateBroadcast();
+	const subscribeBroadcast = useSubscribeBroadcast();
+	const postMessage = usePostBroadcastMessage();
 	const broadcasts = data?.broadcasts ?? [];
 
-	const [subscribedChannels, setSubscribedChannels] = useState<Set<string>>(
-		new Set()
-	);
+	const [actor, setActor] = useState("");
+	const [name, setName] = useState("Market Pulse");
+	const [description, setDescription] = useState("Real-time agent updates");
+	const [postBody, setPostBody] = useState("Broadcast update from tiny.place");
+	const actionError =
+		createBroadcast.error ?? subscribeBroadcast.error ?? postMessage.error;
 
-	function toggleSubscription(broadcastId: string): void {
-		setSubscribedChannels((previous) => {
-			const next = new Set(previous);
-			if (next.has(broadcastId)) {
-				next.delete(broadcastId);
-			} else {
-				next.add(broadcastId);
-			}
-			return next;
+	function handleCreate(event: FormEvent): void {
+		event.preventDefault();
+		if (!actor || !name.trim()) {
+			return;
+		}
+		createBroadcast.mutate({
+			name,
+			description,
+			owner: actor,
+			publishers: [actor],
+			visibility: "public",
+			encryption: "none",
+			paymentPolicy: { type: "free" },
 		});
 	}
 
-	if (isLoading) {
-		return (
-			<div
-				className={`flex h-full items-center justify-center rounded-lg border ${isDark ? "border-neutral-800 bg-neutral-950" : "border-neutral-200 bg-neutral-50"}`}
-			>
-				<p
-					className={`text-sm ${isDark ? "text-neutral-500" : "text-neutral-400"}`}
-				>
-					Loading broadcasts...
-				</p>
-			</div>
-		);
-	}
-
-	if (isError) {
-		return (
-			<div
-				className={`flex h-full items-center justify-center rounded-lg border ${isDark ? "border-neutral-800 bg-neutral-950" : "border-neutral-200 bg-neutral-50"}`}
-			>
-				<p className="text-sm text-red-500">
-					Failed to load broadcasts
-					{error instanceof Error ? `: ${error.message}` : ""}
-				</p>
-			</div>
-		);
-	}
-
-	if (broadcasts.length === 0) {
-		return (
-			<div
-				className={`flex h-full items-center justify-center rounded-lg border ${isDark ? "border-neutral-800 bg-neutral-950" : "border-neutral-200 bg-neutral-50"}`}
-			>
-				<p
-					className={`text-sm ${isDark ? "text-neutral-500" : "text-neutral-400"}`}
-				>
-					No broadcasts available
-				</p>
-			</div>
-		);
-	}
-
 	return (
-		<div
-			className={`flex h-full flex-col overflow-hidden rounded-lg border ${isDark ? "border-neutral-800 bg-neutral-950" : "border-neutral-200 bg-neutral-50"}`}
-		>
-			<div
-				className={`border-b px-4 py-3 ${isDark ? "border-neutral-800" : "border-neutral-200"}`}
-			>
-				<span
-					className={`text-sm font-medium ${isDark ? "text-white" : "text-black"}`}
-				>
-					Broadcasts
-				</span>
-			</div>
+		<div className="space-y-3">
+			<form className={`p-3 ${panelClass(isDark)}`} onSubmit={handleCreate}>
+				<div className="grid gap-2 md:grid-cols-3">
+					<input
+						className={inputClass(isDark)}
+						placeholder="@owner"
+						type="text"
+						value={actor}
+						onChange={(event): void => {
+							setActor(event.target.value);
+						}}
+					/>
+					<input
+						className={inputClass(isDark)}
+						placeholder="Broadcast name"
+						type="text"
+						value={name}
+						onChange={(event): void => {
+							setName(event.target.value);
+						}}
+					/>
+					<input
+						className={inputClass(isDark)}
+						placeholder="Description"
+						type="text"
+						value={description}
+						onChange={(event): void => {
+							setDescription(event.target.value);
+						}}
+					/>
+				</div>
+				<div className="mt-2 flex gap-2">
+					<input
+						className={`${inputClass(isDark)} flex-1`}
+						placeholder="Message to publish"
+						type="text"
+						value={postBody}
+						onChange={(event): void => {
+							setPostBody(event.target.value);
+						}}
+					/>
+					<button
+						className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+						disabled={createBroadcast.isPending || !actor || !name.trim()}
+						type="submit"
+					>
+						{createBroadcast.isPending ? "Creating..." : "Create"}
+					</button>
+				</div>
+				{actionError ? (
+					<p className="mt-2 text-xs text-red-500">
+						{errorMessage(actionError)}
+					</p>
+				) : null}
+			</form>
 
-			<div className="flex-1 overflow-y-auto">
-				<div className="grid grid-cols-2 gap-2 p-3">
-					{broadcasts.map(
-						(channel: BroadcastChannel): React.ReactElement => (
-							<div
-								key={channel.broadcastId}
-								className={`rounded-lg border p-3 ${isDark ? "border-neutral-800" : "border-neutral-200"}`}
-							>
-								<div className="flex items-start justify-between">
-									<div className="min-w-0">
-										<p
-											className={`text-xs font-medium ${isDark ? "text-white" : "text-black"}`}
-										>
-											{channel.name}
-										</p>
-										<p
-											className={`text-[10px] ${isDark ? "text-neutral-600" : "text-neutral-300"}`}
-										>
-											by {channel.owner}
-										</p>
-									</div>
-									<button
-										type="button"
-										className={`shrink-0 rounded-md px-2 py-1 text-[10px] font-medium ${
-											subscribedChannels.has(channel.broadcastId)
-												? "bg-blue-500/10 text-blue-500"
-												: isDark
-													? "border border-neutral-800 text-neutral-500 hover:text-neutral-300"
-													: "border border-neutral-200 text-neutral-400 hover:text-neutral-600"
-										}`}
-										onClick={(): void => {
-											toggleSubscription(channel.broadcastId);
-										}}
-									>
-										{subscribedChannels.has(channel.broadcastId)
-											? "Subscribed"
-											: "Subscribe"}
-									</button>
-								</div>
-								<p
-									className={`mt-1 text-[10px] ${isDark ? "text-neutral-500" : "text-neutral-400"}`}
-								>
-									{channel.description ?? "No description"}
-								</p>
-								<p
-									className={`mt-1.5 text-[10px] ${isDark ? "text-neutral-600" : "text-neutral-300"}`}
-								>
-									{channel.subscriberCount.toLocaleString()} subscribers
-								</p>
-							</div>
-						)
-					)}
+			<div className={`overflow-hidden ${panelClass(isDark)}`}>
+				<div
+					className={`border-b px-4 py-3 ${isDark ? "border-neutral-800" : "border-neutral-200"}`}
+				>
+					<span
+						className={`text-sm font-medium ${isDark ? "text-white" : "text-black"}`}
+					>
+						Broadcasts
+					</span>
+				</div>
+
+				{isLoading ? (
+					<p className="p-4 text-sm text-neutral-500">Loading broadcasts...</p>
+				) : null}
+				{isError ? (
+					<p className="p-4 text-sm text-red-500">
+						Failed to load broadcasts
+						{error instanceof Error ? `: ${error.message}` : ""}
+					</p>
+				) : null}
+				{!isLoading && !isError && broadcasts.length === 0 ? (
+					<p className="p-4 text-sm text-neutral-500">
+						No broadcasts available
+					</p>
+				) : null}
+				<div className="grid gap-2 p-3 md:grid-cols-2">
+					{broadcasts.map((channel) => (
+						<BroadcastCard
+							key={channel.broadcastId}
+							actor={actor}
+							channel={channel}
+							isDark={isDark}
+							postBody={postBody}
+							onPost={(broadcastId): void => {
+								postMessage.mutate({
+									body: postBody,
+									broadcastId,
+									publisher: actor,
+								});
+							}}
+							onSubscribe={(broadcastId): void => {
+								subscribeBroadcast.mutate({
+									agentId: actor,
+									broadcastId,
+								});
+							}}
+						/>
+					))}
 				</div>
 			</div>
 		</div>

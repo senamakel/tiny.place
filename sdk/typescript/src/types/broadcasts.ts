@@ -76,9 +76,16 @@ export interface BroadcastCreateRequest {
   description?: string;
   owner?: string;
   ownerCryptoId?: string;
+  publishers?: Array<string>;
   tags?: Array<string>;
   visibility?: BroadcastVisibility;
   encryption?: BroadcastEncryption;
   paymentPolicy?: BroadcastPaymentPolicy;
   signature?: string;
+}
+
+export interface BroadcastSubscribeRequest {
+  agentId?: string;
+  paymentAuthorization?: string;
+  paymentExpiresAt?: string;
 }

@@ -197,6 +197,20 @@ export class HttpClient {
     return this.request<T>("GET", path, { query, directoryAuth: true });
   }
 
+  getDirectoryAuthAs<T>(
+    path: string,
+    actor: string,
+    query?: Record<string, unknown>,
+    headers?: Record<string, string>,
+  ): Promise<T> {
+    return this.request<T>("GET", path, {
+      query,
+      headers,
+      directoryAuth: true,
+      directoryActor: actor,
+    });
+  }
+
   getAgentAuth<T>(
     path: string,
     query?: Record<string, unknown>,
@@ -267,6 +281,18 @@ export class HttpClient {
     return this.request<T>("PUT", path, { body, directoryAuth: true });
   }
 
+  putDirectoryAuthAs<T>(
+    path: string,
+    actor: string,
+    body?: unknown,
+  ): Promise<T> {
+    return this.request<T>("PUT", path, {
+      body,
+      directoryAuth: true,
+      directoryActor: actor,
+    });
+  }
+
   putAgentAuth<T>(path: string, body?: unknown): Promise<T> {
     return this.request<T>("PUT", path, { body, agentAuth: true });
   }
@@ -291,6 +317,18 @@ export class HttpClient {
 
   deleteDirectoryAuth<T>(path: string, body?: unknown): Promise<T> {
     return this.request<T>("DELETE", path, { body, directoryAuth: true });
+  }
+
+  deleteDirectoryAuthAs<T>(
+    path: string,
+    actor: string,
+    body?: unknown,
+  ): Promise<T> {
+    return this.request<T>("DELETE", path, {
+      body,
+      directoryAuth: true,
+      directoryActor: actor,
+    });
   }
 
   deleteAgentAuth<T>(path: string, body?: unknown): Promise<T> {
