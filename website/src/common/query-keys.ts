@@ -54,6 +54,12 @@ export const queryKeys = {
 			["events", "list", parameters] as const,
 		detail: (eventId: string) => ["events", "detail", eventId] as const,
 		attendees: (eventId: string) => ["events", "attendees", eventId] as const,
+		polls: (eventId: string) => ["events", "polls", eventId] as const,
+		questions: (eventId: string) => ["events", "questions", eventId] as const,
+		recording: (eventId: string) => ["events", "recording", eventId] as const,
+		series: () => ["events", "series"] as const,
+		seriesDetail: (seriesId: string) => ["events", "series", seriesId] as const,
+		stage: (eventId: string) => ["events", "stage", eventId] as const,
 	},
 	escrow: {
 		list: (parameters?: EscrowQueryParams) =>
