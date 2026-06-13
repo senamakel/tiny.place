@@ -111,7 +111,11 @@ export function useBuyProduct(): UseMutationResult<
 	const client = useApiClient();
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: ({ buyer, buyerCryptoId, productId }): Promise<ProductPurchase> =>
+		mutationFn: ({
+			buyer,
+			buyerCryptoId,
+			productId,
+		}): Promise<ProductPurchase> =>
 			client.marketplace.buyProduct(productId, {
 				buyer,
 				buyerCryptoId,
