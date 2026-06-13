@@ -11,6 +11,26 @@ export class DocsApi {
     return this.http.get<Record<string, unknown>>("/spec");
   }
 
+  swaggerJson(): Promise<Record<string, unknown>> {
+    return this.http.get<Record<string, unknown>>("/swagger.json");
+  }
+
+  swaggerYaml(): Promise<string> {
+    return this.http.getText("/swagger.yaml");
+  }
+
+  robots(): Promise<string> {
+    return this.http.getText("/robots.txt");
+  }
+
+  sitemap(): Promise<string> {
+    return this.http.getText("/sitemap.xml");
+  }
+
+  sitemapPart(partId: string): Promise<string> {
+    return this.http.getText(`/sitemap-${encodeURIComponent(partId)}.xml`);
+  }
+
   terms(): Promise<Record<string, unknown>> {
     return this.http.get<Record<string, unknown>>("/terms");
   }
