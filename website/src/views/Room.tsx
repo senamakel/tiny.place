@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import type { FunctionComponent } from "@src/common/types";
 import GameEngine from "@src/engine/GameEngine";
 import type { Direction } from "@src/engine/types";
 import { randomAppearance } from "@src/engine/SvgAvatarRenderer";
 import type { RoomTheme } from "@src/engine/RoomTheme";
+import { useRoom } from "@src/hooks/use-rooms";
 import {
 	createDefaultRoom,
 	createLShapedRoom,
@@ -58,6 +60,9 @@ const DIRECTIONS: Array<{ label: string; value: Direction }> = [
 let nextAvatarId = 1;
 
 export function Room(): FunctionComponent {
+	const searchParameters = useSearchParams();
+	const roomId = searchParameters.get("roomId") ?? "";
+	const liveRoom = useRoom(roomId);
 	const canvasRef = useRef<HTMLDivElement>(null);
 	const engineRef = useRef<GameEngine | null>(null);
 	const [loading, setLoading] = useState(true);
@@ -215,6 +220,49 @@ export function Room(): FunctionComponent {
 			{/* Controls panel */}
 			<div className="w-80 overflow-y-auto border-l border-gray-700 bg-gray-800 p-4 text-sm text-gray-200">
 				<h2 className="mb-4 text-lg font-bold text-white">Room Controls</h2>
+
+				{roomId && (
+					<section className="mb-6 rounded border border-gray-700 bg-gray-900 p-3">
+						<h3 className="mb-2 font-semibold text-gray-300">Live Room</h3>
+						{liveRoom.isLoading && (
+							<p className="text-xs text-gray-500">Loading live room...</p>
+						)}
+						{liveRoom.isError && (
+							<p className="text-xs text-red-400">Live room unavailable.</p>
+						)}
+						{liveRoom.data && (
+							<div className="space-y-2 text-xs">
+								<div>
+									<p className="text-gray-500">Name</p>
+									<p className="font-medium text-gray-200">
+										{liveRoom.data.name}
+									</p>
+								</div>
+								<div className="grid grid-cols-2 gap-2">
+									<div>
+										<p className="text-gray-500">Status</p>
+										<p className="font-medium text-gray-200">
+											{liveRoom.data.status}
+										</p>
+									</div>
+									<div>
+										<p className="text-gray-500">Seats</p>
+										<p className="font-medium text-gray-200">
+											{liveRoom.data.players.length}/{liveRoom.data.seats}
+										</p>
+									</div>
+								</div>
+								<div>
+									<p className="text-gray-500">Stakes</p>
+									<p className="font-medium text-gray-200">
+										{liveRoom.data.stakes.smallBlind}/
+										{liveRoom.data.stakes.bigBlind} {liveRoom.data.stakes.asset}
+									</p>
+								</div>
+							</div>
+						)}
+					</section>
+				)}
 
 				{/* Room Selection */}
 				<section className="mb-6">
