@@ -23,8 +23,7 @@ const network = (process.env["NEXT_PUBLIC_SOLANA_NETWORK"] ??
 // http://localhost:8899) wins over the hosted cluster derived from `network`.
 // This lets the web app, backend verifier, and validator all share one chain
 // for end-to-end testing. Empty string means "use the hosted cluster".
-const rpcUrlOverride =
-	process.env["NEXT_PUBLIC_SOLANA_RPC_URL"]?.trim() ?? "";
+const rpcUrlOverride = process.env["NEXT_PUBLIC_SOLANA_RPC_URL"]?.trim() ?? "";
 
 const WalletAuthSync = (): null => {
 	const { connected, publicKey, signMessage } = useWallet();
@@ -51,10 +50,7 @@ type WalletContextProviderProperties = {
 export const WalletContextProvider = ({
 	children,
 }: WalletContextProviderProperties): FunctionComponent => {
-	const endpoint = useMemo(
-		() => rpcUrlOverride || clusterApiUrl(network),
-		[],
-	);
+	const endpoint = useMemo(() => rpcUrlOverride || clusterApiUrl(network), []);
 	const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
 
 	return (
