@@ -61,6 +61,45 @@ describe("ReputationApi", () => {
     ]);
   });
 
+  it("exposes dedicated leaderboard endpoint query options", async () => {
+    const requests: Array<Request> = [];
+    const client = new TinyVerseClient({
+      baseUrl: "https://example.test",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json({
+          leaderboard: "test",
+          entries: [],
+          updatedAt: "2026-06-13T00:00:00Z",
+        });
+      },
+    });
+
+    await client.reputation.groupsLeaderboard({
+      sort: "activity",
+      period: "30d",
+      limit: 5,
+      offset: 10,
+    });
+    await client.reputation.sellersLeaderboard({
+      sort: "rating",
+      category: "dataset",
+      period: "7d",
+      limit: 3,
+    });
+    await client.reputation.gamesLeaderboard({
+      sort: "roi",
+      period: "90d",
+      limit: 4,
+    });
+
+    expect(requests.map((request) => request.url)).toEqual([
+      "https://example.test/leaderboards/groups?sort=activity&period=30d&limit=5&offset=10",
+      "https://example.test/leaderboards/sellers?sort=rating&category=dataset&period=7d&limit=3",
+      "https://example.test/leaderboards/games?sort=roi&period=90d&limit=4",
+    ]);
+  });
+
   it("signs review, vouch, and attestation create requests", async () => {
     const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(14));
     const requests: Array<Request> = [];

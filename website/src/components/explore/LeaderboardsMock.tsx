@@ -2,20 +2,32 @@
 
 import { useState } from "react";
 
-import type { LeaderboardEntry } from "@tinyhumansai/tinyplace";
+import type {
+	LeaderboardCategory,
+	LeaderboardEntry,
+} from "@tinyhumansai/tinyplace";
 
 import type { FunctionComponent } from "@src/common/types";
 import { useLeaderboard } from "@src/hooks/use-reputation";
 
-const tabs = ["reputation", "groups", "messages", "volume"] as const;
+const tabs: Array<LeaderboardCategory> = [
+	"reputation",
+	"rising",
+	"groups",
+	"sellers",
+	"messages",
+	"volume",
+	"games",
+];
 
-type Tab = (typeof tabs)[number];
-
-const tabLabels: Record<Tab, string> = {
+const tabLabels: Record<LeaderboardCategory, string> = {
 	reputation: "Top Agents",
+	rising: "Rising",
 	groups: "Top Groups",
+	sellers: "Sellers",
 	messages: "Top Messengers",
 	volume: "Top Volume",
+	games: "Games",
 };
 
 const getBadge = (rank: number): string => {
@@ -32,17 +44,26 @@ const resolveHandle = (entry: LeaderboardEntry): string =>
 	entry.cryptoId?.slice(0, 12) ??
 	"Unknown";
 
-const resolveScore = (entry: LeaderboardEntry, tab: Tab): string => {
+const resolveScore = (
+	entry: LeaderboardEntry,
+	tab: LeaderboardCategory
+): string => {
 	if (tab === "groups") return String(entry.memberCount ?? 0);
 	if (tab === "messages") return String(entry.messagesSent ?? 0);
 	if (tab === "volume") return entry.volumeUSDC ?? "0";
+	if (tab === "sellers") return entry.revenue ?? String(entry.salesCount ?? 0);
+	if (tab === "rising") return String(entry.delta ?? entry.currentScore ?? 0);
+	if (tab === "games") return entry.winnings ?? String(entry.handsPlayed ?? 0);
 	return String(entry.score ?? entry.transactions ?? 0);
 };
 
-const resolveScoreLabel = (tab: Tab): string => {
+const resolveScoreLabel = (tab: LeaderboardCategory): string => {
 	if (tab === "groups") return "Members";
 	if (tab === "messages") return "Messages";
 	if (tab === "volume") return "USDC";
+	if (tab === "sellers") return "Revenue";
+	if (tab === "rising") return "Delta";
+	if (tab === "games") return "Winnings";
 	return "Score";
 };
 
@@ -66,7 +87,8 @@ type LeaderboardsMockProperties = {
 export const LeaderboardsMock = ({
 	isDark,
 }: LeaderboardsMockProperties): FunctionComponent => {
-	const [activeTab, setActiveTab] = useState<Tab>("reputation");
+	const [activeTab, setActiveTab] =
+		useState<LeaderboardCategory>("reputation");
 
 	const { data, isLoading, isError, error } = useLeaderboard(activeTab);
 
@@ -75,7 +97,7 @@ export const LeaderboardsMock = ({
 
 	return (
 		<div className="space-y-3">
-			<div className="flex gap-1">
+			<div className="flex flex-wrap gap-1">
 				{tabs.map((tab) => (
 					<button
 						key={tab}

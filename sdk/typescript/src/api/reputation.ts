@@ -5,13 +5,19 @@ import { canonicalPayload } from "../crypto.js";
 import type {
   Attestation,
   AttestationCreate,
+  GameLeaderboardQueryParams,
+  GroupLeaderboardQueryParams,
+  LeaderboardCategory,
+  LeaderboardQueryParams,
   LeaderboardResponse,
   ReputationHistoryPoint,
+  ReputationLeaderboardQueryParams,
   ReputationReview,
   ReputationReviewCreate,
   ReputationScore,
   ReputationVouch,
   ReputationVouchCreate,
+  SellerLeaderboardQueryParams,
 } from "../types/index.js";
 
 export class ReputationApi {
@@ -158,13 +164,13 @@ export class ReputationApi {
   }
 
   leaderboard(
-    category?: string,
-    params?: {
-      category?: string;
-      limit?: number;
-      period?: string;
-      sort?: string;
-    },
+    category?: LeaderboardCategory,
+    params?:
+      | ReputationLeaderboardQueryParams
+      | GroupLeaderboardQueryParams
+      | SellerLeaderboardQueryParams
+      | GameLeaderboardQueryParams
+      | LeaderboardQueryParams,
   ): Promise<LeaderboardResponse> {
     return this.http.get<LeaderboardResponse>(
       category
@@ -174,73 +180,63 @@ export class ReputationApi {
     );
   }
 
-  reputationLeaderboard(params?: {
-    category?: string;
-    limit?: number;
-    period?: string;
-  }): Promise<LeaderboardResponse> {
+  reputationLeaderboard(
+    params?: ReputationLeaderboardQueryParams,
+  ): Promise<LeaderboardResponse> {
     return this.http.get<LeaderboardResponse>(
       "/reputation/leaderboard",
       params as Record<string, unknown>,
     );
   }
 
-  risingLeaderboard(params?: {
-    limit?: number;
-    period?: string;
-  }): Promise<LeaderboardResponse> {
+  risingLeaderboard(
+    params?: LeaderboardQueryParams,
+  ): Promise<LeaderboardResponse> {
     return this.http.get<LeaderboardResponse>(
       "/leaderboards/rising",
       params as Record<string, unknown>,
     );
   }
 
-  sellersLeaderboard(params?: {
-    limit?: number;
-    period?: string;
-  }): Promise<LeaderboardResponse> {
+  sellersLeaderboard(
+    params?: SellerLeaderboardQueryParams,
+  ): Promise<LeaderboardResponse> {
     return this.http.get<LeaderboardResponse>(
       "/leaderboards/sellers",
       params as Record<string, unknown>,
     );
   }
 
-  gamesLeaderboard(params?: {
-    limit?: number;
-    offset?: number;
-    period?: "7d" | "30d" | "90d" | "all-time";
-    sort?: "winnings" | "win-rate" | "roi" | "hands";
-  }): Promise<LeaderboardResponse> {
+  gamesLeaderboard(
+    params?: GameLeaderboardQueryParams,
+  ): Promise<LeaderboardResponse> {
     return this.http.get<LeaderboardResponse>(
       "/leaderboards/games",
       params as Record<string, unknown>,
     );
   }
 
-  groupsLeaderboard(params?: {
-    limit?: number;
-    period?: string;
-  }): Promise<LeaderboardResponse> {
+  groupsLeaderboard(
+    params?: GroupLeaderboardQueryParams,
+  ): Promise<LeaderboardResponse> {
     return this.http.get<LeaderboardResponse>(
       "/leaderboards/groups",
       params as Record<string, unknown>,
     );
   }
 
-  messagesLeaderboard(params?: {
-    limit?: number;
-    period?: string;
-  }): Promise<LeaderboardResponse> {
+  messagesLeaderboard(
+    params?: LeaderboardQueryParams,
+  ): Promise<LeaderboardResponse> {
     return this.http.get<LeaderboardResponse>(
       "/leaderboards/messages",
       params as Record<string, unknown>,
     );
   }
 
-  volumeLeaderboard(params?: {
-    limit?: number;
-    period?: string;
-  }): Promise<LeaderboardResponse> {
+  volumeLeaderboard(
+    params?: LeaderboardQueryParams,
+  ): Promise<LeaderboardResponse> {
     return this.http.get<LeaderboardResponse>(
       "/leaderboards/volume",
       params as Record<string, unknown>,

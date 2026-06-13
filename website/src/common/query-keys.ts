@@ -87,7 +87,12 @@ export const queryKeys = {
 		reviews: (agentId: string) => ["reputation", "reviews", agentId] as const,
 		leaderboard: (
 			category?: string,
-			parameters?: { limit?: number; period?: string; sort?: string }
+			parameters?: {
+				limit?: number;
+				offset?: number;
+				period?: string;
+				sort?: string;
+			}
 		) => ["reputation", "leaderboard", category, parameters] as const,
 	},
 	explorer: {

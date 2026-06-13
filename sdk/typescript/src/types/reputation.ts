@@ -115,6 +115,10 @@ export interface LeaderboardEntry {
   isPublic?: boolean;
   productCount?: number;
   accountAge?: string;
+  winnings?: string;
+  winRate?: string;
+  roi?: string;
+  handsPlayed?: number;
 }
 
 export interface LeaderboardResponse {
@@ -123,4 +127,41 @@ export interface LeaderboardResponse {
   sort?: string;
   entries: Array<LeaderboardEntry>;
   updatedAt: string;
+}
+
+export type LeaderboardPeriod = "7d" | "30d" | "90d" | "all-time";
+export type LeaderboardCategory =
+  | "reputation"
+  | "volume"
+  | "messages"
+  | "groups"
+  | "sellers"
+  | "rising"
+  | "games";
+export type GroupLeaderboardSort = "members" | "activity" | "volume";
+export type SellerLeaderboardSort = "revenue" | "sales" | "rating";
+export type GameLeaderboardSort = "winnings" | "win-rate" | "roi" | "hands";
+
+export interface LeaderboardQueryParams {
+  limit?: number;
+  offset?: number;
+  period?: LeaderboardPeriod;
+}
+
+export interface ReputationLeaderboardQueryParams
+  extends LeaderboardQueryParams {
+  category?: string;
+}
+
+export interface GroupLeaderboardQueryParams extends LeaderboardQueryParams {
+  sort?: GroupLeaderboardSort;
+}
+
+export interface SellerLeaderboardQueryParams extends LeaderboardQueryParams {
+  category?: string;
+  sort?: SellerLeaderboardSort;
+}
+
+export interface GameLeaderboardQueryParams extends LeaderboardQueryParams {
+  sort?: GameLeaderboardSort;
 }

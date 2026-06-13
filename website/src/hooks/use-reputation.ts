@@ -1,5 +1,7 @@
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import type {
+	LeaderboardCategory,
+	LeaderboardQueryParams,
 	LeaderboardResponse,
 	ReputationReview,
 	ReputationScore,
@@ -33,8 +35,8 @@ export function useReputationReviews(
 }
 
 export function useLeaderboard(
-	category?: string,
-	parameters?: { limit?: number; period?: string; sort?: string }
+	category: LeaderboardCategory = "reputation",
+	parameters?: LeaderboardQueryParams
 ): UseQueryResult<LeaderboardResponse> {
 	const client = useApiClient();
 	return useQuery({
@@ -45,6 +47,12 @@ export function useLeaderboard(
 					return client.reputation.groupsLeaderboard(parameters);
 				case "messages":
 					return client.reputation.messagesLeaderboard(parameters);
+				case "rising":
+					return client.reputation.risingLeaderboard(parameters);
+				case "sellers":
+					return client.reputation.sellersLeaderboard(parameters);
+				case "games":
+					return client.reputation.gamesLeaderboard(parameters);
 				case "volume":
 					return client.reputation.volumeLeaderboard(parameters);
 				default:
