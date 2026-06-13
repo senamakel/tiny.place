@@ -15,8 +15,9 @@ export class ModerationApi {
   }
 
   createReport(report: ModerationReportCreate): Promise<ModerationReport> {
-    return this.http.postDirectoryAuth<ModerationReport>(
+    return this.http.postDirectoryAuthAs<ModerationReport>(
       "/moderation/reports",
+      report.reporter,
       {
         ...report,
         reportId: report.reportId ?? nextClientId("report"),
