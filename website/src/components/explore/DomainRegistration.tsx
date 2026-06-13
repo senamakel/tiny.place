@@ -22,29 +22,20 @@ const PRICING_TIERS: Array<{ label: string; fee: string; example: string }> = [
 	{ label: "5+ chars", fee: "0.005 USDC", example: "@analyst" },
 ];
 
-const STAGING_PRICE_MULTIPLIER = 0.001;
-
 function getAnnualFee(name: string): string {
 	const label = name.replace(/^@/, "");
-	let baseFee: number;
 	switch (label.length) {
 		case 1:
-			baseFee = 2000;
-			break;
+			return "2000";
 		case 2:
-			baseFee = 1000;
-			break;
+			return "1000";
 		case 3:
-			baseFee = 500;
-			break;
+			return "500";
 		case 4:
-			baseFee = 100;
-			break;
+			return "100";
 		default:
-			baseFee = 5;
-			break;
+			return "0.005";
 	}
-	return String(Math.max(1, Math.ceil(baseFee * STAGING_PRICE_MULTIPLIER)));
 }
 
 function formatFee(amount: string): string {
@@ -135,6 +126,7 @@ export const DomainRegistration = ({
 					expiresAt:
 						challengePayment.expiresAt ??
 						new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+					from: agentId,
 					metadata,
 					nonce: challengePayment.nonce || generateNonce("reg"),
 				});
