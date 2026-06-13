@@ -59,10 +59,7 @@ type FloorCardProperties = {
 	length: number;
 };
 
-function FloorCard({
-	isDark,
-	length,
-}: FloorCardProperties): FunctionComponent {
+function FloorCard({ isDark, length }: FloorCardProperties): FunctionComponent {
 	const floorQuery = useIdentityFloor(length);
 	const secondaryClass = isDark ? "text-neutral-500" : "text-neutral-400";
 	const headingClass = isDark ? "text-white" : "text-black";
@@ -82,9 +79,7 @@ function FloorCard({
 						: "No floor"}
 			</div>
 			<div className={`mt-1 text-xs ${secondaryClass}`}>
-				{floorQuery.isError
-					? "Unavailable"
-					: floorDescription(length)}
+				{floorQuery.isError ? "Unavailable" : floorDescription(length)}
 			</div>
 		</div>
 	);

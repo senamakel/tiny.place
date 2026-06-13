@@ -37,7 +37,9 @@ export function useIdentityRecentSales(): UseQueryResult<{
 }
 
 /** Floor price for listed identities of a given label length. */
-export function useIdentityFloor(length: number): UseQueryResult<IdentityFloor> {
+export function useIdentityFloor(
+	length: number
+): UseQueryResult<IdentityFloor> {
 	const client = useApiClient();
 	return useQuery({
 		queryKey: queryKeys.marketplace.identityFloor(length),
