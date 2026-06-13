@@ -16,14 +16,16 @@ export class KeysApi {
   }
 
   health(agentId: string): Promise<KeyHealth> {
-    return this.http.getDirectoryAuth<KeyHealth>(
+    return this.http.getDirectoryAuthAs<KeyHealth>(
       `/keys/${encodeURIComponent(agentId)}/health`,
+      agentId,
     );
   }
 
   uploadPreKeys(agentId: string, request: PreKeysRequest): Promise<void> {
-    return this.http.putDirectoryAuth<void>(
+    return this.http.putDirectoryAuthAs<void>(
       `/keys/${encodeURIComponent(agentId)}/prekeys`,
+      agentId,
       request,
     );
   }
@@ -32,8 +34,9 @@ export class KeysApi {
     agentId: string,
     request: SignedPreKeyRequest,
   ): Promise<void> {
-    return this.http.putDirectoryAuth<void>(
+    return this.http.putDirectoryAuthAs<void>(
       `/keys/${encodeURIComponent(agentId)}/signed-prekey`,
+      agentId,
       request,
     );
   }
