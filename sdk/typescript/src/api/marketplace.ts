@@ -2,12 +2,13 @@ import type { HttpClient } from "../http.js";
 import type { SigningKey } from "../auth.js";
 import { signCanonicalPayload } from "../auth.js";
 import { canonicalPayload } from "../crypto.js";
-import type { LedgerTransaction } from "../types/ledger.js";
 import type {
   IdentityBid,
+  IdentityBuyRequest,
   IdentityFloor,
   IdentityListing,
   IdentityOffer,
+  IdentityOfferAcceptRequest,
   IdentitySale,
   MarketplaceCategory,
   Product,
@@ -149,28 +150,59 @@ export class MarketplaceApi {
     );
   }
 
-  createIdentityListing(
+  async createIdentityListing(
     listing: Partial<IdentityListing>,
   ): Promise<IdentityListing> {
+    if (this.signingKey && !listing.signature) {
+      listing = {
+        ...listing,
+        listingId: listing.listingId ?? nextMarketplaceId("listing"),
+      };
+      listing.signature = await signCanonicalPayload(
+        this.signingKey,
+        identityListingSignaturePayload(listing),
+      );
+    }
+
     return this.http.postDirectoryAuth<IdentityListing>(
       "/marketplace/identities",
       listing,
     );
   }
 
-  deleteIdentityListing(listingId: string): Promise<void> {
-    return this.http.deleteDirectoryAuth<void>(
-      `/marketplace/identities/${encodeURIComponent(listingId)}`,
+  async deleteIdentityListing(listingId: string): Promise<void> {
+    if (!this.signingKey) {
+      return this.http.deleteDirectoryAuth<void>(
+        `/marketplace/identities/${encodeURIComponent(listingId)}`,
+      );
+    }
+
+    const signature = await signCanonicalPayload(
+      this.signingKey,
+      identityListingCancelSignaturePayload(listingId),
+    );
+    return this.http.delete<void>(
+      `/marketplace/identities/${encodeURIComponent(listingId)}?signature=${encodeURIComponent(signature)}`,
     );
   }
 
-  buyIdentityListing(
+  async buyIdentityListing(
     listingId: string,
-    payment: Record<string, string>,
-  ): Promise<LedgerTransaction> {
-    return this.http.postDirectoryAuth<LedgerTransaction>(
+    request: IdentityBuyRequest,
+  ): Promise<IdentitySale> {
+    if (this.signingKey && !request.signature) {
+      request = {
+        ...request,
+        signature: await signCanonicalPayload(
+          this.signingKey,
+          identityBuySignaturePayload(listingId, request),
+        ),
+      };
+    }
+
+    return this.http.postDirectoryAuth<IdentitySale>(
       `/marketplace/identities/${encodeURIComponent(listingId)}/buy`,
-      payment,
+      request,
     );
   }
 
@@ -180,8 +212,23 @@ export class MarketplaceApi {
     );
   }
 
-  placeBid(listingId: string, bid: Partial<IdentityBid>): Promise<IdentityBid> {
-    return this.http.postDirectoryAuth<IdentityBid>(
+  async placeBid(
+    listingId: string,
+    bid: Partial<IdentityBid>,
+  ): Promise<IdentityListing> {
+    if (this.signingKey && !bid.signature) {
+      bid = {
+        ...bid,
+        listingId,
+        bidId: bid.bidId ?? nextMarketplaceId("bid"),
+      };
+      bid.signature = await signCanonicalPayload(
+        this.signingKey,
+        identityBidSignaturePayload(bid),
+      );
+    }
+
+    return this.http.postDirectoryAuth<IdentityListing>(
       `/marketplace/identities/${encodeURIComponent(listingId)}/bids`,
       bid,
     );
@@ -220,22 +267,57 @@ export class MarketplaceApi {
 
   // --- Offers ---
 
-  createOffer(offer: Partial<IdentityOffer>): Promise<IdentityOffer> {
+  async createOffer(offer: Partial<IdentityOffer>): Promise<IdentityOffer> {
+    if (this.signingKey && !offer.signature) {
+      offer = {
+        ...offer,
+        offerId: offer.offerId ?? nextMarketplaceId("offer"),
+      };
+      offer.signature = await signCanonicalPayload(
+        this.signingKey,
+        identityOfferSignaturePayload(offer),
+      );
+    }
+
     return this.http.postDirectoryAuth<IdentityOffer>(
       "/marketplace/offers",
       offer,
     );
   }
 
-  cancelOffer(offerId: string): Promise<void> {
-    return this.http.deleteDirectoryAuth<void>(
-      `/marketplace/offers/${encodeURIComponent(offerId)}`,
+  async cancelOffer(offerId: string): Promise<void> {
+    if (!this.signingKey) {
+      return this.http.deleteDirectoryAuth<void>(
+        `/marketplace/offers/${encodeURIComponent(offerId)}`,
+      );
+    }
+
+    const signature = await signCanonicalPayload(
+      this.signingKey,
+      identityOfferCancelSignaturePayload(offerId),
+    );
+    return this.http.delete<void>(
+      `/marketplace/offers/${encodeURIComponent(offerId)}?signature=${encodeURIComponent(signature)}`,
     );
   }
 
-  acceptOffer(offerId: string): Promise<IdentitySale> {
+  async acceptOffer(
+    offerId: string,
+    request: IdentityOfferAcceptRequest,
+  ): Promise<IdentitySale> {
+    if (this.signingKey && !request.signature) {
+      request = {
+        ...request,
+        signature: await signCanonicalPayload(
+          this.signingKey,
+          identityOfferAcceptSignaturePayload(offerId, request.seller),
+        ),
+      };
+    }
+
     return this.http.postDirectoryAuth<IdentitySale>(
       `/marketplace/offers/${encodeURIComponent(offerId)}/accept`,
+      request,
     );
   }
 
@@ -282,6 +364,80 @@ function productReviewSignaturePayload(
     productId: review.productId ?? "",
     rating: review.rating ?? 0,
     reviewId: review.reviewId ?? "",
+  });
+}
+
+function identityListingSignaturePayload(
+  listing: Partial<IdentityListing>,
+): string {
+  return canonicalPayload("marketplace.identity.listing", {
+    description: listing.description ?? "",
+    listingId: listing.listingId ?? "",
+    listingType: listing.listingType ?? "",
+    name: listing.name ?? "",
+    price: listing.price ?? null,
+    seller: listing.seller ?? "",
+    sellerCryptoId: listing.sellerCryptoId ?? "",
+    tags: listing.tags ?? null,
+  });
+}
+
+function identityListingCancelSignaturePayload(listingId: string): string {
+  return canonicalPayload("marketplace.identity.listing.cancel", {
+    listingId,
+  });
+}
+
+function identityBuySignaturePayload(
+  listingId: string,
+  request: IdentityBuyRequest,
+): string {
+  return canonicalPayload("marketplace.identity.buy", {
+    buyer: request.buyer,
+    buyerCryptoId: request.buyerCryptoId,
+    buyerPublicKey: request.buyerPublicKey ?? "",
+    listingId,
+  });
+}
+
+function identityBidSignaturePayload(bid: Partial<IdentityBid>): string {
+  return canonicalPayload("marketplace.identity.bid", {
+    bidId: bid.bidId ?? "",
+    bidder: bid.bidder ?? "",
+    bidderCryptoId: bid.bidderCryptoId ?? "",
+    bidderPublicKey: bid.bidderPublicKey ?? "",
+    listingId: bid.listingId ?? "",
+    price: bid.price ?? null,
+  });
+}
+
+function identityOfferSignaturePayload(
+  offer: Partial<IdentityOffer>,
+): string {
+  return canonicalPayload("marketplace.identity.offer", {
+    buyer: offer.buyer ?? "",
+    buyerCryptoId: offer.buyerCryptoId ?? "",
+    buyerPublicKey: offer.buyerPublicKey ?? "",
+    listingId: offer.listingId ?? "",
+    name: offer.name ?? "",
+    offerId: offer.offerId ?? "",
+    price: offer.price ?? null,
+  });
+}
+
+function identityOfferCancelSignaturePayload(offerId: string): string {
+  return canonicalPayload("marketplace.identity.offer.cancel", {
+    offerId,
+  });
+}
+
+function identityOfferAcceptSignaturePayload(
+  offerId: string,
+  seller: string,
+): string {
+  return canonicalPayload("marketplace.identity.offer.accept", {
+    offerId,
+    seller,
   });
 }
 

@@ -10,6 +10,27 @@ function fromBase64(value: string): Uint8Array {
   return bytes;
 }
 
+async function verifySignature(
+  signer: LocalSigner,
+  signature: string,
+  action: string,
+  fields: Record<string, unknown>,
+): Promise<boolean> {
+  const publicKey = await globalThis.crypto.subtle.importKey(
+    "raw",
+    signer.publicKey,
+    { name: "Ed25519" },
+    false,
+    ["verify"],
+  );
+  return globalThis.crypto.subtle.verify(
+    "Ed25519",
+    publicKey,
+    fromBase64(signature),
+    new TextEncoder().encode(canonicalPayload(action, fields)),
+  );
+}
+
 describe("MarketplaceApi", () => {
   it("signs product reviews with a client-generated review ID", async () => {
     const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(11));
@@ -63,26 +84,196 @@ describe("MarketplaceApi", () => {
     expect(body.reviewId).toMatch(/^rev_/);
     expect(body.signature).toBeTruthy();
 
-    const signedPayload = canonicalPayload("marketplace.product.review", {
-      buyer: body.buyer,
-      comment: body.comment,
-      productId: body.productId,
-      rating: body.rating,
-      reviewId: body.reviewId,
+    await expect(
+      verifySignature(signer, body.signature, "marketplace.product.review", {
+        buyer: body.buyer,
+        comment: body.comment,
+        productId: body.productId,
+        rating: body.rating,
+        reviewId: body.reviewId,
+      }),
+    ).resolves.toBe(true);
+  });
+
+  it("signs identity listing, purchase, and bid payloads", async () => {
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(12));
+    const requests: Array<Request> = [];
+    const price = { amount: "10", asset: "USDC", network: "eip155:8453" };
+    const client = new TinyVerseClient({
+      baseUrl: "https://example.test",
+      signer,
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json({});
+      },
     });
-    const publicKey = await globalThis.crypto.subtle.importKey(
-      "raw",
-      signer.publicKey,
-      { name: "Ed25519" },
-      false,
-      ["verify"],
-    );
-    const ok = await globalThis.crypto.subtle.verify(
-      "Ed25519",
-      publicKey,
-      fromBase64(body.signature),
-      new TextEncoder().encode(signedPayload),
-    );
-    expect(ok).toBe(true);
+
+    await client.marketplace.createIdentityListing({
+      name: "@seller",
+      seller: "@seller",
+      sellerCryptoId: signer.agentId,
+      description: "Handle for sale",
+      tags: ["agent"],
+      price,
+      listingType: "fixed",
+    });
+    await client.marketplace.buyIdentityListing("listing_123", {
+      buyer: "@buyer",
+      buyerCryptoId: signer.agentId,
+      buyerPublicKey: signer.publicKeyBase64,
+      payment: { signature: "payment-signature" },
+    });
+    await client.marketplace.placeBid("listing_auction", {
+      bidder: "@bidder",
+      bidderCryptoId: signer.agentId,
+      bidderPublicKey: signer.publicKeyBase64,
+      price,
+      payment: { signature: "payment-signature" },
+    });
+
+    const listingBody = (await requests[0]!.json()) as {
+      description: string;
+      listingId: string;
+      listingType: string;
+      name: string;
+      price: typeof price;
+      seller: string;
+      sellerCryptoId: string;
+      tags: Array<string>;
+      signature: string;
+    };
+    expect(listingBody.listingId).toMatch(/^listing_/);
+    await expect(
+      verifySignature(
+        signer,
+        listingBody.signature,
+        "marketplace.identity.listing",
+        {
+          description: listingBody.description,
+          listingId: listingBody.listingId,
+          listingType: listingBody.listingType,
+          name: listingBody.name,
+          price: listingBody.price,
+          seller: listingBody.seller,
+          sellerCryptoId: listingBody.sellerCryptoId,
+          tags: listingBody.tags,
+        },
+      ),
+    ).resolves.toBe(true);
+
+    const buyBody = (await requests[1]!.json()) as {
+      buyer: string;
+      buyerCryptoId: string;
+      buyerPublicKey: string;
+      signature: string;
+    };
+    await expect(
+      verifySignature(signer, buyBody.signature, "marketplace.identity.buy", {
+        buyer: buyBody.buyer,
+        buyerCryptoId: buyBody.buyerCryptoId,
+        buyerPublicKey: buyBody.buyerPublicKey,
+        listingId: "listing_123",
+      }),
+    ).resolves.toBe(true);
+
+    const bidBody = (await requests[2]!.json()) as {
+      bidId: string;
+      bidder: string;
+      bidderCryptoId: string;
+      bidderPublicKey: string;
+      listingId: string;
+      price: typeof price;
+      signature: string;
+    };
+    expect(bidBody.bidId).toMatch(/^bid_/);
+    await expect(
+      verifySignature(signer, bidBody.signature, "marketplace.identity.bid", {
+        bidId: bidBody.bidId,
+        bidder: bidBody.bidder,
+        bidderCryptoId: bidBody.bidderCryptoId,
+        bidderPublicKey: bidBody.bidderPublicKey,
+        listingId: bidBody.listingId,
+        price: bidBody.price,
+      }),
+    ).resolves.toBe(true);
+  });
+
+  it("signs identity offers and offer lifecycle requests", async () => {
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(13));
+    const requests: Array<Request> = [];
+    const price = { amount: "12", asset: "USDC", network: "eip155:8453" };
+    const client = new TinyVerseClient({
+      baseUrl: "https://example.test",
+      signer,
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json({});
+      },
+    });
+
+    await client.marketplace.createOffer({
+      listingId: "listing_123",
+      name: "@seller",
+      buyer: "@buyer",
+      buyerCryptoId: signer.agentId,
+      buyerPublicKey: signer.publicKeyBase64,
+      price,
+      payment: { signature: "payment-signature" },
+    });
+    await client.marketplace.cancelOffer("offer_123");
+    await client.marketplace.acceptOffer("offer_123", { seller: "@seller" });
+
+    const offerBody = (await requests[0]!.json()) as {
+      buyer: string;
+      buyerCryptoId: string;
+      buyerPublicKey: string;
+      listingId: string;
+      name: string;
+      offerId: string;
+      price: typeof price;
+      signature: string;
+    };
+    expect(offerBody.offerId).toMatch(/^offer_/);
+    await expect(
+      verifySignature(
+        signer,
+        offerBody.signature,
+        "marketplace.identity.offer",
+        {
+          buyer: offerBody.buyer,
+          buyerCryptoId: offerBody.buyerCryptoId,
+          buyerPublicKey: offerBody.buyerPublicKey,
+          listingId: offerBody.listingId,
+          name: offerBody.name,
+          offerId: offerBody.offerId,
+          price: offerBody.price,
+        },
+      ),
+    ).resolves.toBe(true);
+
+    const cancelUrl = new URL(requests[1]!.url);
+    const cancelSignature = cancelUrl.searchParams.get("signature");
+    expect(cancelSignature).toBeTruthy();
+    await expect(
+      verifySignature(
+        signer,
+        cancelSignature!,
+        "marketplace.identity.offer.cancel",
+        { offerId: "offer_123" },
+      ),
+    ).resolves.toBe(true);
+
+    const acceptBody = (await requests[2]!.json()) as {
+      seller: string;
+      signature: string;
+    };
+    await expect(
+      verifySignature(
+        signer,
+        acceptBody.signature,
+        "marketplace.identity.offer.accept",
+        { offerId: "offer_123", seller: acceptBody.seller },
+      ),
+    ).resolves.toBe(true);
   });
 });

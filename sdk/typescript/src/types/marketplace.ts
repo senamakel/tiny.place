@@ -89,6 +89,19 @@ export interface ProductReview {
   signature?: string;
 }
 
+export interface IdentityBuyRequest {
+  buyer: string;
+  buyerCryptoId: string;
+  buyerPublicKey?: string;
+  payment?: Record<string, string>;
+  signature?: string;
+}
+
+export interface IdentityOfferAcceptRequest {
+  seller: string;
+  signature?: string;
+}
+
 export interface IdentityListing {
   listingId: string;
   type: string;
