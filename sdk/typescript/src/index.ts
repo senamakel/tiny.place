@@ -57,6 +57,9 @@ export {
   executeSolanaPayment,
   executeSolanaX402Payment,
   SOLANA_MAINNET_NETWORK,
+  SOLANA_NATIVE_ASSET,
+  SOLANA_NATIVE_DECIMALS,
+  SOLANA_SYSTEM_PROGRAM_ID,
   SOLANA_TOKEN_PROGRAM_ID,
   SOLANA_USDC_MINT,
 } from "./solana.js";

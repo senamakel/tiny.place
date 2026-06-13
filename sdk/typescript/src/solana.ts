@@ -14,6 +14,12 @@ export const SOLANA_USDC_MINT =
   "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 export const SOLANA_TOKEN_PROGRAM_ID =
   "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+/** The System program, used to transfer native SOL (lamports). */
+export const SOLANA_SYSTEM_PROGRAM_ID = "11111111111111111111111111111111";
+/** Default asset symbol that denotes a native SOL (lamports) transfer. */
+export const SOLANA_NATIVE_ASSET = "SOL";
+/** Decimals of native SOL (1 SOL = 1e9 lamports). */
+export const SOLANA_NATIVE_DECIMALS = 9;
 
 export interface SolanaPaymentExecutionOptions {
   rpcUrl: string;
@@ -22,6 +28,18 @@ export interface SolanaPaymentExecutionOptions {
     X402AuthorizationFields,
     "network" | "asset" | "amount" | "to"
   >;
+  /**
+   * Expected x402 network. When set, the payment's network must match it
+   * exactly; when omitted, any `solana:*` network is accepted (so the same
+   * client works against the mainnet network id served over a local validator
+   * RPC). Defaults to accepting any Solana network.
+   */
+  network?: string;
+  /**
+   * Asset symbol (case-insensitive) that denotes a native SOL transfer rather
+   * than an SPL-token transfer. Defaults to {@link SOLANA_NATIVE_ASSET} ("SOL").
+   */
+  nativeAsset?: string;
   mint?: string;
   decimals?: number;
   sourceTokenAccount?: string;
@@ -92,11 +110,22 @@ const MAX_CONFIRMATION_POLLS = 20;
 export async function executeSolanaPayment(
   options: SolanaPaymentExecutionOptions,
 ): Promise<SolanaPaymentExecution> {
-  if (options.payment.network !== SOLANA_MAINNET_NETWORK) {
+  if (options.network !== undefined) {
+    if (options.payment.network !== options.network) {
+      throw new Error(
+        `Unexpected Solana network: ${options.payment.network} (expected ${options.network})`,
+      );
+    }
+  } else if (!options.payment.network.startsWith("solana:")) {
     throw new Error(`Unsupported Solana network: ${options.payment.network}`);
   }
-  if (options.payment.asset !== "USDC" && !options.mint) {
-    throw new Error(`Unsupported Solana asset: ${options.payment.asset}`);
+
+  const nativeAsset = (options.nativeAsset ?? SOLANA_NATIVE_ASSET).toUpperCase();
+  const isNative = (options.payment.asset ?? "").toUpperCase() === nativeAsset;
+  if (!isNative && options.payment.asset !== "USDC" && !options.mint) {
+    throw new Error(
+      `Unsupported Solana asset: ${options.payment.asset} (provide a mint, or use the native "${nativeAsset}" asset)`,
+    );
   }
 
   const secretKey = solanaSecretKeyBytes(options.secretKey);
@@ -109,8 +138,44 @@ export async function executeSolanaPayment(
   const fetchFn = options.fetch ?? globalThis.fetch;
   const commitment = options.commitment ?? "confirmed";
   const payer = encodeBase58(publicKey);
-  const mint = options.mint ?? SOLANA_USDC_MINT;
   const amount = normalizedAmount(options.payment.amount);
+
+  // Native SOL: a System-program lamport transfer, payer -> recipient wallet.
+  // No mint, no token accounts.
+  if (isNative) {
+    const latest = await rpc<LatestBlockhashResponse>(
+      fetchFn,
+      options.rpcUrl,
+      "getLatestBlockhash",
+      [{ commitment }],
+    );
+    const message = nativeTransferMessage({
+      payer,
+      to: options.payment.to,
+      amount,
+      recentBlockhash: latest.value.blockhash,
+    });
+    const txSignature = await sendSignedMessage(
+      fetchFn,
+      options.rpcUrl,
+      message,
+      seed,
+      commitment,
+    );
+    return {
+      signature: txSignature,
+      from: payer,
+      to: options.payment.to,
+      mint: nativeAsset,
+      amount,
+      sourceTokenAccount: payer,
+      destinationTokenAccount: options.payment.to,
+    };
+  }
+
+  // SPL token transfer (e.g. USDC) via transferChecked. Token-account lookups
+  // happen before fetching the blockhash to match the historical RPC order.
+  const mint = options.mint ?? SOLANA_USDC_MINT;
   const sourceTokenAccount =
     options.sourceTokenAccount ??
     (await findTokenAccount({
@@ -144,22 +209,13 @@ export async function executeSolanaPayment(
     decimals: options.decimals ?? 6,
     recentBlockhash: latest.value.blockhash,
   });
-  const signature = ed25519.sign(message, seed);
-  const transaction = concatBytes(
-    shortVec(1),
-    signature,
-    message,
-  );
-  const txSignature = await rpc<string>(
+  const txSignature = await sendSignedMessage(
     fetchFn,
     options.rpcUrl,
-    "sendTransaction",
-    [
-      bytesToBase64(transaction),
-      { encoding: "base64", preflightCommitment: commitment },
-    ],
+    message,
+    seed,
+    commitment,
   );
-  await confirmSignature(fetchFn, options.rpcUrl, txSignature, commitment);
 
   return {
     signature: txSignature,
@@ -170,6 +226,24 @@ export async function executeSolanaPayment(
     sourceTokenAccount,
     destinationTokenAccount,
   };
+}
+
+/** Sign a serialized legacy message, submit it, and wait for confirmation. */
+async function sendSignedMessage(
+  fetchFn: typeof globalThis.fetch,
+  rpcUrl: string,
+  message: Uint8Array,
+  seed: Uint8Array,
+  commitment: string,
+): Promise<string> {
+  const signature = ed25519.sign(message, seed);
+  const transaction = concatBytes(shortVec(1), signature, message);
+  const txSignature = await rpc<string>(fetchFn, rpcUrl, "sendTransaction", [
+    bytesToBase64(transaction),
+    { encoding: "base64", preflightCommitment: commitment },
+  ]);
+  await confirmSignature(fetchFn, rpcUrl, txSignature, commitment);
+  return txSignature;
 }
 
 export async function executeSolanaX402Payment(
@@ -249,6 +323,34 @@ async function confirmSignature(
     await sleep(500);
   }
   throw new Error(`Solana transaction was not ${commitment}: ${signature}`);
+}
+
+function nativeTransferMessage(options: {
+  payer: string;
+  to: string;
+  amount: string;
+  recentBlockhash: string;
+}): Uint8Array {
+  // accountKeys: [payer (signer, writable), recipient (writable), SystemProgram
+  // (readonly)]. Header = 1 required signature, 0 readonly-signed, 1
+  // readonly-unsigned (the System program).
+  const accountKeys = [options.payer, options.to, SOLANA_SYSTEM_PROGRAM_ID];
+  // System "Transfer" instruction: u32 LE discriminant (2) + u64 LE lamports.
+  const instructionData = new Uint8Array(12);
+  instructionData[0] = 2;
+  writeU64Le(instructionData, 4, BigInt(options.amount));
+  return concatBytes(
+    new Uint8Array([1, 0, 1]),
+    shortVec(accountKeys.length),
+    ...accountKeys.map((key) => decodeBase58(key)),
+    decodeBase58(options.recentBlockhash),
+    shortVec(1),
+    new Uint8Array([2]),
+    shortVec(2),
+    new Uint8Array([0, 1]),
+    shortVec(instructionData.length),
+    instructionData,
+  );
 }
 
 function legacyTransferCheckedMessage(options: {

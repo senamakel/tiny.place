@@ -2,7 +2,6 @@ import type { SigningKey } from "../auth.js";
 import type { HttpClient } from "../http.js";
 import {
   executeSolanaX402Payment,
-  SOLANA_USDC_MINT,
   type SolanaX402PaymentExecution,
   type SolanaX402PaymentExecutionOptions,
 } from "../solana.js";
@@ -146,7 +145,10 @@ export class PaymentsApi {
     } = options;
     const execution = await executeSolanaX402Payment({
       ...executionOptions,
-      mint: mint ?? SOLANA_USDC_MINT,
+      // Pass the mint through as-is. The executor defaults to USDC for SPL
+      // transfers and ignores the mint entirely for native-SOL payments, so we
+      // must NOT force a USDC mint here (that would break native SOL).
+      mint,
       signer: this.signingKey,
       payment: {
         scheme: scheme ?? "exact",

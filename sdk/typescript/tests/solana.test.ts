@@ -167,7 +167,59 @@ describe("Solana payment execution", () => {
     expect(result.payment.signature).toBeTruthy();
   });
 
-  it("rejects unsupported payment shapes before submitting RPC calls", async () => {
+  it("submits a native SOL transfer without any token-account lookups", async () => {
+    const { secretKey, signer } = await createSigner();
+    const calls: Array<{ method: string; params: Array<unknown> }> = [];
+
+    const result = await executeSolanaPayment({
+      rpcUrl: "https://solana.example.test",
+      secretKey,
+      payment: {
+        network: SOLANA_MAINNET_NETWORK,
+        asset: "SOL",
+        amount: "1000000000", // 1 SOL in lamports
+        to: "F8zMkwbG3hp1k2t3eQWQh9bsh8qrK8CtqfZ2dBrrW3Ee",
+      },
+      fetch: createMockFetch(calls),
+    });
+
+    // Native SOL pays wallet -> wallet with no SPL mint or token accounts.
+    expect(result).toMatchObject({
+      from: signer.agentId,
+      to: "F8zMkwbG3hp1k2t3eQWQh9bsh8qrK8CtqfZ2dBrrW3Ee",
+      mint: "SOL",
+      amount: "1000000000",
+      sourceTokenAccount: signer.agentId,
+      destinationTokenAccount: "F8zMkwbG3hp1k2t3eQWQh9bsh8qrK8CtqfZ2dBrrW3Ee",
+    });
+    // No getTokenAccountsByOwner — that is the SPL-only path.
+    expect(calls.map((call) => call.method)).toEqual([
+      "getLatestBlockhash",
+      "sendTransaction",
+      "getSignatureStatuses",
+    ]);
+  });
+
+  it("accepts any solana:* network when none is pinned (e.g. a local validator)", async () => {
+    const { secretKey } = await createSigner();
+    const calls: Array<{ method: string; params: Array<unknown> }> = [];
+
+    const result = await executeSolanaPayment({
+      rpcUrl: "http://localhost:8899",
+      secretKey,
+      payment: {
+        // A non-mainnet solana network label must still be accepted.
+        network: "solana:LOCALNET1111111111111111111111111111111",
+        asset: "SOL",
+        amount: "500",
+        to: "F8zMkwbG3hp1k2t3eQWQh9bsh8qrK8CtqfZ2dBrrW3Ee",
+      },
+      fetch: createMockFetch(calls),
+    });
+    expect(result.signature).toBeTruthy();
+  });
+
+  it("rejects a non-solana network", async () => {
     await expect(
       executeSolanaPayment({
         rpcUrl: "https://solana.example.test",
@@ -180,5 +232,22 @@ describe("Solana payment execution", () => {
         },
       }),
     ).rejects.toThrow("Unsupported Solana network");
+  });
+
+  it("enforces an explicitly pinned network", async () => {
+    const { secretKey } = await createSigner();
+    await expect(
+      executeSolanaPayment({
+        rpcUrl: "https://solana.example.test",
+        secretKey,
+        network: SOLANA_MAINNET_NETWORK,
+        payment: {
+          network: "solana:LOCALNET1111111111111111111111111111111",
+          asset: "SOL",
+          amount: "1",
+          to: "F8zMkwbG3hp1k2t3eQWQh9bsh8qrK8CtqfZ2dBrrW3Ee",
+        },
+      }),
+    ).rejects.toThrow("Unexpected Solana network");
   });
 });
