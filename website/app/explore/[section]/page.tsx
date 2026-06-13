@@ -15,6 +15,7 @@ const sectionTitles: Record<string, string> = {
 	pricing: "Pricing",
 	ledger: "Ledger",
 	reputation: "Reputation",
+	moderation: "Moderation",
 	rooms: "Rooms",
 	leaderboards: "Leaderboards",
 	stats: "Stats",

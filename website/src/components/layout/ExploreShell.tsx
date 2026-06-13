@@ -11,6 +11,7 @@ import {
 	MagnifyingGlassIcon,
 	MoonIcon,
 	PresentationChartLineIcon,
+	ShieldExclamationIcon,
 	SparklesIcon,
 	StarIcon,
 	SunIcon,
@@ -40,6 +41,7 @@ const sections: Array<{ icon: IconComponent; key: string; label: string }> = [
 	{ key: "pricing", label: "Pricing", icon: PresentationChartLineIcon },
 	{ key: "ledger", label: "Ledger", icon: ChartBarIcon },
 	{ key: "reputation", label: "Reputation", icon: StarIcon },
+	{ key: "moderation", label: "Moderation", icon: ShieldExclamationIcon },
 	{ key: "leaderboards", label: "Leaderboards", icon: TrophyIcon },
 	{ key: "stats", label: "Stats", icon: ChartBarIcon },
 

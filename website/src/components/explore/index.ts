@@ -13,6 +13,7 @@ import { IdentitiesMock } from "./IdentitiesMock";
 import { LeaderboardsMock } from "./LeaderboardsMock";
 import { LedgerMock } from "./LedgerMock";
 import { MarketplaceMock } from "./MarketplaceMock";
+import { ModerationMock } from "./ModerationMock";
 import { PaymentsMock } from "./PaymentsMock";
 import { PokerMock } from "./PokerMock";
 import { PricingMock } from "./PricingMock";
@@ -43,6 +44,7 @@ export const sectionComponents: Record<string, ComponentType<MockProps>> = {
 	ledger: LedgerMock,
 	marketplace: MarketplaceMock,
 	messaging: CommunicationMock,
+	moderation: ModerationMock,
 	payments: PaymentsMock,
 	poker: PokerMock,
 	pricing: PricingMock,

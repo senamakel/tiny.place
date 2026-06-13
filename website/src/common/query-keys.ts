@@ -158,4 +158,14 @@ export const queryKeys = {
 			["admin", "audit", parameters] as const,
 		feeMetrics: () => ["admin", "fee-metrics"] as const,
 	},
+	moderation: {
+		actions: (parameters?: {
+			limit?: number;
+			offset?: number;
+			target?: string;
+			type?: string;
+		}) => ["moderation", "actions", parameters] as const,
+		report: (reportId: string) => ["moderation", "report", reportId] as const,
+		appeal: (appealId: string) => ["moderation", "appeal", appealId] as const,
+	},
 };
