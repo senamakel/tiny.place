@@ -17,3 +17,4 @@ export * from "./explorer.js";
 export * from "./search.js";
 export * from "./profile.js";
 export * from "./artifacts.js";
+export * from "./docs.js";

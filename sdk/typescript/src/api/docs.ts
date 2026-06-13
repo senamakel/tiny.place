@@ -1,4 +1,5 @@
 import type { HttpClient } from "../http.js";
+import type { TermsDocument, TermsHistoryResponse } from "../types/index.js";
 
 export class DocsApi {
   constructor(private readonly http: HttpClient) {}
@@ -31,12 +32,12 @@ export class DocsApi {
     return this.http.getText(`/sitemap-${encodeURIComponent(partId)}.xml`);
   }
 
-  terms(): Promise<Record<string, unknown>> {
-    return this.http.get<Record<string, unknown>>("/terms");
+  terms(): Promise<TermsDocument> {
+    return this.http.get<TermsDocument>("/terms");
   }
 
-  termsHistory(): Promise<Record<string, unknown>> {
-    return this.http.get<Record<string, unknown>>("/terms/history");
+  termsHistory(): Promise<TermsHistoryResponse> {
+    return this.http.get<TermsHistoryResponse>("/terms/history");
   }
 
   llms(): Promise<string> {

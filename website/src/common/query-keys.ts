@@ -94,4 +94,7 @@ export const queryKeys = {
 	constitution: {
 		detail: () => ["constitution"] as const,
 	},
+	docs: {
+		terms: () => ["docs", "terms"] as const,
+	},
 };

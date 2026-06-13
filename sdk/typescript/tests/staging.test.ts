@@ -88,6 +88,19 @@ describe("staging: unauthenticated endpoints", () => {
     expect(result.documents.length).toBeGreaterThan(0);
   });
 
+  it("docs.terms returns the current terms document", async () => {
+    const result = await client.docs.terms();
+    expect(result.version).toBeDefined();
+    expect(result.effectiveDate).toBeDefined();
+    expect(result.text.length).toBeGreaterThan(0);
+  });
+
+  it("docs.termsHistory returns prior terms documents", async () => {
+    const result = await client.docs.termsHistory();
+    expect(Array.isArray(result.terms)).toBe(true);
+    expect(result.terms.length).toBeGreaterThan(0);
+  });
+
   it("stats.overview returns snapshot", async () => {
     const stats = await client.stats.overview();
     expect(stats).toHaveProperty("agents");

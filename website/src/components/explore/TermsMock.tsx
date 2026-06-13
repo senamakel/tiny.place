@@ -1,14 +1,19 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
+import type { TermsDocument } from "@tinyhumansai/tinyplace";
+
+import { useApiClient } from "@src/common/api-context";
+import { queryKeys } from "@src/common/query-keys";
 import type { FunctionComponent } from "@src/common/types";
 
 type Section = {
-	number: number;
+	number?: number;
 	title: string;
 	body: string;
 };
 
-const sections: Array<Section> = [
+const fallbackSections: Array<Section> = [
 	{
 		number: 1,
 		title: "Acceptance of Terms",
@@ -41,6 +46,38 @@ const sections: Array<Section> = [
 	},
 ];
 
+const parseTermsSections = (text: string): Array<Section> => {
+	const sectionMatches = [...text.matchAll(/^(\d+)\.\s+(.+)$/gm)];
+	if (sectionMatches.length === 0) {
+		return [{ title: "Terms", body: text.trim() }];
+	}
+
+	const parsed: Array<Section> = [];
+	const intro = text.slice(0, sectionMatches[0]?.index ?? 0).trim();
+	if (intro) {
+		parsed.push({ title: "Overview", body: intro });
+	}
+
+	for (const [index, match] of sectionMatches.entries()) {
+		const start = (match.index ?? 0) + match[0].length;
+		const end = sectionMatches[index + 1]?.index ?? text.length;
+		parsed.push({
+			number: Number(match[1]),
+			title: match[2]?.trim() ?? "Terms",
+			body: text.slice(start, end).trim(),
+		});
+	}
+
+	return parsed.filter((section) => section.body.length > 0);
+};
+
+const formatEffectiveDate = (iso: string): string =>
+	new Intl.DateTimeFormat(undefined, {
+		month: "long",
+		day: "numeric",
+		year: "numeric",
+	}).format(new Date(iso));
+
 type TermsMockProperties = {
 	isDark: boolean;
 };
@@ -48,13 +85,21 @@ type TermsMockProperties = {
 export const TermsMock = ({
 	isDark,
 }: TermsMockProperties): FunctionComponent => {
+	const client = useApiClient();
+	const { data, isError, isLoading } = useQuery({
+		queryKey: queryKeys.docs.terms(),
+		queryFn: (): Promise<TermsDocument> => client.docs.terms(),
+	});
+	const termsSections = data ? parseTermsSections(data.text) : fallbackSections;
+
 	return (
 		<div className="space-y-4">
 			<div className="flex items-center justify-between">
 				<span
 					className={`text-xs ${isDark ? "text-neutral-500" : "text-neutral-400"}`}
 				>
-					Effective Date: 2026-01-01
+					Effective Date:{" "}
+					{data ? formatEffectiveDate(data.effectiveDate) : "2026-01-01"}
 				</span>
 				<span
 					className={`rounded-full px-2 py-0.5 text-xs ${
@@ -63,13 +108,30 @@ export const TermsMock = ({
 							: "bg-neutral-200 text-neutral-500"
 					}`}
 				>
-					Version 1.2
+					Version {data?.version ?? "1.2"}
 				</span>
 			</div>
+			{data?.title && (
+				<h3 className={`text-sm font-medium ${isDark ? "text-white" : "text-black"}`}>
+					{data.title}
+				</h3>
+			)}
+			{isLoading && (
+				<p
+					className={`text-xs ${isDark ? "text-neutral-500" : "text-neutral-400"}`}
+				>
+					Loading current terms...
+				</p>
+			)}
+			{isError && (
+				<p className="text-xs text-red-500">
+					Failed to load current terms. Showing bundled fallback.
+				</p>
+			)}
 			<div className="space-y-3">
-				{sections.map((section) => (
+				{termsSections.map((section) => (
 					<div
-						key={section.number}
+						key={`${String(section.number ?? 0)}-${section.title}`}
 						className={`rounded-lg border p-3 ${
 							isDark
 								? "border-neutral-800 bg-neutral-950"
@@ -79,10 +141,11 @@ export const TermsMock = ({
 						<span
 							className={`text-sm font-medium ${isDark ? "text-white" : "text-black"}`}
 						>
-							{section.number}. {section.title}
+							{section.number ? `${String(section.number)}. ` : ""}
+							{section.title}
 						</span>
 						<p
-							className={`mt-1 text-xs leading-relaxed ${isDark ? "text-neutral-500" : "text-neutral-400"}`}
+							className={`mt-1 whitespace-pre-line text-xs leading-relaxed ${isDark ? "text-neutral-500" : "text-neutral-400"}`}
 						>
 							{section.body}
 						</p>
