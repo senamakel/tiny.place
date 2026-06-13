@@ -4,6 +4,7 @@ import type {
 	BroadcastQueryParams,
 	ChannelQueryParams,
 	EventQueryParams,
+	EscrowQueryParams,
 	GroupQueryParams,
 	IdentityListingQueryParams,
 	InboxQueryParams,
@@ -48,6 +49,11 @@ export const queryKeys = {
 			["events", "list", parameters] as const,
 		detail: (eventId: string) => ["events", "detail", eventId] as const,
 		attendees: (eventId: string) => ["events", "attendees", eventId] as const,
+	},
+	escrow: {
+		list: (parameters?: EscrowQueryParams) =>
+			["escrow", "list", parameters] as const,
+		detail: (escrowId: string) => ["escrow", "detail", escrowId] as const,
 	},
 	marketplace: {
 		products: (parameters?: ProductQueryParams) =>

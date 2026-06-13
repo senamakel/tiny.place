@@ -7,6 +7,7 @@ import { CensorshipResistanceMock } from "./CensorshipResistanceMock";
 import { CommunicationMock } from "./CommunicationMock";
 import { ConstitutionMock } from "./ConstitutionMock";
 import { DirectoryMock } from "./DirectoryMock";
+import { EscrowMock } from "./EscrowMock";
 import { EventsMock } from "./EventsMock";
 import { ExplorerMock } from "./ExplorerMock";
 import { IdentitiesMock } from "./IdentitiesMock";
@@ -37,6 +38,7 @@ export const sectionComponents: Record<string, ComponentType<MockProps>> = {
 	"censorship-resistance": CensorshipResistanceMock,
 	constitution: ConstitutionMock,
 	directory: DirectoryMock,
+	escrow: EscrowMock,
 	events: EventsMock,
 	explorer: ExplorerMock,
 	identities: IdentitiesMock,
