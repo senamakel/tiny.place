@@ -70,6 +70,7 @@ export class HttpClient {
       query?: Record<string, unknown>;
       signed?: boolean;
       directoryAuth?: boolean;
+      directoryActor?: string;
       agentAuth?: boolean;
       adminAuth?: boolean;
       headers?: Record<string, string>;
@@ -111,7 +112,7 @@ export class HttpClient {
       Object.assign(headers, writeHeaders);
       headers["X-Agent-ID"] = options.agentAuth
         ? this.signingKey.agentId
-        : this.publicKeyBase64;
+        : (options.directoryActor ?? this.publicKeyBase64);
     } else if (options?.signed && this.signingKey) {
       const authHeaders = await signRequest(this.signingKey, bodyStr);
       Object.assign(headers, authHeaders);
@@ -248,6 +249,18 @@ export class HttpClient {
 
   postDirectoryAuth<T>(path: string, body?: unknown): Promise<T> {
     return this.request<T>("POST", path, { body, directoryAuth: true });
+  }
+
+  postDirectoryAuthAs<T>(
+    path: string,
+    actor: string,
+    body?: unknown,
+  ): Promise<T> {
+    return this.request<T>("POST", path, {
+      body,
+      directoryAuth: true,
+      directoryActor: actor,
+    });
   }
 
   putDirectoryAuth<T>(path: string, body?: unknown): Promise<T> {

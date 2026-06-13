@@ -26,7 +26,11 @@ export class EscrowApi {
   }
 
   create(request: EscrowCreateRequest): Promise<Escrow> {
-    return this.http.post<Escrow>("/escrow", request);
+    return this.http.postDirectoryAuthAs<Escrow>(
+      "/escrow",
+      request.client,
+      request,
+    );
   }
 
   get(escrowId: string): Promise<Escrow> {
@@ -43,54 +47,94 @@ export class EscrowApi {
     );
   }
 
-  accept(escrowId: string): Promise<Escrow> {
-    return this.http.post<Escrow>(`/escrow/${encodeURIComponent(escrowId)}/accept`);
+  accept(escrowId: string, actor?: string): Promise<Escrow> {
+    return this.postEscrowActor(
+      `/escrow/${encodeURIComponent(escrowId)}/accept`,
+      actor,
+    );
   }
 
-  deliver(escrowId: string, proof: { description: string; refs?: Array<string> }): Promise<Escrow> {
-    return this.http.post<Escrow>(`/escrow/${encodeURIComponent(escrowId)}/deliver`, proof);
+  deliver(
+    escrowId: string,
+    proof: { actor?: string; description: string; refs?: Array<string> },
+  ): Promise<Escrow> {
+    return this.postEscrowActor(
+      `/escrow/${encodeURIComponent(escrowId)}/deliver`,
+      proof.actor,
+      proof,
+    );
   }
 
-  acceptDelivery(escrowId: string): Promise<Escrow> {
-    return this.http.post<Escrow>(`/escrow/${encodeURIComponent(escrowId)}/accept-delivery`);
+  acceptDelivery(escrowId: string, actor?: string): Promise<Escrow> {
+    return this.postEscrowActor(
+      `/escrow/${encodeURIComponent(escrowId)}/accept-delivery`,
+      actor,
+    );
   }
 
-  claimRelease(escrowId: string): Promise<Escrow> {
-    return this.http.post<Escrow>(`/escrow/${encodeURIComponent(escrowId)}/claim-release`);
+  claimRelease(escrowId: string, actor?: string): Promise<Escrow> {
+    return this.postEscrowActor(
+      `/escrow/${encodeURIComponent(escrowId)}/claim-release`,
+      actor,
+    );
   }
 
-  claimRefund(escrowId: string): Promise<Escrow> {
-    return this.http.post<Escrow>(`/escrow/${encodeURIComponent(escrowId)}/claim-refund`);
+  claimRefund(escrowId: string, actor?: string): Promise<Escrow> {
+    return this.postEscrowActor(
+      `/escrow/${encodeURIComponent(escrowId)}/claim-refund`,
+      actor,
+    );
   }
 
-  requestRevision(escrowId: string, reason: string): Promise<Escrow> {
-    return this.http.post<Escrow>(
+  requestRevision(
+    escrowId: string,
+    reason: string,
+    actor?: string,
+  ): Promise<Escrow> {
+    return this.postEscrowActor(
       `/escrow/${encodeURIComponent(escrowId)}/request-revision`,
-      { reason },
+      actor,
+      { actor, reason },
     );
   }
 
-  cancel(escrowId: string): Promise<Escrow> {
-    return this.http.post<Escrow>(`/escrow/${encodeURIComponent(escrowId)}/cancel`);
+  cancel(escrowId: string, actor?: string): Promise<Escrow> {
+    return this.postEscrowActor(
+      `/escrow/${encodeURIComponent(escrowId)}/cancel`,
+      actor,
+    );
   }
 
-  extendDeadline(escrowId: string, newDeadline: string): Promise<Escrow> {
-    return this.http.post<Escrow>(
+  extendDeadline(
+    escrowId: string,
+    newDeadline: string,
+    actor?: string,
+  ): Promise<Escrow> {
+    return this.postEscrowActor(
       `/escrow/${encodeURIComponent(escrowId)}/extend-deadline`,
-      { newDeadline },
+      actor,
+      { actor, deadline: newDeadline },
     );
   }
 
-  approveExtension(escrowId: string): Promise<Escrow> {
-    return this.http.post<Escrow>(`/escrow/${encodeURIComponent(escrowId)}/approve-extension`);
+  approveExtension(escrowId: string, actor?: string): Promise<Escrow> {
+    return this.postEscrowActor(
+      `/escrow/${encodeURIComponent(escrowId)}/approve-extension`,
+      actor,
+    );
   }
 
   // --- Disputes ---
 
-  openDispute(escrowId: string, reason: string): Promise<EscrowDispute> {
-    return this.http.post<EscrowDispute>(
+  openDispute(
+    escrowId: string,
+    reason: string,
+    actor?: string,
+  ): Promise<EscrowDispute> {
+    return this.postEscrowActor(
       `/escrow/${encodeURIComponent(escrowId)}/dispute`,
-      { reason },
+      actor,
+      { actor, reason },
     );
   }
 
@@ -100,39 +144,48 @@ export class EscrowApi {
 
   submitEvidence(
     escrowId: string,
-    evidence: { type: string; description: string; ref?: string },
+    evidence: { actor?: string; type: string; description: string; ref?: string },
   ): Promise<void> {
-    return this.http.post<void>(
+    return this.postEscrowActor(
       `/escrow/${encodeURIComponent(escrowId)}/dispute/evidence`,
+      evidence.actor,
       evidence,
     );
   }
 
-  acceptMediation(escrowId: string): Promise<EscrowDispute> {
-    return this.http.post<EscrowDispute>(
+  acceptMediation(escrowId: string, actor?: string): Promise<EscrowDispute> {
+    return this.postEscrowActor(
       `/escrow/${encodeURIComponent(escrowId)}/dispute/accept-mediation`,
+      actor,
     );
   }
 
-  rejectMediation(escrowId: string): Promise<EscrowDispute> {
-    return this.http.post<EscrowDispute>(
+  rejectMediation(escrowId: string, actor?: string): Promise<EscrowDispute> {
+    return this.postEscrowActor(
       `/escrow/${encodeURIComponent(escrowId)}/dispute/reject-mediation`,
+      actor,
     );
   }
 
-  payArbitration(escrowId: string, amount: string): Promise<EscrowDispute> {
-    return this.http.post<EscrowDispute>(
+  payArbitration(
+    escrowId: string,
+    amount: string,
+    actor?: string,
+  ): Promise<EscrowDispute> {
+    return this.postEscrowActor(
       `/escrow/${encodeURIComponent(escrowId)}/dispute/pay-arbitration`,
-      { amount },
+      actor,
+      { actor, amount },
     );
   }
 
   voteArbitration(
     escrowId: string,
-    vote: { councilMember: string; vote: string; clientPct?: number; providerPct?: number; rationale?: string },
+    vote: { actor?: string; councilMember: string; vote: string; clientPct?: number; providerPct?: number; rationale?: string },
   ): Promise<void> {
-    return this.http.post<void>(
+    return this.postEscrowActor(
       `/escrow/${encodeURIComponent(escrowId)}/dispute/vote`,
+      vote.actor ?? vote.councilMember,
       vote,
     );
   }
@@ -142,17 +195,23 @@ export class EscrowApi {
   deliverMilestone(
     escrowId: string,
     milestoneId: string,
-    proof: { description: string; refs?: Array<string> },
+    proof: { actor?: string; description: string; refs?: Array<string> },
   ): Promise<EscrowMilestone> {
-    return this.http.post<EscrowMilestone>(
+    return this.postEscrowActor(
       `/escrow/${encodeURIComponent(escrowId)}/milestones/${encodeURIComponent(milestoneId)}/deliver`,
+      proof.actor,
       proof,
     );
   }
 
-  acceptMilestoneDelivery(escrowId: string, milestoneId: string): Promise<EscrowMilestone> {
-    return this.http.post<EscrowMilestone>(
+  acceptMilestoneDelivery(
+    escrowId: string,
+    milestoneId: string,
+    actor?: string,
+  ): Promise<EscrowMilestone> {
+    return this.postEscrowActor(
       `/escrow/${encodeURIComponent(escrowId)}/milestones/${encodeURIComponent(milestoneId)}/accept-delivery`,
+      actor,
     );
   }
 
@@ -160,10 +219,12 @@ export class EscrowApi {
     escrowId: string,
     milestoneId: string,
     reason: string,
+    actor?: string,
   ): Promise<EscrowMilestone> {
-    return this.http.post<EscrowMilestone>(
+    return this.postEscrowActor(
       `/escrow/${encodeURIComponent(escrowId)}/milestones/${encodeURIComponent(milestoneId)}/request-revision`,
-      { reason },
+      actor,
+      { actor, reason },
     );
   }
 
@@ -171,10 +232,26 @@ export class EscrowApi {
     escrowId: string,
     milestoneId: string,
     reason: string,
+    actor?: string,
   ): Promise<EscrowDispute> {
-    return this.http.post<EscrowDispute>(
+    return this.postEscrowActor(
       `/escrow/${encodeURIComponent(escrowId)}/milestones/${encodeURIComponent(milestoneId)}/dispute`,
-      { reason },
+      actor,
+      { actor, reason },
     );
+  }
+
+  private postEscrowActor<T>(
+    path: string,
+    actor?: string,
+    body?: Record<string, unknown>,
+  ): Promise<T> {
+    if (actor) {
+      return this.http.postDirectoryAuthAs<T>(path, actor, {
+        ...(body ?? {}),
+        actor,
+      });
+    }
+    return this.http.post<T>(path, body);
   }
 }

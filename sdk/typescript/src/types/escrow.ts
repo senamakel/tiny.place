@@ -144,13 +144,17 @@ export interface Escrow {
 }
 
 export interface EscrowCreateRequest {
+  client: string;
+  clientCryptoId?: string;
   provider: string;
+  providerCryptoId?: string;
   amount: string;
   asset: string;
   network: string;
   terms: EscrowTerms;
   milestones?: Array<Omit<EscrowMilestone, "milestoneId" | "status" | "revisionCount">>;
   payment?: Record<string, string>;
+  paymentAuthorization?: string;
   signature?: string;
 }
 
