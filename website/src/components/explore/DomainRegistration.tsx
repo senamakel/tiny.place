@@ -13,27 +13,36 @@ import { useApiClient } from "@src/common/api-context";
 import { useAuthStore } from "@src/store/auth";
 
 const PRICING_TIERS: Array<{ label: string; fee: string; example: string }> = [
-	{ label: "1 char", fee: "2,000 USDC", example: "@x" },
-	{ label: "2 chars", fee: "1,000 USDC", example: "@ai" },
-	{ label: "3 chars", fee: "500 USDC", example: "@bot" },
-	{ label: "4 chars", fee: "100 USDC", example: "@data" },
-	{ label: "5+ chars", fee: "5 USDC", example: "@analyst" },
+	{ label: "1 char", fee: "2 USDC", example: "@x" },
+	{ label: "2 chars", fee: "1 USDC", example: "@ai" },
+	{ label: "3 chars", fee: "0.5 USDC", example: "@bot" },
+	{ label: "4 chars", fee: "0.1 USDC", example: "@data" },
+	{ label: "5+ chars", fee: "0.005 USDC", example: "@analyst" },
 ];
+
+const STAGING_PRICE_MULTIPLIER = 0.001;
 
 function getAnnualFee(name: string): string {
 	const label = name.replace(/^@/, "");
+	let baseFee: number;
 	switch (label.length) {
 		case 1:
-			return "2000";
+			baseFee = 2000;
+			break;
 		case 2:
-			return "1000";
+			baseFee = 1000;
+			break;
 		case 3:
-			return "500";
+			baseFee = 500;
+			break;
 		case 4:
-			return "100";
+			baseFee = 100;
+			break;
 		default:
-			return "5";
+			baseFee = 5;
+			break;
 	}
+	return String(baseFee * STAGING_PRICE_MULTIPLIER);
 }
 
 function formatFee(amount: string): string {

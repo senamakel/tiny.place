@@ -31,6 +31,7 @@ export interface X402VerifyRequest {
   nonce: string;
   expiresAt: string;
   signature: string;
+  metadata?: Record<string, string>;
 }
 
 export interface X402VerifyResponse {
@@ -53,9 +54,12 @@ export interface X402SettleRequest {
 }
 
 export interface X402SettleResponse {
+  settled?: boolean;
   ledgerTxId?: string;
   onChainTx?: string;
+  batchId?: string;
   status?: string;
+  error?: string;
   [key: string]: unknown;
 }
 
