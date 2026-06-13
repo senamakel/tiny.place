@@ -195,57 +195,105 @@ fn payment_id(payload: &PaymentPayload) -> [u8; 32] {
 
 // --- State ---
 
+/// Lifecycle of a vault. A vault is `Open` from creation; `Closed` is reserved
+/// for a future explicit close path (today vaults simply reach a zero balance
+/// once their settlement program has disbursed everything).
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
 pub enum VaultState {
+    /// Accepting deposits and disbursements.
     Open,
+    /// No longer accepting deposits (reserved; not set by current instructions).
     Closed,
 }
 
-/// A custody vault: funds live in a separate `vault_token` account whose
-/// authority is the vault PDA. `deposited - disbursed` is the available balance.
+/// A custody vault — the on-chain home of escrowed funds for one job or game.
+///
+/// The tokens themselves live in a separate SPL token account (`token_account`)
+/// whose authority is this vault's PDA, so only the escrow program can move
+/// them. This account holds only the accounting and the binding to a settlement
+/// program; `deposited - disbursed` is the currently available balance.
+///
+/// PDA: `["vault", vault_id]` under the escrow program.
 #[account]
 pub struct Vault {
+    /// Caller-supplied 32-byte id; also the PDA seed. Lets a single deployed
+    /// escrow program hold an unbounded, id-mapped set of independent vaults.
     pub vault_id: [u8; 32],
+    /// The settlement program (settlement_job / settlement_game_poker / …) that
+    /// is allowed to disburse this vault's funds.
     pub settlement_program: Pubkey,
+    /// The exact signer required on `disburse`, fixed at creation to
+    /// `PDA(["vault_authority"], settlement_program)`. Recomputing it here makes
+    /// the custody↔policy binding trustless.
     pub authority: Pubkey,
+    /// SPL mint of the escrowed asset.
     pub mint: Pubkey,
+    /// The one token account this vault deposits into and disburses from, pinned
+    /// at creation so on-chain balances can never desync from the accounting.
     pub token_account: Pubkey,
+    /// Token account that receives the platform fee on every disburse.
     pub fee_account: Pubkey,
+    /// Running total deposited into the vault (base units).
     pub deposited: u64,
+    /// Running total released out of the vault, fees included (base units).
     pub disbursed: u64,
+    /// Lifecycle state.
     pub state: VaultState,
+    /// Cached PDA bump for `["vault", vault_id]`, used to sign transfers.
     pub bump: u8,
 }
 
 impl Vault {
+    /// Account size: 8 discriminator + vault_id(32) + 4×Pubkey(128) +
+    /// fee_account(32) + deposited(8) + disbursed(8) + state(1) + bump(1).
     pub const SIZE: usize = 8 + 32 + 32 + 32 + 32 + 32 + 32 + 8 + 8 + 1 + 1;
 }
 
+/// Per-payer replay guard for x402 deposits. The accepted nonce must strictly
+/// increase, so a captured payment can never be replayed.
+///
+/// PDA: `["nonce", owner]` under the escrow program.
 #[account]
 pub struct NonceTracker {
+    /// The payer this tracker belongs to.
     pub owner: Pubkey,
+    /// Highest nonce accepted so far; the next deposit must exceed it.
     pub last_nonce: u64,
+    /// Cached PDA bump.
     pub bump: u8,
 }
 
 impl NonceTracker {
+    /// Account size: 8 discriminator + owner(32) + last_nonce(8) + bump(1).
     pub const SIZE: usize = 8 + 32 + 8 + 1;
 }
 
+/// An x402 payment authorization, passed to `deposit`. Mirrors the off-chain
+/// x402 `PaymentPayload` so a signed HTTP-402 authorization maps directly to an
+/// on-chain deposit.
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct PaymentPayload {
+    /// Amount to deposit, in token base units.
     pub amount: u64,
+    /// The paying account; must equal the transaction's `payer` signer.
     pub payer: Pubkey,
+    /// The intended payee (recorded in the payment id; not used for transfer
+    /// routing, since funds always land in the vault token account).
     pub payee: Pubkey,
+    /// Monotonic nonce for replay protection (must exceed the tracker's last).
     pub nonce: u64,
+    /// Unix expiry; the deposit is rejected once `Clock` passes it.
     pub expiry: i64,
 }
 
 // --- Contexts ---
 
+/// Accounts for [`escrow::create_vault`]. Initializes the vault PDA and its
+/// dedicated token account in one instruction.
 #[derive(Accounts)]
 #[instruction(vault_id: [u8; 32])]
 pub struct CreateVault<'info> {
+    /// The vault account being created; PDA `["vault", vault_id]`.
     #[account(
         init,
         payer = creator,
@@ -254,6 +302,8 @@ pub struct CreateVault<'info> {
         bump
     )]
     pub vault: Account<'info, Vault>,
+    /// The vault's token account, created here with the vault PDA as authority.
+    /// A fresh keypair supplied by the caller; pinned into `vault.token_account`.
     #[account(
         init,
         payer = creator,
@@ -261,18 +311,23 @@ pub struct CreateVault<'info> {
         token::authority = vault,
     )]
     pub vault_token: Account<'info, TokenAccount>,
+    /// Pays rent for the new accounts; need not be a party to the job/game.
     #[account(mut)]
     pub creator: Signer<'info>,
+    /// SPL mint of the escrowed asset.
     pub mint: Account<'info, Mint>,
-    /// CHECK: token account that receives the fee on disburse; verified by key on disburse
+    /// CHECK: token account that receives the fee on disburse; only its key is
+    /// stored, and it is re-verified by key on every `disburse`.
     pub fee_account: AccountInfo<'info>,
     pub token_program: Program<'info, Token>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
 }
 
+/// Accounts for [`escrow::init_nonce`]. One-time setup of a payer's replay guard.
 #[derive(Accounts)]
 pub struct InitNonce<'info> {
+    /// The tracker being created; PDA `["nonce", owner]`.
     #[account(
         init,
         payer = owner,
@@ -281,26 +336,34 @@ pub struct InitNonce<'info> {
         bump
     )]
     pub nonce_tracker: Account<'info, NonceTracker>,
+    /// The payer this tracker is for; pays its rent and signs.
     #[account(mut)]
     pub owner: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
 
+/// Accounts for [`escrow::deposit`]. Moves `payload.amount` from the payer's
+/// token account into the vault's pinned token account.
 #[derive(Accounts)]
 #[instruction(payload: PaymentPayload)]
 pub struct Deposit<'info> {
+    /// Vault being funded; its `deposited` total is incremented.
     #[account(mut)]
     pub vault: Account<'info, Vault>,
+    /// The payer's replay guard, keyed by `payload.payer`.
     #[account(
         mut,
         seeds = [b"nonce", payload.payer.as_ref()],
         bump = nonce_tracker.bump,
     )]
     pub nonce_tracker: Account<'info, NonceTracker>,
+    /// The depositing wallet; must equal `payload.payer`.
     #[account(mut)]
     pub payer: Signer<'info>,
+    /// Source token account, owned by the payer.
     #[account(mut, constraint = payer_token.owner == payer.key() @ EscrowError::Unauthorized)]
     pub payer_token: Account<'info, TokenAccount>,
+    /// Destination — must be the vault's pinned token account.
     #[account(
         mut,
         constraint = vault_token.key() == vault.token_account @ EscrowError::InvalidVault,
@@ -309,19 +372,26 @@ pub struct Deposit<'info> {
     pub token_program: Program<'info, Token>,
 }
 
+/// Accounts for [`escrow::disburse`]. Releases funds out of the vault; callable
+/// only by the bound settlement program's `vault_authority` PDA.
 #[derive(Accounts)]
 pub struct Disburse<'info> {
+    /// Vault being drained; its `disbursed` total is incremented.
     #[account(mut)]
     pub vault: Account<'info, Vault>,
-    /// The settlement program's `vault_authority` PDA, signing via CPI.
+    /// The settlement program's `vault_authority` PDA, signing via CPI. Must
+    /// equal `vault.authority`.
     pub authority: Signer<'info>,
+    /// Source of funds — the vault's pinned token account.
     #[account(
         mut,
         constraint = vault_token.key() == vault.token_account @ EscrowError::InvalidVault,
     )]
     pub vault_token: Account<'info, TokenAccount>,
+    /// Where the `amount` goes (winner / provider / refunded client).
     #[account(mut)]
     pub recipient_token: Account<'info, TokenAccount>,
+    /// Where the `fee` goes — must equal `vault.fee_account`.
     #[account(mut)]
     pub fee_token: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
@@ -329,6 +399,7 @@ pub struct Disburse<'info> {
 
 // --- Events ---
 
+/// Emitted when a vault is created and bound to a settlement program.
 #[event]
 pub struct VaultOpened {
     pub vault: Pubkey,
@@ -338,6 +409,8 @@ pub struct VaultOpened {
     pub mint: Pubkey,
 }
 
+/// Emitted on every successful deposit; carries the running `deposited` total
+/// and the deterministic `payment_id` for off-chain reconciliation.
 #[event]
 pub struct Deposited {
     pub vault: Pubkey,
@@ -347,6 +420,8 @@ pub struct Deposited {
     pub deposited: u64,
 }
 
+/// Emitted on every disburse; `amount` went to `to`, `fee` to the fee account,
+/// with the running `disbursed` total after the release.
 #[event]
 pub struct Disbursed {
     pub vault: Pubkey,

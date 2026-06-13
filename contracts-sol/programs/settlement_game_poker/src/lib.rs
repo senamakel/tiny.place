@@ -8,7 +8,9 @@ pub mod math;
 
 declare_id!("CATBJS1qmZCCHJzNmdEwXNsBn1QYJoBuCg7yi8FTL8mG");
 
+/// Basis-points denominator: a `fee_bps` of 500 means a 5.00% rake.
 pub const BPS_DENOMINATOR: u64 = 10_000;
+/// Upper bound on players in a single pot; keeps account/transaction sizing bounded.
 pub const MAX_PLAYERS_CAP: u16 = 64;
 
 /// settlement_game_poker is the winner-take-all policy layer for poker (and
@@ -219,6 +221,7 @@ pub mod settlement_game_poker {
     }
 }
 
+/// The vault's current pot: total deposited minus anything already disbursed.
 fn available(vault: &Account<Vault>) -> Result<u64> {
     vault
         .deposited
@@ -262,48 +265,87 @@ fn disburse_signed<'info>(
 
 // --- State ---
 
+/// Game lifecycle:
+///
+/// ```text
+///                 join × N            settle (settler picks winner)
+///   Open ───────────────────────────────────────────────► Settled (→ winner)
+///    │
+///    │ cancel (settler)
+///    ▼
+///  Cancelled ── claim_refund × N ──► (each player reclaims their stake)
+/// ```
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
 pub enum GameState {
+    /// Accepting buy-ins; settleable once ≥ 2 players have joined.
     Open,
+    /// Terminal: the settler awarded the pot to a winner.
     Settled,
+    /// Terminal-ish: aborted; players reclaim stakes via `claim_refund`.
     Cancelled,
 }
 
+/// On-chain record of a pooled, winner-take-all game. Funds live in the bound
+/// escrow vault; this account tracks the buy-in, player count, and rake.
+/// PDA: `["game", game_id]`.
 #[account]
 pub struct Game {
+    /// Caller-supplied 32-byte id; also the PDA seed.
     pub game_id: [u8; 32],
+    /// Server key authorized to declare the winner (`settle`) or `cancel`.
     pub settler: Pubkey,
+    /// The escrow vault holding the pot.
     pub vault: Pubkey,
+    /// Required buy-in per player, in token base units.
     pub stake: u64,
+    /// Maximum players allowed to join (2..=MAX_PLAYERS_CAP).
     pub max_players: u16,
+    /// Number of players that have joined so far.
     pub player_count: u16,
+    /// Platform rake in basis points, taken from the pot on settle.
     pub fee_bps: u16,
+    /// Lifecycle state.
     pub state: GameState,
+    /// Cached PDA bump for `["game", game_id]`.
     pub bump: u8,
 }
 
 impl Game {
+    /// 8 discriminator + game_id(32) + settler(32) + vault(32) + stake(8) +
+    /// max_players(2) + player_count(2) + fee_bps(2) + state(1) + bump(1).
     pub const SIZE: usize = 8 + 32 + 32 + 32 + 8 + 2 + 2 + 2 + 1 + 1;
 }
 
+/// Proof that a player joined a game with a given stake; also the unit of
+/// refund. One per (game, player). PDA: `["player", game, player]`.
 #[account]
 pub struct PlayerEntry {
+    /// The game this entry belongs to.
     pub game: Pubkey,
+    /// The player who staked.
     pub player: Pubkey,
+    /// The stake they put in (equals the game's buy-in).
     pub amount: u64,
+    /// Whether this stake has already been refunded (cancel path).
     pub refunded: bool,
+    /// Cached PDA bump.
     pub bump: u8,
 }
 
 impl PlayerEntry {
+    /// 8 discriminator + game(32) + player(32) + amount(8) + refunded(1) +
+    /// bump(1).
     pub const SIZE: usize = 8 + 32 + 32 + 8 + 1 + 1;
 }
 
 // --- Contexts ---
 
+/// Accounts for [`settlement_game_poker::create_game`]. The vault must already
+/// exist and be bound to this program.
 #[derive(Accounts)]
 #[instruction(game_id: [u8; 32])]
 pub struct CreateGame<'info> {
+    /// The game record being created; PDA `["game", game_id]`.
     #[account(
         init,
         payer = creator,
@@ -312,17 +354,25 @@ pub struct CreateGame<'info> {
         bump
     )]
     pub game: Account<'info, Game>,
+    /// Pays rent for the game account (typically the room host / backend).
     #[account(mut)]
     pub creator: Signer<'info>,
+    /// The escrow vault that custodies the pot; checked to be bound to this
+    /// program.
     pub vault: Account<'info, Vault>,
     pub system_program: Program<'info, System>,
 }
 
+/// Accounts for [`settlement_game_poker::join`]. Creates the player's entry and
+/// CPIs `escrow::deposit` for the buy-in.
 #[derive(Accounts)]
 #[instruction(payload: escrow::PaymentPayload)]
 pub struct Join<'info> {
+    /// The game being joined; must point at `vault`. `player_count` is bumped.
     #[account(mut, constraint = game.vault == vault.key() @ GameError::VaultMismatch)]
     pub game: Account<'info, Game>,
+    /// The new per-player entry; PDA `["player", game, player]`. Its `init`
+    /// also prevents the same player from joining twice.
     #[account(
         init,
         payer = player,
@@ -331,76 +381,104 @@ pub struct Join<'info> {
         bump
     )]
     pub player_entry: Account<'info, PlayerEntry>,
+    /// The escrow vault (mutated by the CPI deposit).
     #[account(mut)]
     pub vault: Account<'info, Vault>,
-    /// CHECK: escrow nonce tracker PDA, validated inside escrow::deposit
+    /// CHECK: escrow nonce tracker PDA for the player; validated inside
+    /// `escrow::deposit`.
     #[account(mut)]
     pub nonce_tracker: UncheckedAccount<'info>,
+    /// The joining player; the deposit's payer.
     #[account(mut)]
     pub player: Signer<'info>,
+    /// Player's source token account.
     #[account(mut)]
     pub player_token: Account<'info, TokenAccount>,
+    /// The vault's pinned token account (deposit destination).
     #[account(mut)]
     pub vault_token: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
+    /// The escrow program, invoked via CPI.
     pub escrow_program: Program<'info, Escrow>,
     pub system_program: Program<'info, System>,
 }
 
+/// Accounts for [`settlement_game_poker::settle`]. Releases the pot to the
+/// winner minus rake via `escrow::disburse`.
 #[derive(Accounts)]
 pub struct SettleGame<'info> {
+    /// The game being settled; must point at `vault`.
     #[account(mut, constraint = game.vault == vault.key() @ GameError::VaultMismatch)]
     pub game: Account<'info, Game>,
+    /// Must equal `game.settler`.
     pub settler: Signer<'info>,
+    /// The winner's entry — proves they joined this game; its `player` is paid.
     pub winner_entry: Account<'info, PlayerEntry>,
+    /// The escrow vault being drained.
     #[account(mut)]
     pub vault: Account<'info, Vault>,
-    /// CHECK: PDA that authorizes disbursement; signs the escrow CPI via seeds
+    /// CHECK: this program's `vault_authority` PDA; signs the escrow CPI.
     #[account(seeds = [VAULT_AUTHORITY_SEED], bump)]
     pub vault_authority: UncheckedAccount<'info>,
+    /// The vault's pinned token account (disburse source).
     #[account(mut)]
     pub vault_token: Account<'info, TokenAccount>,
+    /// The winner's token account; must be owned by `winner_entry.player`.
     #[account(mut)]
     pub winner_token: Account<'info, TokenAccount>,
+    /// Fee destination; escrow verifies it equals `vault.fee_account`.
     #[account(mut)]
     pub fee_token: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
+    /// The escrow program, invoked via CPI.
     pub escrow_program: Program<'info, Escrow>,
 }
 
+/// Accounts for [`settlement_game_poker::cancel`]. Settler-only state change.
 #[derive(Accounts)]
 pub struct Cancel<'info> {
     #[account(mut)]
     pub game: Account<'info, Game>,
+    /// Must equal `game.settler`.
     pub settler: Signer<'info>,
 }
 
+/// Accounts for [`settlement_game_poker::claim_refund`]. A player reclaims their
+/// stake from a cancelled game via `escrow::disburse`.
 #[derive(Accounts)]
 pub struct ClaimRefund<'info> {
+    /// The cancelled game; must point at `vault`.
     #[account(constraint = game.vault == vault.key() @ GameError::VaultMismatch)]
     pub game: Account<'info, Game>,
+    /// The caller's entry; marked refunded after payout.
     #[account(
         mut,
         seeds = [b"player", game.key().as_ref(), player.key().as_ref()],
         bump = player_entry.bump,
     )]
     pub player_entry: Account<'info, PlayerEntry>,
+    /// The player reclaiming their stake.
     pub player: Signer<'info>,
+    /// The escrow vault being drained.
     #[account(mut)]
     pub vault: Account<'info, Vault>,
-    /// CHECK: PDA that authorizes disbursement; signs the escrow CPI via seeds
+    /// CHECK: this program's `vault_authority` PDA; signs the escrow CPI.
     #[account(seeds = [VAULT_AUTHORITY_SEED], bump)]
     pub vault_authority: UncheckedAccount<'info>,
+    /// The vault's pinned token account (disburse source).
     #[account(mut)]
     pub vault_token: Account<'info, TokenAccount>,
+    /// The player's token account; must be owned by `player_entry.player`.
     #[account(mut)]
     pub player_token: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
+    /// The escrow program, invoked via CPI.
     pub escrow_program: Program<'info, Escrow>,
 }
 
 // --- Events ---
 
+/// Emitted when a game is created and bound to a vault.
 #[event]
 pub struct GameCreated {
     pub game: Pubkey,
@@ -410,6 +488,7 @@ pub struct GameCreated {
     pub stake: u64,
 }
 
+/// Emitted on each buy-in; carries the running `player_count`.
 #[event]
 pub struct PlayerJoined {
     pub game: Pubkey,
@@ -418,6 +497,8 @@ pub struct PlayerJoined {
     pub player_count: u16,
 }
 
+/// Emitted when the settler awards the pot; `payout` to `winner`, `fee` to the
+/// fee account.
 #[event]
 pub struct GameSettled {
     pub game: Pubkey,
@@ -426,11 +507,13 @@ pub struct GameSettled {
     pub fee: u64,
 }
 
+/// Emitted when the settler cancels an open game.
 #[event]
 pub struct GameCancelled {
     pub game: Pubkey,
 }
 
+/// Emitted when a player reclaims their stake from a cancelled game.
 #[event]
 pub struct PlayerRefunded {
     pub game: Pubkey,

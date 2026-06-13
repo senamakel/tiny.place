@@ -8,6 +8,7 @@ pub mod math;
 
 declare_id!("6SAJ45pSHykE984VqDL54GmakdaT7C55xCJJEZnFXcyg");
 
+/// Basis-points denominator: a `fee_bps` of 250 means a 2.50% rake.
 pub const BPS_DENOMINATOR: u64 = 10_000;
 
 /// settlement_job is the policy layer for job/task escrow. It owns the job
@@ -224,36 +225,66 @@ fn release(ctx: &Context<Settle>, take_fee: bool) -> Result<()> {
 
 // --- State ---
 
+/// Job lifecycle:
+///
+/// ```text
+///                 mark_delivered            approve
+///   Open ───────────────────────► Delivered ─────────► Resolved (→ provider)
+///    │                               │
+///    │ refund (→ client)             │ dispute
+///    ▼                               ▼
+///  Refunded                       Disputed ── resolve(award) ──► Resolved
+/// ```
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
 pub enum JobState {
+    /// Created and (optionally) funded; awaiting delivery, or refundable.
     Open,
+    /// Provider has delivered; awaiting client acceptance or a dispute.
     Delivered,
+    /// A party disputed after delivery; funds locked until the controller rules.
     Disputed,
+    /// Terminal: funds released to the awarded party.
     Resolved,
+    /// Terminal: funds returned to the client (refunded while Open).
     Refunded,
 }
 
+/// On-chain record of a job. Holds the parties, the rake, and a pointer to the
+/// escrow vault that custodies the funds. PDA: `["job", job_id]`.
 #[account]
 pub struct Job {
+    /// Caller-supplied 32-byte id; also the PDA seed.
     pub job_id: [u8; 32],
+    /// The client who funds the job and accepts/disputes delivery.
     pub client: Pubkey,
+    /// The provider who delivers the work and is paid on approval.
     pub provider: Pubkey,
+    /// Server key authorized to resolve disputes (win/lose rulings).
     pub controller: Pubkey,
+    /// The escrow vault holding this job's funds.
     pub vault: Pubkey,
+    /// Platform rake in basis points, applied on releases to the provider.
     pub fee_bps: u16,
+    /// Lifecycle state.
     pub state: JobState,
+    /// Cached PDA bump for `["job", job_id]`.
     pub bump: u8,
 }
 
 impl Job {
+    /// 8 discriminator + job_id(32) + 4×Pubkey(128) + fee_bps(2) + state(1) +
+    /// bump(1).
     pub const SIZE: usize = 8 + 32 + 32 + 32 + 32 + 32 + 2 + 1 + 1;
 }
 
 // --- Contexts ---
 
+/// Accounts for [`settlement_job::create_job`]. The vault must already exist and
+/// be bound to this program.
 #[derive(Accounts)]
 #[instruction(job_id: [u8; 32])]
 pub struct CreateJob<'info> {
+    /// The job record being created; PDA `["job", job_id]`.
     #[account(
         init,
         payer = client,
@@ -262,60 +293,86 @@ pub struct CreateJob<'info> {
         bump
     )]
     pub job: Account<'info, Job>,
+    /// The client; pays rent and is recorded as `job.client`.
     #[account(mut)]
     pub client: Signer<'info>,
+    /// The escrow vault that will custody funds; checked to be bound to this
+    /// program (`vault.settlement_program == crate::ID`).
     pub vault: Account<'info, Vault>,
     pub system_program: Program<'info, System>,
 }
 
+/// Accounts for [`settlement_job::fund`]. A thin wrapper that CPIs
+/// `escrow::deposit`; the remaining accounts are forwarded to escrow.
 #[derive(Accounts)]
 pub struct Fund<'info> {
+    /// The job being funded; must point at `vault`.
     #[account(constraint = job.vault == vault.key() @ JobError::VaultMismatch)]
     pub job: Account<'info, Job>,
+    /// The escrow vault (mutated by the CPI deposit).
     #[account(mut)]
     pub vault: Account<'info, Vault>,
-    /// CHECK: escrow nonce tracker PDA, validated inside escrow::deposit
+    /// CHECK: escrow nonce tracker PDA for the client; validated inside
+    /// `escrow::deposit`.
     #[account(mut)]
     pub nonce_tracker: UncheckedAccount<'info>,
+    /// The client funding the job; the deposit's payer.
     #[account(mut)]
     pub client: Signer<'info>,
+    /// Client's source token account.
     #[account(mut)]
     pub client_token: Account<'info, TokenAccount>,
+    /// The vault's pinned token account (deposit destination).
     #[account(mut)]
     pub vault_token: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
+    /// The escrow program, invoked via CPI.
     pub escrow_program: Program<'info, Escrow>,
 }
 
+/// Accounts for the no-fund state transitions ([`mark_delivered`], [`dispute`]).
 #[derive(Accounts)]
 pub struct UpdateJob<'info> {
     #[account(mut)]
     pub job: Account<'info, Job>,
+    /// The caller; its authorization is checked per-instruction.
     pub actor: Signer<'info>,
 }
 
+/// Accounts for the fund-releasing instructions ([`approve`], [`resolve`],
+/// [`refund`]). Carries everything needed to CPI `escrow::disburse`.
 #[derive(Accounts)]
 pub struct Settle<'info> {
+    /// The job being settled; must point at `vault`.
     #[account(mut, constraint = job.vault == vault.key() @ JobError::VaultMismatch)]
     pub job: Account<'info, Job>,
+    /// The caller (client / controller depending on the instruction).
     pub actor: Signer<'info>,
+    /// The escrow vault being drained.
     #[account(mut)]
     pub vault: Account<'info, Vault>,
-    /// CHECK: PDA that authorizes disbursement; signs the escrow CPI via seeds
+    /// CHECK: this program's `vault_authority` PDA; signs the escrow disburse
+    /// CPI via its seeds, and equals the vault's stored authority.
     #[account(seeds = [VAULT_AUTHORITY_SEED], bump)]
     pub vault_authority: UncheckedAccount<'info>,
+    /// The vault's pinned token account (disburse source).
     #[account(mut)]
     pub vault_token: Account<'info, TokenAccount>,
+    /// Where funds go — provider on approve, provider or client on resolve,
+    /// client on refund (owner is verified per-instruction).
     #[account(mut)]
     pub recipient_token: Account<'info, TokenAccount>,
+    /// Fee destination; escrow verifies it equals `vault.fee_account`.
     #[account(mut)]
     pub fee_token: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
+    /// The escrow program, invoked via CPI.
     pub escrow_program: Program<'info, Escrow>,
 }
 
 // --- Events ---
 
+/// Emitted when a job is registered against a vault.
 #[event]
 pub struct JobCreated {
     pub job: Pubkey,
@@ -325,23 +382,28 @@ pub struct JobCreated {
     pub vault: Pubkey,
 }
 
+/// Emitted when the provider marks the work delivered.
 #[event]
 pub struct JobDelivered {
     pub job: Pubkey,
 }
 
+/// Emitted when a party opens a dispute; `by` is the disputing party.
 #[event]
 pub struct JobDisputed {
     pub job: Pubkey,
     pub by: Pubkey,
 }
 
+/// Emitted when funds are released (approve or dispute resolution); `to` is the
+/// recipient token account.
 #[event]
 pub struct JobResolved {
     pub job: Pubkey,
     pub to: Pubkey,
 }
 
+/// Emitted when the client refunds an Open job.
 #[event]
 pub struct JobRefunded {
     pub job: Pubkey,
