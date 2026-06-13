@@ -115,9 +115,10 @@ export function useExecuteSwap(): UseMutationResult<
 > {
 	const client = useApiClient();
 	const queryClient = useQueryClient();
+	const agentId = useAuthStore((state) => state.agentId);
 	return useMutation({
 		mutationFn: (request): Promise<SwapExecution> =>
-			client.pricing.executeSwap(request),
+			client.pricing.executeSwap(request, agentId),
 		onSuccess: (swap): void => {
 			void queryClient.invalidateQueries({
 				queryKey: ["pricing", "swap-history"],
@@ -175,9 +176,10 @@ export function useExecuteBridge(): UseMutationResult<
 > {
 	const client = useApiClient();
 	const queryClient = useQueryClient();
+	const agentId = useAuthStore((state) => state.agentId);
 	return useMutation({
 		mutationFn: (request): Promise<BridgeExecution> =>
-			client.pricing.executeBridge(request),
+			client.pricing.executeBridge(request, agentId),
 		onSuccess: (bridge): void => {
 			void queryClient.invalidateQueries({
 				queryKey: ["pricing", "bridge-history"],

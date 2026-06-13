@@ -145,6 +145,60 @@ describe("PricingApi", () => {
     });
   });
 
+  it("signs swap and bridge execution as the requested payer", async () => {
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(63));
+    const requests: Array<Request> = [];
+    const client = new TinyVerseClient({
+      baseUrl: "https://example.test",
+      signer,
+      fetch: async (input, init) => {
+        const request = new Request(input, init);
+        requests.push(request);
+        if (request.url.includes("/swap/execute")) {
+          return Response.json({
+            swapId: "swap_123",
+            quoteId: "quote_123",
+            status: "completed",
+            from: { asset: "SOL", amount: "1" },
+            to: { asset: "USDC", amount: "100" },
+            createdAt: "2026-06-13T00:00:00.000Z",
+          });
+        }
+        return Response.json({
+          bridgeId: "bridge_123",
+          quoteId: "quote_456",
+          status: "completed",
+          from: { asset: "USDC", amount: "100", network: "eip155:8453" },
+          to: {
+            asset: "USDC",
+            amount: "99",
+            network: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+          },
+          provider: "wormhole",
+          createdAt: "2026-06-13T00:00:00.000Z",
+        });
+      },
+    });
+
+    await client.pricing.executeSwap({ quoteId: "quote_123" }, signer.agentId);
+    await client.pricing.executeBridge({ quoteId: "quote_456" }, signer.agentId);
+
+    expect(requests.map((request) => request.url)).toEqual([
+      "https://example.test/swap/execute",
+      "https://example.test/bridge/execute",
+    ]);
+
+    for (const request of requests) {
+      expect(request.method).toBe("POST");
+      expect(request.headers.get("X-Agent-ID")).toBe(signer.agentId);
+      expect(request.headers.get("X-TinyPlace-Public-Key")).toBe(
+        signer.publicKeyBase64,
+      );
+      expect(request.headers.get("X-TinyPlace-Signature")).toBeTruthy();
+      expect(request.headers.get("Authorization")).toBeNull();
+    }
+  });
+
   it("signs swap and bridge reads as the requested agent", async () => {
     const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(62));
     const requests: Array<Request> = [];

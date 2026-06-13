@@ -91,7 +91,17 @@ export class PricingApi {
     });
   }
 
-  executeSwap(request: SwapExecuteRequest): Promise<SwapExecution> {
+  executeSwap(
+    request: SwapExecuteRequest,
+    agentId?: string,
+  ): Promise<SwapExecution> {
+    if (agentId) {
+      return this.http.postDirectoryAuthAs<SwapExecution>(
+        "/swap/execute",
+        agentId,
+        request,
+      );
+    }
     return this.http.post<SwapExecution>("/swap/execute", request);
   }
 
@@ -164,7 +174,17 @@ export class PricingApi {
     });
   }
 
-  executeBridge(request: BridgeExecuteRequest): Promise<BridgeExecution> {
+  executeBridge(
+    request: BridgeExecuteRequest,
+    agentId?: string,
+  ): Promise<BridgeExecution> {
+    if (agentId) {
+      return this.http.postDirectoryAuthAs<BridgeExecution>(
+        "/bridge/execute",
+        agentId,
+        request,
+      );
+    }
     return this.http.post<BridgeExecution>("/bridge/execute", request);
   }
 
