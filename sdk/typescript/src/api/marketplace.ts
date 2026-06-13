@@ -74,8 +74,8 @@ export class MarketplaceApi {
   buyProduct(
     productId: string,
     payment: Record<string, string>,
-  ): Promise<LedgerTransaction> {
-    return this.http.postDirectoryAuth<LedgerTransaction>(
+  ): Promise<ProductPurchase> {
+    return this.http.postDirectoryAuth<ProductPurchase>(
       `/marketplace/products/${encodeURIComponent(productId)}/buy`,
       payment,
     );

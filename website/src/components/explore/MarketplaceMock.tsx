@@ -6,11 +6,13 @@ import type {
 	DeliveryMethod,
 	Product,
 	ProductCategory,
+	TinyVerseError,
 } from "@tinyhumansai/tinyplace";
 
 import type { FunctionComponent } from "@src/common/types";
 import {
 	firstActiveIdentity,
+	useBuyProduct,
 	useCreateProduct,
 	useOwnedIdentities,
 	useProducts,
@@ -49,6 +51,25 @@ function slugify(value: string): string {
 		.replace(/[^a-z0-9]+/g, "-")
 		.replace(/^-+|-+$/g, "");
 	return slug || "product";
+}
+
+function paymentChallengeMessage(error: Error | null): string | undefined {
+	if (!error || error.name !== "TinyVerseError") {
+		return undefined;
+	}
+	const typed = error as TinyVerseError;
+	if (typed.status !== 402) {
+		return undefined;
+	}
+	const body = typed.body as {
+		error?: string;
+		payment?: { amount?: string; asset?: string; network?: string };
+	};
+	const payment = body.payment;
+	if (!payment) {
+		return body.error ?? "Payment required";
+	}
+	return `${body.error ?? "Payment required"}: ${payment.amount ?? ""} ${payment.asset ?? ""} on ${payment.network ?? ""}`.trim();
 }
 
 type MarketplaceMockProperties = {
@@ -313,6 +334,8 @@ export const MarketplaceMock = ({
 	const agentId = useAuthStore((state) => state.agentId);
 	const ownedIdentities = useOwnedIdentities(agentId);
 	const sellerIdentity = firstActiveIdentity(ownedIdentities.data?.identities);
+	const buyProduct = useBuyProduct();
+	const buyPaymentChallenge = paymentChallengeMessage(buyProduct.error);
 
 	const products = data?.products ?? [];
 
@@ -374,6 +397,19 @@ export const MarketplaceMock = ({
 
 			{!isLoading && !isError && products.length > 0 && (
 				<>
+					{buyProduct.isError && (
+						<p className="text-xs text-red-500">
+							{buyPaymentChallenge ??
+								(buyProduct.error instanceof Error
+									? buyProduct.error.message
+									: "Failed to buy product")}
+						</p>
+					)}
+
+					{buyProduct.isSuccess && (
+						<p className="text-xs text-green-500">Purchase recorded.</p>
+					)}
+
 					<div className="flex gap-1">
 						{categories.map(
 							(category: string): React.ReactElement => (
@@ -467,6 +503,28 @@ export const MarketplaceMock = ({
 											)}
 										</div>
 									)}
+									<button
+										className="mt-3 w-full rounded-md bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-neutral-700 disabled:opacity-50"
+										type="button"
+										disabled={
+											buyProduct.isPending ||
+											!agentId ||
+											!sellerIdentity ||
+											product.seller === sellerIdentity.username
+										}
+										onClick={(): void => {
+											if (!agentId || !sellerIdentity) {
+												return;
+											}
+											buyProduct.mutate({
+												buyer: sellerIdentity.username,
+												buyerCryptoId: agentId,
+												productId: product.productId,
+											});
+										}}
+									>
+										{buyProduct.isPending ? "Buying..." : "Buy"}
+									</button>
 								</div>
 							)
 						)}

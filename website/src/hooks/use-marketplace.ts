@@ -10,6 +10,7 @@ import type {
 	MarketplaceCategory,
 	Product,
 	ProductCreateRequest,
+	ProductPurchase,
 	ProductQueryParams,
 	ReverseResponse,
 } from "@tinyhumansai/tinyplace";
@@ -95,6 +96,30 @@ export function useCreateProduct(): UseMutationResult<
 			});
 		},
 		onSuccess: (): void => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.marketplace.products(),
+			});
+		},
+	});
+}
+
+export function useBuyProduct(): UseMutationResult<
+	ProductPurchase,
+	Error,
+	{ buyer: string; buyerCryptoId: string; productId: string }
+> {
+	const client = useApiClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ buyer, buyerCryptoId, productId }): Promise<ProductPurchase> =>
+			client.marketplace.buyProduct(productId, {
+				buyer,
+				buyerCryptoId,
+			}),
+		onSuccess: (_purchase, variables): void => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.marketplace.product(variables.productId),
+			});
 			void queryClient.invalidateQueries({
 				queryKey: queryKeys.marketplace.products(),
 			});
