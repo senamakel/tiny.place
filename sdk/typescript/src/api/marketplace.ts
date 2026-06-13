@@ -14,6 +14,7 @@ import type {
   MarketplaceBrowseResponse,
   MarketplaceCategory,
   Product,
+  ProductBuyRequest,
   ProductCreateRequest,
   ProductPurchase,
   ProductQueryParams,
@@ -54,10 +55,15 @@ export class MarketplaceApi {
       );
     }
 
-    return this.http.postDirectoryAuth<Product>(
-      "/marketplace/products",
-      product,
-    );
+    if (product.seller) {
+      return this.http.postDirectoryAuthAs<Product>(
+        "/marketplace/products",
+        product.seller,
+        product,
+      );
+    }
+
+    return this.http.postDirectoryAuth<Product>("/marketplace/products", product);
   }
 
   getProduct(productId: string): Promise<Product> {
@@ -66,26 +72,55 @@ export class MarketplaceApi {
     );
   }
 
-  updateProduct(productId: string, update: Partial<Product>): Promise<Product> {
+  async updateProduct(productId: string, update: Product): Promise<Product> {
+    if (this.signingKey && !update.signature) {
+      update = {
+        ...update,
+        signature: await signCanonicalPayload(
+          this.signingKey,
+          productSignaturePayload(update),
+        ),
+      };
+    }
+
+    if (update.seller) {
+      return this.http.putDirectoryAuthAs<Product>(
+        `/marketplace/products/${encodeURIComponent(productId)}`,
+        update.seller,
+        update,
+      );
+    }
+
     return this.http.putDirectoryAuth<Product>(
       `/marketplace/products/${encodeURIComponent(productId)}`,
       update,
     );
   }
 
-  deleteProduct(productId: string): Promise<void> {
-    return this.http.deleteDirectoryAuth<void>(
-      `/marketplace/products/${encodeURIComponent(productId)}`,
+  async deleteProduct(productId: string): Promise<void> {
+    if (!this.signingKey) {
+      return this.http.deleteDirectoryAuth<void>(
+        `/marketplace/products/${encodeURIComponent(productId)}`,
+      );
+    }
+
+    const signature = await signCanonicalPayload(
+      this.signingKey,
+      productDeleteSignaturePayload(productId),
+    );
+    return this.http.deletePublic<void>(
+      `/marketplace/products/${encodeURIComponent(productId)}?signature=${encodeURIComponent(signature)}`,
     );
   }
 
   buyProduct(
     productId: string,
-    payment: Record<string, string>,
+    request: ProductBuyRequest,
   ): Promise<ProductPurchase> {
-    return this.http.postDirectoryAuth<ProductPurchase>(
+    return this.http.postDirectoryAuthAs<ProductPurchase>(
       `/marketplace/products/${encodeURIComponent(productId)}/buy`,
-      payment,
+      request.buyer,
+      request,
     );
   }
 
@@ -136,6 +171,14 @@ export class MarketplaceApi {
       review.signature = await signCanonicalPayload(
         this.signingKey,
         productReviewSignaturePayload(review),
+      );
+    }
+
+    if (review.buyer) {
+      return this.http.postDirectoryAuthAs<ProductReview>(
+        `/marketplace/products/${encodeURIComponent(productId)}/reviews`,
+        review.buyer,
+        review,
       );
     }
 
@@ -372,7 +415,9 @@ export class MarketplaceApi {
   }
 }
 
-function productSignaturePayload(product: ProductCreateRequest): string {
+function productSignaturePayload(
+  product: ProductCreateRequest | Product,
+): string {
   return canonicalPayload("marketplace.product", {
     category: product.category,
     deliveryMethod: product.deliveryMethod,
@@ -384,6 +429,12 @@ function productSignaturePayload(product: ProductCreateRequest): string {
     sellerCryptoId: product.sellerCryptoId ?? "",
     stock: product.stock ?? null,
     tags: product.tags ?? null,
+  });
+}
+
+function productDeleteSignaturePayload(productId: string): string {
+  return canonicalPayload("marketplace.product.delete", {
+    productId,
   });
 }
 

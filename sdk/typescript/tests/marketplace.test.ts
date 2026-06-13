@@ -148,6 +148,11 @@ describe("MarketplaceApi", () => {
     expect(request.url).toBe(
       "https://example.test/marketplace/products/prod_123/reviews",
     );
+    expect(request.headers.get("X-Agent-ID")).toBe("@buyer");
+    expect(request.headers.get("X-TinyPlace-Public-Key")).toBe(
+      signer.publicKeyBase64,
+    );
+    expect(request.headers.get("X-TinyPlace-Signature")).toBeTruthy();
 
     const body = (await request.json()) as {
       buyer: string;
@@ -174,6 +179,151 @@ describe("MarketplaceApi", () => {
         rating: body.rating,
         reviewId: body.reviewId,
       }),
+    ).resolves.toBe(true);
+  });
+
+  it("signs product lifecycle requests with marketplace actors", async () => {
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(14));
+    const requests: Array<Request> = [];
+    const price = { amount: "7", asset: "USDC", network: "eip155:8453" };
+    const client = new TinyVerseClient({
+      baseUrl: "https://example.test",
+      signer,
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json({});
+      },
+    });
+
+    await client.marketplace.createProduct({
+      name: "Research Pack",
+      description: "Fresh market data",
+      category: "dataset",
+      tags: ["market", "data"],
+      seller: "@seller",
+      sellerCryptoId: signer.agentId,
+      price,
+      deliveryMethod: "download",
+      stock: 3,
+    });
+    await client.marketplace.updateProduct("prod_123", {
+      productId: "prod_123",
+      name: "Research Pack v2",
+      description: "Fresh market data",
+      category: "dataset",
+      tags: ["market", "data"],
+      seller: "@seller",
+      sellerCryptoId: signer.agentId,
+      price,
+      deliveryMethod: "download",
+      status: "active",
+      stock: 3,
+      createdAt: "2026-06-13T00:00:00.000Z",
+      updatedAt: "2026-06-13T00:00:00.000Z",
+      salesCount: 0,
+      rating: 0,
+    });
+    await client.marketplace.buyProduct("prod_123", {
+      buyer: "@buyer",
+      buyerCryptoId: signer.agentId,
+      payment: { transaction: "tx_123" },
+    });
+    await client.marketplace.deleteProduct("prod_123");
+
+    expect(requests).toHaveLength(4);
+    expect(requests[0]!.method).toBe("POST");
+    expect(requests[0]!.url).toBe(
+      "https://example.test/marketplace/products",
+    );
+    expect(requests[0]!.headers.get("X-Agent-ID")).toBe("@seller");
+
+    const createBody = (await requests[0]!.json()) as {
+      category: string;
+      deliveryMethod: string;
+      description: string;
+      name: string;
+      price: typeof price;
+      productId: string;
+      seller: string;
+      sellerCryptoId: string;
+      stock: number;
+      tags: Array<string>;
+      signature: string;
+    };
+    expect(createBody.productId).toMatch(/^prod_/);
+    await expect(
+      verifySignature(signer, createBody.signature, "marketplace.product", {
+        category: createBody.category,
+        deliveryMethod: createBody.deliveryMethod,
+        description: createBody.description,
+        name: createBody.name,
+        price: createBody.price,
+        productId: createBody.productId,
+        seller: createBody.seller,
+        sellerCryptoId: createBody.sellerCryptoId,
+        stock: createBody.stock,
+        tags: createBody.tags,
+      }),
+    ).resolves.toBe(true);
+
+    expect(requests[1]!.method).toBe("PUT");
+    expect(requests[1]!.url).toBe(
+      "https://example.test/marketplace/products/prod_123",
+    );
+    expect(requests[1]!.headers.get("X-Agent-ID")).toBe("@seller");
+    const updateBody = (await requests[1]!.json()) as {
+      category: string;
+      deliveryMethod: string;
+      description: string;
+      name: string;
+      price: typeof price;
+      productId: string;
+      seller: string;
+      sellerCryptoId: string;
+      stock: number;
+      tags: Array<string>;
+      signature: string;
+    };
+    await expect(
+      verifySignature(signer, updateBody.signature, "marketplace.product", {
+        category: updateBody.category,
+        deliveryMethod: updateBody.deliveryMethod,
+        description: updateBody.description,
+        name: updateBody.name,
+        price: updateBody.price,
+        productId: updateBody.productId,
+        seller: updateBody.seller,
+        sellerCryptoId: updateBody.sellerCryptoId,
+        stock: updateBody.stock,
+        tags: updateBody.tags,
+      }),
+    ).resolves.toBe(true);
+
+    expect(requests[2]!.method).toBe("POST");
+    expect(requests[2]!.url).toBe(
+      "https://example.test/marketplace/products/prod_123/buy",
+    );
+    expect(requests[2]!.headers.get("X-Agent-ID")).toBe("@buyer");
+    await expect(requests[2]!.json()).resolves.toMatchObject({
+      buyer: "@buyer",
+      buyerCryptoId: signer.agentId,
+    });
+
+    expect(requests[3]!.method).toBe("DELETE");
+    const deleteUrl = new URL(requests[3]!.url);
+    const deleteSignature = deleteUrl.searchParams.get("signature");
+    expect(deleteUrl.origin + deleteUrl.pathname).toBe(
+      "https://example.test/marketplace/products/prod_123",
+    );
+    expect(requests[3]!.headers.get("X-TinyPlace-Signature")).toBeNull();
+    expect(deleteSignature).toBeTruthy();
+    await expect(
+      verifySignature(
+        signer,
+        deleteSignature!,
+        "marketplace.product.delete",
+        { productId: "prod_123" },
+      ),
     ).resolves.toBe(true);
   });
 

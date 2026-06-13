@@ -85,6 +85,13 @@ export interface ProductPurchase {
   createdAt: string;
 }
 
+export interface ProductBuyRequest {
+  buyer: string;
+  buyerCryptoId?: string;
+  payment?: Record<string, string>;
+  delivery?: Record<string, unknown>;
+}
+
 export interface ProductReview {
   reviewId: string;
   productId: string;
