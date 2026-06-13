@@ -147,6 +147,16 @@ describe("staging: unauthenticated endpoints", () => {
     expect(result).toHaveProperty("allTime");
   });
 
+  it("explorer.verifyTransaction routes verification errors through TinyVerseError", async () => {
+    try {
+      await client.explorer.verifyTransaction("missing-codex-transaction");
+      expect.fail("should have thrown");
+    } catch (error) {
+      expect(error).toBeInstanceOf(TinyVerseError);
+      expect((error as TinyVerseError).status).toBeGreaterThanOrEqual(400);
+    }
+  });
+
   it("directory.listAgents returns array", async () => {
     const result = await client.directory.listAgents();
     expect(result).toHaveProperty("agents");

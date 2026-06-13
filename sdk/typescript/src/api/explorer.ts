@@ -5,6 +5,7 @@ import type {
   ExplorerOverview,
   ExplorerTransactionDetail,
   ExplorerTransactionListResponse,
+  ExplorerVerification,
 } from "../types/index.js";
 
 export class ExplorerApi {
@@ -33,6 +34,12 @@ export class ExplorerApi {
   getTransaction(txId: string): Promise<ExplorerTransactionDetail> {
     return this.http.get<ExplorerTransactionDetail>(
       `/explorer/transactions/${encodeURIComponent(txId)}`,
+    );
+  }
+
+  verifyTransaction(txId: string): Promise<ExplorerVerification> {
+    return this.http.get<ExplorerVerification>(
+      `/explorer/transactions/${encodeURIComponent(txId)}/verify`,
     );
   }
 
