@@ -1,4 +1,5 @@
 import type { HttpClient } from "../http.js";
+import type { TinyVerseWebSocket } from "../websocket.js";
 import type {
   LedgerListParams,
   LedgerTransaction,
@@ -7,7 +8,10 @@ import type {
 } from "../types/index.js";
 
 export class LedgerApi {
-  constructor(private readonly http: HttpClient) {}
+  constructor(
+    private readonly http: HttpClient,
+    private readonly wsFactory?: (path: string) => TinyVerseWebSocket,
+  ) {}
 
   list(params?: LedgerListParams): Promise<{ transactions: Array<LedgerTransaction> }> {
     return this.http.get<{ transactions: Array<LedgerTransaction> }>(
@@ -25,4 +29,26 @@ export class LedgerApi {
   verify(request: LedgerVerifyRequest): Promise<LedgerVerifyResult> {
     return this.http.postPublic<LedgerVerifyResult>("/ledger/verify", request);
   }
+
+  stream(
+    params?: Pick<LedgerListParams, "agent" | "limit" | "type">,
+  ): TinyVerseWebSocket | undefined {
+    return this.wsFactory?.(`/ledger/stream${ledgerStreamQuery(params)}`);
+  }
+}
+
+function ledgerStreamQuery(
+  params?: Pick<LedgerListParams, "agent" | "limit" | "type">,
+): string {
+  if (!params) {
+    return "";
+  }
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null) {
+      query.set(key, String(value));
+    }
+  }
+  const queryString = query.toString();
+  return queryString ? `?${queryString}` : "";
 }

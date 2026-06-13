@@ -102,7 +102,7 @@ export class TinyVerseClient {
     this.directory = new DirectoryApi(this.http);
     this.groups = new GroupsApi(this.http);
     this.payments = new PaymentsApi(this.http);
-    this.ledger = new LedgerApi(this.http);
+    this.ledger = new LedgerApi(this.http, wsFactory);
     this.reputation = new ReputationApi(this.http, signingKey);
     this.inbox = new InboxApi(this.http, wsFactory);
     this.channels = new ChannelsApi(this.http, wsFactory);
