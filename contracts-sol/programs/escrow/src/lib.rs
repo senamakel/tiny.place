@@ -27,6 +27,7 @@ pub mod escrow {
         ctx: Context<CreateVault>,
         vault_id: [u8; 32],
         settlement_program: Pubkey,
+        owner: Pubkey,
     ) -> Result<()> {
         let (authority, _) =
             Pubkey::find_program_address(&[VAULT_AUTHORITY_SEED], &settlement_program);
@@ -34,6 +35,7 @@ pub mod escrow {
         let vault = &mut ctx.accounts.vault;
         vault.vault_id = vault_id;
         vault.settlement_program = settlement_program;
+        vault.owner = owner;
         vault.authority = authority;
         vault.mint = ctx.accounts.mint.key();
         vault.token_account = ctx.accounts.vault_token.key();
@@ -47,6 +49,7 @@ pub mod escrow {
             vault: vault.key(),
             vault_id,
             settlement_program,
+            owner,
             authority,
             mint: vault.mint,
         });
@@ -211,6 +214,13 @@ pub struct Vault {
     /// The settlement program (settlement_job / settlement_game_poker / …) that
     /// is allowed to disburse this vault's funds.
     pub settlement_program: Pubkey,
+    /// The single job/game record (the settlement program's PDA) this vault is
+    /// bound to. Set once at creation; the settlement program enforces that the
+    /// registering job/game's key equals this value, so a vault can only ever be
+    /// claimed — and therefore disbursed — by one job/game. This is what makes
+    /// the custody binding 1:1, preventing a third party from registering a
+    /// competing job/game against an already-funded vault to drain it.
+    pub owner: Pubkey,
     /// The exact signer required on `disburse`, fixed at creation to
     /// `PDA(["vault_authority"], settlement_program)`. Recomputing it here makes
     /// the custody↔policy binding trustless.
@@ -233,9 +243,10 @@ pub struct Vault {
 }
 
 impl Vault {
-    /// Account size: 8 discriminator + vault_id(32) + 4×Pubkey(128) +
+    /// Account size: 8 discriminator + vault_id(32) + 5×Pubkey(160)
+    /// (settlement_program, owner, authority, mint, token_account) +
     /// fee_account(32) + deposited(8) + disbursed(8) + state(1) + bump(1).
-    pub const SIZE: usize = 8 + 32 + 32 + 32 + 32 + 32 + 32 + 8 + 8 + 1 + 1;
+    pub const SIZE: usize = 8 + 32 + 32 + 32 + 32 + 32 + 32 + 32 + 8 + 8 + 1 + 1;
 }
 
 /// Per-payer replay guard for x402 deposits. The accepted nonce must strictly
@@ -305,9 +316,12 @@ pub struct CreateVault<'info> {
     pub creator: Signer<'info>,
     /// SPL mint of the escrowed asset.
     pub mint: Account<'info, Mint>,
-    /// CHECK: token account that receives the fee on disburse; only its key is
-    /// stored, and it is re-verified by key on every `disburse`.
-    pub fee_account: AccountInfo<'info>,
+    /// Token account that receives the fee on disburse. Constrained to be a
+    /// real SPL token account of the vault's `mint`, so a malformed or
+    /// wrong-mint fee account can never be stored — which would otherwise brick
+    /// every fee-bearing `disburse` and permanently lock the vault's principal.
+    #[account(constraint = fee_account.mint == mint.key() @ EscrowError::InvalidFeeAccount)]
+    pub fee_account: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
@@ -394,6 +408,7 @@ pub struct VaultOpened {
     pub vault: Pubkey,
     pub vault_id: [u8; 32],
     pub settlement_program: Pubkey,
+    pub owner: Pubkey,
     pub authority: Pubkey,
     pub mint: Pubkey,
 }

@@ -42,6 +42,14 @@ pub mod settlement_game_poker {
             ctx.accounts.vault.settlement_program == crate::ID,
             GameError::VaultNotBound
         );
+        // The vault is bound 1:1 to exactly one game at creation: escrow records
+        // `vault.owner` = this game's PDA, so a third party cannot register a
+        // competing game over an already-funded pot vault to drain it. Only the
+        // game whose key matches the recorded owner may ever claim the vault.
+        require!(
+            ctx.accounts.vault.owner == ctx.accounts.game.key(),
+            GameError::VaultNotOwned
+        );
 
         let game = &mut ctx.accounts.game;
         game.game_id = game_id;
@@ -542,6 +550,8 @@ pub enum GameError {
     InvalidFee,
     #[msg("Vault is not bound to this settlement program")]
     VaultNotBound,
+    #[msg("Vault is not owned by this game (claimed by another job/game)")]
+    VaultNotOwned,
     #[msg("Vault does not match the game")]
     VaultMismatch,
     #[msg("Game is full")]

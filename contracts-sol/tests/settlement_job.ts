@@ -230,4 +230,35 @@ describe("settlement_job", () => {
       "non-controller resolve",
     );
   });
+
+  // Regression for the CRITICAL vault-theft finding: a vault is bound 1:1 to one
+  // job at creation (escrow stores vault.owner = the job PDA). A third party must
+  // NOT be able to register a competing job against an already-funded vault and
+  // drain it. Before the fix, create_job only checked `vault.settlement_program
+  // == crate::ID`, so this attacker createJob succeeded and could then refund the
+  // whole balance to themselves. After the fix it reverts with VaultNotOwned.
+  it("rejects a competing job registered against another job's funded vault", async () => {
+    const client = Keypair.generate();
+    const providerKp = Keypair.generate();
+    const controller = Keypair.generate();
+    await fundSol(client.publicKey);
+
+    // Victim creates and funds a vault bound to their own job.
+    const { vault } = await setupJob("job-victim-vault", client, providerKp.publicKey, controller.publicKey);
+
+    // Attacker tries to register a brand-new job (different job_id, so a
+    // different job PDA) pointing at the victim's funded vault.
+    const attacker = Keypair.generate();
+    await fundSol(attacker.publicKey);
+    const attackerJobId = id32("job-attacker-steal");
+    const attackerJob = jobPda(attackerJobId);
+    await expectRevert(
+      jobProgram.methods
+        .createJob(attackerJobId, attacker.publicKey, attacker.publicKey, FEE_BPS)
+        .accounts({ job: attackerJob, client: attacker.publicKey, vault, systemProgram: SystemProgram.programId })
+        .signers([attacker])
+        .rpc(),
+      "competing job over a funded vault",
+    );
+  });
 });

@@ -195,4 +195,35 @@ describe("settlement_game_poker", () => {
       "non-settler settle",
     );
   });
+
+  // Regression for the CRITICAL vault-theft finding: a pot vault is bound 1:1 to
+  // one game at creation (escrow stores vault.owner = the game PDA). A third
+  // party must NOT be able to register a competing game over an already-funded
+  // pot vault and drain it. Before the fix, create_game only checked
+  // `vault.settlement_program == crate::ID`, so this attacker createGame
+  // succeeded and could then cancel + claim_refund (or settle) the victim's pot.
+  // After the fix it reverts with VaultNotOwned.
+  it("rejects a competing game registered against another game's pot vault", async () => {
+    // Victim creates a game; escrow records vault.owner = the victim game PDA.
+    const { vault, vaultToken, game } = await newGame("poker-victim-vault");
+    const p1 = Keypair.generate();
+    const p2 = Keypair.generate();
+    await join(game, vault, vaultToken, p1, 1);
+    await join(game, vault, vaultToken, p2, 1);
+
+    // Attacker tries to register a brand-new game (different game_id, different
+    // PDA) over the victim's funded pot vault — must revert with VaultNotOwned.
+    const attacker = Keypair.generate();
+    await fundSol(attacker.publicKey);
+    const attackerGameId = id32("poker-attacker-steal");
+    const attackerGame = gamePda(attackerGameId);
+    await expectRevert(
+      pokerProgram.methods
+        .createGame(attackerGameId, attacker.publicKey, new BN(STAKE), MAX_PLAYERS, FEE_BPS)
+        .accounts({ game: attackerGame, creator: attacker.publicKey, vault, systemProgram: SystemProgram.programId })
+        .signers([attacker])
+        .rpc(),
+      "competing game over a funded pot vault",
+    );
+  });
 });

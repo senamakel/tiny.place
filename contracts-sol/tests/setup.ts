@@ -157,13 +157,27 @@ export async function createVault(
   mint: PublicKey,
   feeAccount: PublicKey,
   label: string,
+  owner?: PublicKey,
 ): Promise<{ vaultId: number[]; vault: PublicKey; vaultToken: PublicKey }> {
   const vaultId = id32(label);
   const vault = vaultPda(vaultId);
   const vaultToken = Keypair.generate();
 
+  // A vault is bound 1:1 to the job/game that will claim it. By convention the
+  // vault label equals the job/game id label, so derive the owning record's PDA
+  // for the matching settlement program (callers can override for negative
+  // tests). Escrow itself never checks `owner`; the binding is enforced by
+  // settlement_job::create_job / settlement_game_poker::create_game.
+  const resolvedOwner =
+    owner ??
+    (settlementProgram.equals(jobProgram.programId)
+      ? jobPda(vaultId)
+      : settlementProgram.equals(pokerProgram.programId)
+        ? gamePda(vaultId)
+        : payer.publicKey);
+
   await escrowProgram.methods
-    .createVault(vaultId, settlementProgram)
+    .createVault(vaultId, settlementProgram, resolvedOwner)
     .accounts({
       vault,
       vaultToken: vaultToken.publicKey,

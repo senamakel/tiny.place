@@ -151,4 +151,18 @@ describe("escrow (custody)", () => {
       "unauthorized disburse",
     );
   });
+
+  // Regression for the fee-account validation finding: a vault must reject a fee
+  // account whose mint differs from the vault's mint. Otherwise the fee transfer
+  // on every disburse reverts, permanently locking the vault's principal with no
+  // recovery path. Before the fix fee_account was an unchecked AccountInfo and
+  // this createVault succeeded; after the fix it reverts at creation.
+  it("rejects a vault whose fee account has the wrong mint", async () => {
+    const otherMint = await newMint();
+    const wrongFee = await ata(otherMint, payer.publicKey);
+    await expectRevert(
+      createVault(jobProgram.programId, mint, wrongFee, "escrow-bad-fee"),
+      "wrong-mint fee account",
+    );
+  });
 });

@@ -36,6 +36,14 @@ pub mod settlement_job {
             ctx.accounts.vault.settlement_program == crate::ID,
             JobError::VaultNotBound
         );
+        // The vault is bound 1:1 to exactly one job at creation: escrow records
+        // `vault.owner` = this job's PDA, so a third party cannot register a
+        // competing job against an already-funded vault to drain it. Only the
+        // job whose key matches the recorded owner may ever claim the vault.
+        require!(
+            ctx.accounts.vault.owner == ctx.accounts.job.key(),
+            JobError::VaultNotOwned
+        );
 
         let job = &mut ctx.accounts.job;
         job.job_id = job_id;
@@ -421,6 +429,8 @@ pub enum JobError {
     InvalidFee,
     #[msg("Vault is not bound to this settlement program")]
     VaultNotBound,
+    #[msg("Vault is not owned by this job (claimed by another job/game)")]
+    VaultNotOwned,
     #[msg("Vault does not match the job")]
     VaultMismatch,
     #[msg("Arithmetic overflow")]
