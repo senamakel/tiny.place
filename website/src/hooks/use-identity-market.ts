@@ -13,6 +13,8 @@ import {
 	type IdentityBuyRequest,
 	type IdentityFloor,
 	type IdentityListing,
+	type IdentityOffer,
+	type IdentityOfferAcceptRequest,
 	type IdentitySale,
 	type MarketplacePrice,
 	type X402AuthorizationFields,
@@ -197,6 +199,112 @@ export function useBuyIdentityListing(): UseMutationResult<
 			});
 			void queryClient.invalidateQueries({
 				queryKey: queryKeys.marketplace.identityRecent(),
+			});
+		},
+	});
+}
+
+export function useCreateIdentityOffer(): UseMutationResult<
+	IdentityOffer,
+	Error,
+	Partial<IdentityOffer>
+> {
+	const client = useApiClient();
+	const signer = useAuthStore((state) => state.signer);
+	const agentId = useAuthStore((state) => state.agentId);
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: async (offer): Promise<IdentityOffer> => {
+			if (!signer || !agentId) {
+				throw new Error("Connect your wallet first");
+			}
+			if (!offer.buyer) {
+				throw new Error("Offer buyer is required");
+			}
+
+			const request: Partial<IdentityOffer> = {
+				...offer,
+				buyerCryptoId: offer.buyerCryptoId ?? agentId,
+				buyerPublicKey: offer.buyerPublicKey ?? signer.publicKeyBase64,
+				status: offer.status ?? "pending",
+			};
+
+			try {
+				return await client.marketplace.createOffer(request);
+			} catch (error) {
+				const challenge = identityPaymentChallenge(error);
+				if (!challenge) {
+					throw error;
+				}
+
+				const challengePayment = challenge.payment;
+				const signedPayment = await signX402Authorization(signer, {
+					...challengePayment,
+					expiresAt:
+						challengePayment.expiresAt ??
+						new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+					from: challengePayment.from || offer.buyer,
+					metadata: challengePayment.metadata,
+					nonce: challengePayment.nonce || generateNonce("identity-offer"),
+				});
+
+				return client.marketplace.createOffer({
+					...request,
+					payment: x402AuthorizationToPaymentMap(signedPayment),
+				});
+			}
+		},
+		onSuccess: (): void => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.marketplace.identityListings(),
+			});
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.marketplace.identityOffers(),
+			});
+		},
+	});
+}
+
+export function useCancelIdentityOffer(): UseMutationResult<
+	void,
+	Error,
+	string
+> {
+	const client = useApiClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (offerId): Promise<void> =>
+			client.marketplace.cancelOffer(offerId),
+		onSuccess: (): void => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.marketplace.identityOffers(),
+			});
+		},
+	});
+}
+
+export function useAcceptIdentityOffer(): UseMutationResult<
+	IdentitySale,
+	Error,
+	{ offerId: string; request: IdentityOfferAcceptRequest }
+> {
+	const client = useApiClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ offerId, request }): Promise<IdentitySale> =>
+			client.marketplace.acceptOffer(offerId, request),
+		onSuccess: (): void => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.marketplace.identityListings(),
+			});
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.marketplace.identityOffers(),
+			});
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.marketplace.identityRecent(),
+			});
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.directory.identities(),
 			});
 		},
 	});
