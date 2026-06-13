@@ -344,6 +344,67 @@ describe("MarketplaceApi", () => {
     ).resolves.toBe(true);
   });
 
+  it("signs product delivery reads and fulfillment as the delivery actor", async () => {
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(15));
+    const requests: Array<Request> = [];
+    const client = new TinyVerseClient({
+      baseUrl: "https://example.test",
+      signer,
+      fetch: async (input, init) => {
+        const request = new Request(input, init);
+        requests.push(request);
+        if (request.url.includes("/download/")) {
+          return new Response("download-content");
+        }
+        return Response.json({
+          productId: "prod_123",
+          purchaseId: "buy_123",
+          status: "ready",
+        });
+      },
+    });
+
+    await client.marketplace.downloadProduct("prod_123", "buy_123", "@buyer");
+    await client.marketplace.getProductDelivery(
+      "prod_123",
+      "buy_123",
+      "@buyer",
+    );
+    await client.marketplace.updateProductDelivery("prod_123", "buy_123", {
+      actor: "@seller",
+      description: "Delivered",
+      refs: ["artifact_123"],
+    });
+
+    expect(requests.map((request) => request.method)).toEqual([
+      "GET",
+      "GET",
+      "POST",
+    ]);
+    expect(requests.map((request) => request.url)).toEqual([
+      "https://example.test/marketplace/products/prod_123/download/buy_123",
+      "https://example.test/marketplace/products/prod_123/purchases/buy_123/delivery",
+      "https://example.test/marketplace/products/prod_123/purchases/buy_123/delivery",
+    ]);
+    expect(requests.map((request) => request.headers.get("X-Agent-ID"))).toEqual(
+      ["@buyer", "@buyer", "@seller"],
+    );
+
+    for (const request of requests) {
+      expect(request.headers.get("X-TinyPlace-Public-Key")).toBe(
+        signer.publicKeyBase64,
+      );
+      expect(request.headers.get("X-TinyPlace-Signature")).toBeTruthy();
+      expect(request.headers.get("Authorization")).toBeNull();
+    }
+
+    await expect(requests[2]!.json()).resolves.toEqual({
+      actor: "@seller",
+      description: "Delivered",
+      refs: ["artifact_123"],
+    });
+  });
+
   it("signs identity listing, purchase, and bid payloads", async () => {
     const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(12));
     const requests: Array<Request> = [];

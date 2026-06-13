@@ -127,7 +127,17 @@ export class MarketplaceApi {
     );
   }
 
-  downloadProduct(productId: string, purchaseId: string): Promise<Response> {
+  downloadProduct(
+    productId: string,
+    purchaseId: string,
+    actorId?: string,
+  ): Promise<Response> {
+    if (actorId) {
+      return this.http.getDirectoryAuthRawAs(
+        `/marketplace/products/${encodeURIComponent(productId)}/download/${encodeURIComponent(purchaseId)}`,
+        actorId,
+      );
+    }
     return this.http.getDirectoryAuthRaw(
       `/marketplace/products/${encodeURIComponent(productId)}/download/${encodeURIComponent(purchaseId)}`,
     );
@@ -136,7 +146,14 @@ export class MarketplaceApi {
   getProductDelivery(
     productId: string,
     purchaseId: string,
+    actorId?: string,
   ): Promise<Record<string, unknown>> {
+    if (actorId) {
+      return this.http.getDirectoryAuthAs<Record<string, unknown>>(
+        `/marketplace/products/${encodeURIComponent(productId)}/purchases/${encodeURIComponent(purchaseId)}/delivery`,
+        actorId,
+      );
+    }
     return this.http.getDirectoryAuth<Record<string, unknown>>(
       `/marketplace/products/${encodeURIComponent(productId)}/purchases/${encodeURIComponent(purchaseId)}/delivery`,
     );
@@ -146,7 +163,16 @@ export class MarketplaceApi {
     productId: string,
     purchaseId: string,
     delivery: Record<string, unknown>,
+    actorId =
+      typeof delivery["actor"] === "string" ? delivery["actor"] : undefined,
   ): Promise<Record<string, unknown>> {
+    if (actorId) {
+      return this.http.postDirectoryAuthAs<Record<string, unknown>>(
+        `/marketplace/products/${encodeURIComponent(productId)}/purchases/${encodeURIComponent(purchaseId)}/delivery`,
+        actorId,
+        delivery,
+      );
+    }
     return this.http.postDirectoryAuth<Record<string, unknown>>(
       `/marketplace/products/${encodeURIComponent(productId)}/purchases/${encodeURIComponent(purchaseId)}/delivery`,
       delivery,
