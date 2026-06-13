@@ -1,19 +1,31 @@
 import {
 	useMutation,
 	useQuery,
+	useQueryClient,
 	type UseMutationResult,
 	type UseQueryResult,
 } from "@tanstack/react-query";
-import type {
-	SupportedChain,
-	X402SettleRequest,
-	X402SettleResponse,
-	X402VerifyRequest,
-	X402VerifyResponse,
+import {
+	generateNonce,
+	signX402Authorization,
+	type Subscription,
+	type SubscriptionCreateRequest,
+	type SubscriptionRenewRequest,
+	type SubscriptionRenewResponse,
+	type SupportedChain,
+	type X402SettleRequest,
+	type X402SettleResponse,
+	type X402VerifyRequest,
+	type X402VerifyResponse,
 } from "@tinyhumansai/tinyplace";
 
 import { useApiClient } from "@src/common/api-context";
 import { queryKeys } from "@src/common/query-keys";
+import { useAuthStore } from "@src/store/auth";
+
+function subscriptionId(): string {
+	return `sub_${generateNonce().replace(/_/g, "")}`;
+}
 
 export function useSupportedPayments(): UseQueryResult<{
 	chains: Array<SupportedChain>;
@@ -47,5 +59,148 @@ export function useSettlePayment(): UseMutationResult<
 	return useMutation({
 		mutationFn: (request): Promise<X402SettleResponse> =>
 			client.payments.settle(request),
+	});
+}
+
+export function useSubscription(
+	subscriptionId: string | undefined
+): UseQueryResult<Subscription> {
+	const client = useApiClient();
+	return useQuery({
+		queryKey: queryKeys.payments.subscription(subscriptionId ?? ""),
+		queryFn: (): Promise<Subscription> =>
+			client.payments.getSubscription(subscriptionId ?? ""),
+		enabled: Boolean(subscriptionId),
+	});
+}
+
+export function useCreateSubscription(): UseMutationResult<
+	Subscription,
+	Error,
+	SubscriptionCreateRequest
+> {
+	const client = useApiClient();
+	const signer = useAuthStore((state) => state.signer);
+	const agentId = useAuthStore((state) => state.agentId);
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: async (request): Promise<Subscription> => {
+			const nextSubscriptionId = request.subscriptionId ?? subscriptionId();
+			const subscriber = request.subscriber || agentId;
+			if (!subscriber) {
+				throw new Error("Subscriber is required");
+			}
+			if (!request.authorization?.signature) {
+				if (!signer) {
+					throw new Error("Connect your wallet first");
+				}
+				const authorization = await signX402Authorization(signer, {
+					scheme: "upto",
+					network: request.plan.network,
+					asset: request.plan.asset,
+					amount: request.plan.amount,
+					from: subscriber,
+					to: request.provider,
+					nonce: `subscription:${nextSubscriptionId}:authorization`,
+					expiresAt: "",
+					metadata: {
+						domain: "tiny.place",
+						subscriptionId: nextSubscriptionId,
+						kind: "subscription_authorization",
+						interval: request.plan.interval,
+					},
+				});
+				return client.payments.createSubscription({
+					...request,
+					subscriptionId: nextSubscriptionId,
+					subscriber,
+					authorization: {
+						...request.authorization,
+						scheme: "upto",
+						signature: authorization.signature,
+					},
+				});
+			}
+			return client.payments.createSubscription({
+				...request,
+				subscriptionId: nextSubscriptionId,
+				subscriber,
+			});
+		},
+		onSuccess: (subscription): void => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.payments.subscription(subscription.subscriptionId),
+			});
+		},
+	});
+}
+
+export function useRenewSubscription(): UseMutationResult<
+	SubscriptionRenewResponse,
+	Error,
+	{ subscriptionId: string; request?: Partial<SubscriptionRenewRequest> }
+> {
+	const client = useApiClient();
+	const signer = useAuthStore((state) => state.signer);
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: async ({
+			subscriptionId: id,
+			request,
+		}): Promise<SubscriptionRenewResponse> => {
+			if (request?.paymentAuthorization) {
+				return client.payments.renewSubscription(id, {
+					paymentAuthorization: request.paymentAuthorization,
+					settledAmount: request.settledAmount,
+				});
+			}
+			if (!signer) {
+				throw new Error("Connect your wallet first");
+			}
+			const subscription = await client.payments.getSubscription(id);
+			const authorization = await signX402Authorization(signer, {
+				scheme: "upto",
+				network: subscription.plan.network,
+				asset: subscription.plan.asset,
+				amount: subscription.plan.amount,
+				from: subscription.subscriber,
+				to: subscription.provider,
+				nonce: `subscription:${subscription.subscriptionId}:authorization`,
+				expiresAt: "",
+				metadata: {
+					domain: "tiny.place",
+					subscriptionId: subscription.subscriptionId,
+					kind: "subscription_authorization",
+					interval: subscription.plan.interval,
+				},
+			});
+			return client.payments.renewSubscription(id, {
+				paymentAuthorization: authorization.signature,
+				settledAmount: request?.settledAmount,
+			});
+		},
+		onSuccess: ({ subscription }): void => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.payments.subscription(subscription.subscriptionId),
+			});
+		},
+	});
+}
+
+export function useCancelSubscription(): UseMutationResult<
+	void,
+	Error,
+	string
+> {
+	const client = useApiClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (subscriptionId): Promise<void> =>
+			client.payments.cancelSubscription(subscriptionId),
+		onSuccess: (_response, subscriptionIdValue): void => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.payments.subscription(subscriptionIdValue),
+			});
+		},
 	});
 }

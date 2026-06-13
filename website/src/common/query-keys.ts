@@ -125,6 +125,8 @@ export const queryKeys = {
 	},
 	payments: {
 		supported: () => ["payments", "supported"] as const,
+		subscription: (subscriptionId: string) =>
+			["payments", "subscription", subscriptionId] as const,
 	},
 	pricing: {
 		quote: (parameters: { base: string; network?: string; quote: string }) =>

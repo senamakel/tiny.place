@@ -147,6 +147,27 @@ export interface Subscription {
   updatedAt: string;
 }
 
+export interface SubscriptionCreateRequest {
+  subscriptionId?: string;
+  subscriber: string;
+  provider: string;
+  plan: SubscriptionPlan;
+  authorization?: Partial<SubscriptionAuthorization>;
+  status?: SubscriptionStatus;
+  currentPeriodEnd?: string;
+  autoRenew?: boolean;
+}
+
+export interface SubscriptionRenewRequest {
+  paymentAuthorization: string;
+  settledAmount?: string;
+}
+
+export interface SubscriptionRenewResponse {
+  subscription: Subscription;
+  settlement: X402SettleResponse;
+}
+
 export interface DueRenewalResult {
   renewed: number;
   failed: number;

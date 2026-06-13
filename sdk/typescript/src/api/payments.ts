@@ -4,6 +4,9 @@ import type {
   PaymentBatchFlushRequest,
   PaymentBatchFlushResponse,
   Subscription,
+  SubscriptionCreateRequest,
+  SubscriptionRenewRequest,
+  SubscriptionRenewResponse,
   SupportedChain,
   X402SettleRequest,
   X402SettleResponse,
@@ -36,9 +39,7 @@ export class PaymentsApi {
     );
   }
 
-  createSubscription(
-    subscription: Partial<Subscription>,
-  ): Promise<Subscription> {
+  createSubscription(subscription: SubscriptionCreateRequest): Promise<Subscription> {
     return this.http.post<Subscription>(
       "/payments/subscriptions",
       subscription,
@@ -57,9 +58,13 @@ export class PaymentsApi {
     );
   }
 
-  renewSubscription(subscriptionId: string): Promise<Subscription> {
-    return this.http.post<Subscription>(
+  renewSubscription(
+    subscriptionId: string,
+    request: SubscriptionRenewRequest,
+  ): Promise<SubscriptionRenewResponse> {
+    return this.http.post<SubscriptionRenewResponse>(
       `/payments/subscriptions/${encodeURIComponent(subscriptionId)}/renew`,
+      request,
     );
   }
 
