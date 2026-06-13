@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Token, TokenAccount, Transfer};
+use anchor_spl::token::{self, Transfer};
 
-use crate::{EscrowAccount, EscrowState, EscrowError};
+use crate::{EscrowError, EscrowState, InitNonce, Settle, SettleToEscrow};
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct PaymentPayload {
@@ -36,77 +36,6 @@ pub struct NonceTracker {
 
 impl NonceTracker {
     pub const SIZE: usize = 8 + 32 + 8 + 1;
-}
-
-#[derive(Accounts)]
-#[instruction(payload: PaymentPayload)]
-pub struct Settle<'info> {
-    #[account(
-        init,
-        payer = payer,
-        space = PaymentRecord::SIZE,
-        seeds = [b"payment", payload.payer.as_ref(), &payload.nonce.to_le_bytes()],
-        bump
-    )]
-    pub payment_record: Account<'info, PaymentRecord>,
-    #[account(
-        mut,
-        seeds = [b"nonce", payload.payer.as_ref()],
-        bump = nonce_tracker.bump,
-    )]
-    pub nonce_tracker: Account<'info, NonceTracker>,
-    #[account(mut)]
-    pub payer: Signer<'info>,
-    #[account(mut, constraint = payer_token.owner == payer.key())]
-    pub payer_token: Account<'info, TokenAccount>,
-    #[account(mut)]
-    pub payee_token: Account<'info, TokenAccount>,
-    pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-#[instruction(payload: PaymentPayload)]
-pub struct SettleToEscrow<'info> {
-    #[account(
-        init,
-        payer = payer,
-        space = PaymentRecord::SIZE,
-        seeds = [b"payment", payload.payer.as_ref(), &payload.nonce.to_le_bytes()],
-        bump
-    )]
-    pub payment_record: Account<'info, PaymentRecord>,
-    #[account(
-        mut,
-        seeds = [b"nonce", payload.payer.as_ref()],
-        bump = nonce_tracker.bump,
-    )]
-    pub nonce_tracker: Account<'info, NonceTracker>,
-    #[account(mut)]
-    pub payer: Signer<'info>,
-    #[account(mut, constraint = payer_token.owner == payer.key())]
-    pub payer_token: Account<'info, TokenAccount>,
-    #[account(mut)]
-    pub escrow: Account<'info, EscrowAccount>,
-    #[account(mut)]
-    pub vault: Account<'info, TokenAccount>,
-    pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct InitNonce<'info> {
-    #[account(
-        init,
-        payer = owner,
-        space = NonceTracker::SIZE,
-        seeds = [b"nonce", owner.key().as_ref()],
-        bump
-    )]
-    pub nonce_tracker: Account<'info, NonceTracker>,
-    #[account(mut)]
-    pub owner: Signer<'info>,
-    pub system_program: Program<'info, System>,
 }
 
 pub fn handle_init_nonce(ctx: Context<InitNonce>) -> Result<()> {
@@ -155,7 +84,10 @@ pub fn handle_settle(ctx: Context<Settle>, payload: PaymentPayload) -> Result<()
     Ok(())
 }
 
-pub fn handle_settle_to_escrow(ctx: Context<SettleToEscrow>, payload: PaymentPayload) -> Result<()> {
+pub fn handle_settle_to_escrow(
+    ctx: Context<SettleToEscrow>,
+    payload: PaymentPayload,
+) -> Result<()> {
     let clock = Clock::get()?;
     require!(clock.unix_timestamp <= payload.expiry, EscrowError::Expired);
 
@@ -197,7 +129,7 @@ pub fn handle_settle_to_escrow(ctx: Context<SettleToEscrow>, payload: PaymentPay
     Ok(())
 }
 
-fn payment_id(payload: &PaymentPayload) -> [u8; 32] {
+pub fn payment_id(payload: &PaymentPayload) -> [u8; 32] {
     let mut data = Vec::new();
     data.extend_from_slice(&payload.amount.to_le_bytes());
     data.extend_from_slice(payload.payer.as_ref());

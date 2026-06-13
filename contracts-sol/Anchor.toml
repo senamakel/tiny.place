@@ -5,7 +5,8 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-escrow = "EscrowX402111111111111111111111111111111111111"
+escrow = "FNCnjUKR1YbEJwcjWWHJzWxgp2vbSjjHcBZaAshybhLq"
+game = "CATBJS1qmZCCHJzNmdEwXNsBn1QYJoBuCg7yi8FTL8mG"
 
 [registry]
 url = "https://api.apr.dev"
