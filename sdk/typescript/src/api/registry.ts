@@ -11,6 +11,7 @@ import type {
   IdentityProfileUpdate,
   LedgerTransaction,
   PaymentMethod,
+  ProfileVisibility,
   ProfileVisibilityUpdate,
   RenewalRequest,
   Subname,
@@ -87,11 +88,26 @@ export class RegistryApi {
     );
   }
 
-  updateProfileVisibility(
+  async updateProfileVisibility(
     name: string,
     update: ProfileVisibilityUpdate,
-  ): Promise<Identity> {
-    return this.http.put<Identity>(
+  ): Promise<ProfileVisibility> {
+    if (this.signingKey && !update.signature) {
+      const payload = canonicalPayload("identity.profile_visibility", {
+        activity: update.activity ?? null,
+        agentCard: update.agentCard ?? null,
+        attestations: update.attestations ?? null,
+        broadcasts: update.broadcasts ?? null,
+        groups: update.groups ?? null,
+        searchEngineIndexing: update.searchEngineIndexing ?? null,
+        username: name,
+      });
+      update = {
+        ...update,
+        signature: await signCanonicalPayload(this.signingKey, payload),
+      };
+    }
+    return this.http.put<ProfileVisibility>(
       `/registry/names/${encodeURIComponent(name)}/profile-visibility`,
       update,
     );
