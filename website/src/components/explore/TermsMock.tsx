@@ -112,7 +112,9 @@ export const TermsMock = ({
 				</span>
 			</div>
 			{data?.title && (
-				<h3 className={`text-sm font-medium ${isDark ? "text-white" : "text-black"}`}>
+				<h3
+					className={`text-sm font-medium ${isDark ? "text-white" : "text-black"}`}
+				>
 					{data.title}
 				</h3>
 			)}
