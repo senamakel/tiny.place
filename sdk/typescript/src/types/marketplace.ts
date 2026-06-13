@@ -56,6 +56,7 @@ export interface ProductCreateRequest {
 
 export interface ProductQueryParams {
   q?: string;
+  type?: "all" | "product" | "products" | "identity" | "identities";
   category?: string;
   tags?: Array<string>;
   seller?: string;
@@ -64,6 +65,11 @@ export interface ProductQueryParams {
   sortBy?: string;
   limit?: number;
   offset?: number;
+}
+
+export interface MarketplaceBrowseResponse {
+  products: Array<Product>;
+  identities: Array<IdentityListing>;
 }
 
 export interface ProductPurchase {

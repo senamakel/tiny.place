@@ -11,6 +11,7 @@ import type {
   IdentityOffer,
   IdentityOfferAcceptRequest,
   IdentitySale,
+  MarketplaceBrowseResponse,
   MarketplaceCategory,
   Product,
   ProductCreateRequest,
@@ -328,6 +329,15 @@ export class MarketplaceApi {
   }
 
   // --- Browsing ---
+
+  browseMarketplace(
+    params?: ProductQueryParams,
+  ): Promise<MarketplaceBrowseResponse> {
+    return this.http.get<MarketplaceBrowseResponse>(
+      "/marketplace",
+      params as Record<string, unknown>,
+    );
+  }
 
   categories(): Promise<{ categories: Array<MarketplaceCategory> }> {
     return this.http.get<{ categories: Array<MarketplaceCategory> }>(

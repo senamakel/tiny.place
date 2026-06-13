@@ -32,6 +32,32 @@ async function verifySignature(
 }
 
 describe("MarketplaceApi", () => {
+  it("browses the unified marketplace root endpoint", async () => {
+    const requests: Array<Request> = [];
+    const client = new TinyVerseClient({
+      baseUrl: "https://example.test",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json({
+          products: [],
+          identities: [],
+        });
+      },
+    });
+
+    await client.marketplace.browseMarketplace({
+      q: "market",
+      type: "identities",
+      tags: ["premium", "data"],
+      limit: 5,
+    });
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0]!.url).toBe(
+      "https://example.test/marketplace?q=market&type=identities&tags=premium&tags=data&limit=5",
+    );
+  });
+
   it("opens marketplace streams with directory query auth", async () => {
     const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(18));
     const openedUrls: Array<string> = [];
