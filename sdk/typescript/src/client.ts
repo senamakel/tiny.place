@@ -22,6 +22,7 @@ import { PricingApi } from "./api/pricing.js";
 import { ProfilesApi } from "./api/profiles.js";
 import { RegistryApi } from "./api/registry.js";
 import { ReputationApi } from "./api/reputation.js";
+import { RoomsApi } from "./api/rooms.js";
 import { SearchApi } from "./api/search.js";
 import { StatsApi } from "./api/stats.js";
 
@@ -62,6 +63,7 @@ export class TinyVerseClient {
   readonly stats: StatsApi;
   readonly admin: AdminApi;
   readonly a2a: A2AApi;
+  readonly rooms: RoomsApi;
 
   constructor(options: TinyVerseClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/+$/, "");
@@ -108,6 +110,7 @@ export class TinyVerseClient {
     this.stats = new StatsApi(this.http);
     this.admin = new AdminApi(this.http);
     this.a2a = new A2AApi(this.http, wsFactory);
+    this.rooms = new RoomsApi(this.http, wsFactory);
   }
 
   healthz(): Promise<unknown> {

@@ -49,6 +49,7 @@ export { StatsApi } from "./api/stats.js";
 export { AdminApi } from "./api/admin.js";
 export { A2AApi } from "./api/a2a.js";
 export type { A2ATaskRequest, A2ATaskResponse } from "./api/a2a.js";
+export { RoomsApi } from "./api/rooms.js";
 
 export * from "./types/index.js";
 
@@ -61,6 +62,8 @@ export {
   serializePreKey,
   generateX25519KeyPair,
   ed25519PubToX25519Pub,
+  toBase64,
+  fromBase64,
 } from "./signal/index.js";
 export type {
   SessionStore,

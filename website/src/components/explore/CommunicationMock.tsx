@@ -5,23 +5,26 @@ import { useState } from "react";
 import type { FunctionComponent } from "@src/common/types";
 
 import { BroadcastsMock } from "./BroadcastsMock";
+import { DirectMessages } from "./DirectMessages";
 import { GroupsMock } from "./GroupsMock";
 import { InboxMock } from "./InboxMock";
 import { MessagingMock } from "./MessagingMock";
 
-const tabs = ["dms", "groups", "broadcasts", "inbox"] as const;
+const tabs = ["dms", "channels", "groups", "broadcasts", "inbox"] as const;
 
 type Tab = (typeof tabs)[number];
 
 const tabLabels: Record<Tab, string> = {
 	dms: "DMs",
+	channels: "Channels",
 	groups: "Groups",
 	broadcasts: "Broadcasts",
 	inbox: "Inbox",
 };
 
 const tabComponents: Record<Tab, React.ComponentType<{ isDark: boolean }>> = {
-	dms: MessagingMock,
+	dms: DirectMessages,
+	channels: MessagingMock,
 	groups: GroupsMock,
 	broadcasts: BroadcastsMock,
 	inbox: InboxMock,

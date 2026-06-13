@@ -12,6 +12,11 @@ dist
 dist-ssr
 .next
 *.local
+*.tsbuildinfo
+
+# Claude Code (local agent settings, notes, and personal overrides)
+.claude/
+CLAUDE.local.md
 
 # Editor directories and files
 .vscode/*

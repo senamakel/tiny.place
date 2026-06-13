@@ -133,10 +133,25 @@ export interface ConstitutionRule {
   description: string;
 }
 
+/**
+ * Constitution-scoped content types a moderation report can target. The
+ * server rejects any other value with HTTP 400. Note the hyphenated form
+ * (`channel-message`, not `channel_message`).
+ */
+export type ModerationReportContentType =
+  | "channel-message"
+  | "profile"
+  | "product"
+  | "review"
+  | "channel";
+
+export const MODERATION_REPORT_CONTENT_TYPES: Array<ModerationReportContentType> =
+  ["channel-message", "profile", "product", "review", "channel"];
+
 export interface ModerationReport {
   reportId: string;
   reporter: string;
-  contentType: string;
+  contentType: ModerationReportContentType;
   contentId: string;
   channelId?: string;
   ruleViolated: string;
@@ -150,7 +165,7 @@ export interface ModerationReport {
 
 export interface ModerationReportCreate {
   reporter: string;
-  contentType: string;
+  contentType: ModerationReportContentType;
   contentId: string;
   channelId?: string;
   ruleViolated: string;
