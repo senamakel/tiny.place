@@ -62,10 +62,7 @@ describe("assertValidX402Challenge", () => {
 
 	it("rejects a swapped network", () => {
 		expect(() =>
-			assertValidX402Challenge(
-				{ ...baseChallenge, network: "base" },
-				expected
-			)
+			assertValidX402Challenge({ ...baseChallenge, network: "base" }, expected)
 		).toThrow(/network mismatch/i);
 	});
 

@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-	formatFee,
-	getAnnualFee,
-	PRICING_TIERS,
-} from "./domain-pricing";
+import { formatFee, getAnnualFee, PRICING_TIERS } from "./domain-pricing";
 
 // Map each PRICING_TIERS row to a representative handle length so we can assert
 // the computed fee preview matches the advertised tier. The 5+ tier is covered
@@ -29,7 +25,9 @@ describe("DomainRegistration fee display", () => {
 
 	it("keeps every tier's preview consistent with its advertised fee", () => {
 		for (const { handle, tierIndex } of TIER_HANDLES) {
-			expect(formatFee(getAnnualFee(handle))).toBe(PRICING_TIERS[tierIndex]?.fee);
+			expect(formatFee(getAnnualFee(handle))).toBe(
+				PRICING_TIERS[tierIndex]?.fee
+			);
 		}
 	});
 

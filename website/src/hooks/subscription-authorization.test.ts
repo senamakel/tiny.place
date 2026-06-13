@@ -1,4 +1,7 @@
-import { buildCanonicalMessage, type SubscriptionPlan } from "@tinyhumansai/tinyplace";
+import {
+	buildCanonicalMessage,
+	type SubscriptionPlan,
+} from "@tinyhumansai/tinyplace";
 import { describe, expect, it } from "vitest";
 
 import {

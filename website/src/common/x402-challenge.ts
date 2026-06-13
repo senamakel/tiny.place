@@ -63,10 +63,7 @@ export function assertValidX402Challenge(
 		}
 	}
 
-	if (
-		expected.amount !== undefined &&
-		payment.amount !== expected.amount
-	) {
+	if (expected.amount !== undefined && payment.amount !== expected.amount) {
 		throw new Error(
 			`Payment amount mismatch: challenge requests "${payment.amount}" but expected "${expected.amount}".`
 		);
@@ -81,10 +78,7 @@ export function assertValidX402Challenge(
 			`Payment recipient mismatch: challenge pays "${payment.to}" but expected "${expected.to}".`
 		);
 	}
-	if (
-		expected.network !== undefined &&
-		payment.network !== expected.network
-	) {
+	if (expected.network !== undefined && payment.network !== expected.network) {
 		throw new Error(
 			`Payment network mismatch: challenge uses "${payment.network}" but expected "${expected.network}".`
 		);
