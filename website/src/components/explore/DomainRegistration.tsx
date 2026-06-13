@@ -1,18 +1,18 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 
 import {
 	generateNonce,
 	signX402Authorization,
 	TinyVerseError,
 	x402AuthorizationToPaymentMap,
-	type AvailabilityResponse,
 	type X402AuthorizationFields,
 } from "@tinyhumansai/tinyplace";
 import type { FunctionComponent } from "@src/common/types";
 import { useApiClient } from "@src/common/api-context";
+import { useHandleAvailability } from "@src/hooks/use-registry";
 import { useAuthStore } from "@src/store/auth";
 
 const PRICING_TIERS: Array<{ label: string; fee: string; example: string }> = [
@@ -41,6 +41,11 @@ function getAnnualFee(name: string): string {
 
 function formatFee(amount: string): string {
 	return `${Number(amount).toLocaleString()} USDC`;
+}
+
+function normalizedHandle(value: string): string {
+	const normalized = value.trim().replace(/^@+/, "");
+	return normalized ? `@${normalized}` : "";
 }
 
 type RegistryPaymentChallenge = {
@@ -83,16 +88,11 @@ export const DomainRegistration = ({
 	const [selectedName, setSelectedName] = useState<string | null>(null);
 	const [bio, setBio] = useState("");
 	const [registrationComplete, setRegistrationComplete] = useState(false);
+	const [paymentChallenge, setPaymentChallenge] =
+		useState<RegistryPaymentChallenge | null>(null);
 
-	const searchName = searchInput.startsWith("@")
-		? searchInput
-		: `@${searchInput}`;
-
-	const availabilityQuery = useQuery<AvailabilityResponse>({
-		queryKey: ["registry", "availability", searchName],
-		queryFn: () => client.registry.get(searchName),
-		enabled: searchInput.length > 0,
-	});
+	const searchName = normalizedHandle(searchInput);
+	const availabilityQuery = useHandleAvailability(searchName);
 
 	const registerMutation = useMutation({
 		mutationFn: async (): Promise<unknown> => {
@@ -114,6 +114,7 @@ export const DomainRegistration = ({
 				if (!challenge) {
 					throw error;
 				}
+				setPaymentChallenge(challenge);
 				const challengePayment = challenge.payment;
 				const metadata = {
 					...challengePayment.metadata,
@@ -138,15 +139,17 @@ export const DomainRegistration = ({
 			}
 		},
 		onSuccess: () => {
+			setPaymentChallenge(null);
 			setRegistrationComplete(true);
 		},
 	});
 
 	const handleSearch = useCallback((): void => {
 		if (availabilityQuery.data?.available) {
-			setSelectedName(searchName);
+			setSelectedName(availabilityQuery.data.name);
+			setPaymentChallenge(null);
 		}
-	}, [availabilityQuery.data, searchName]);
+	}, [availabilityQuery.data]);
 
 	const cardClass = isDark
 		? "border-neutral-800 bg-neutral-950"
@@ -182,6 +185,7 @@ export const DomainRegistration = ({
 						setSelectedName(null);
 						setSearchInput("");
 						setBio("");
+						setPaymentChallenge(null);
 					}}
 				>
 					Register Another
@@ -208,6 +212,7 @@ export const DomainRegistration = ({
 							type="button"
 							onClick={(): void => {
 								setSelectedName(null);
+								setPaymentChallenge(null);
 							}}
 						>
 							Change
@@ -250,14 +255,26 @@ export const DomainRegistration = ({
 				>
 					{registerMutation.isPending
 						? "Signing & Registering..."
-						: `Pay ${formatFee(getAnnualFee(selectedName))} & Register`}
+						: `Authorize ${formatFee(
+								paymentChallenge?.payment.amount ?? getAnnualFee(selectedName)
+							)} & Register`}
 				</button>
+
+				{paymentChallenge ? (
+					<p className={`text-xs ${secondaryClass}`}>
+						Payment challenge: {paymentChallenge.error} for{" "}
+						{formatFee(paymentChallenge.payment.amount)} on{" "}
+						{paymentChallenge.payment.network}.
+					</p>
+				) : null}
 
 				{registerMutation.isError && (
 					<p className="text-xs text-red-500">
-						{registerMutation.error instanceof Error
-							? registerMutation.error.message
-							: "Registration failed"}
+						{registryPaymentChallenge(registerMutation.error)
+							? "Registration still requires a valid settled x402 payment."
+							: registerMutation.error instanceof Error
+								? registerMutation.error.message
+								: "Registration failed"}
 					</p>
 				)}
 			</div>
@@ -280,7 +297,9 @@ export const DomainRegistration = ({
 							setSearchInput(event.target.value);
 						}}
 						onKeyDown={(event): void => {
-							if (event.key === "Enter") handleSearch();
+							if (event.key === "Enter") {
+								handleSearch();
+							}
 						}}
 					/>
 					<button
@@ -315,7 +334,8 @@ export const DomainRegistration = ({
 									className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${buttonClass}`}
 									type="button"
 									onClick={(): void => {
-										setSelectedName(searchName);
+										setSelectedName(availabilityQuery.data.name);
+										setPaymentChallenge(null);
 									}}
 								>
 									Register
