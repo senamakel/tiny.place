@@ -11,11 +11,7 @@ type AuthState = {
 	 * identity registration, which binds the cryptoId to the public key.
 	 */
 	identitySigner: Signer | undefined;
-	setSigner: (
-		signer: Signer,
-		agentId: string,
-		identitySigner?: Signer
-	) => void;
+	setSigner: (signer: Signer, agentId: string, identitySigner?: Signer) => void;
 	signer: Signer | undefined;
 };
 
