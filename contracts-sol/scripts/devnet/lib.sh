@@ -23,13 +23,22 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 
 # Temp keypair files materialized from raw private keys are deleted on exit.
 TMP_KEYS=()
-cleanup_tmp_keys() { for f in "${TMP_KEYS[@]:-}"; do [ -n "${f:-}" ] && rm -f "$f"; done; }
+cleanup_tmp_keys() {
+  local f
+  for f in "${TMP_KEYS[@]:-}"; do [ -n "${f:-}" ] && rm -f "$f"; done
+  return 0  # never let cleanup change the script's exit status
+}
 trap cleanup_tmp_keys EXIT
 
-# Resolve a signing role to a keypair FILE the solana CLI can use. Prefers a raw
-# private key (`<ROLE>_PRIVATE_KEY`, base58 or JSON array) which it writes to a
-# gitignored temp file; otherwise a keypair file path (`<ROLE>_KEYPAIR`). Echoes
-# the resolved path.
+# Resolve a signing role to a keypair FILE the solana CLI can use, setting the
+# global RESOLVED_KEYPAIR. Prefers a raw private key (`<ROLE>_PRIVATE_KEY`, base58
+# or JSON array) which it writes to a gitignored temp file tracked for cleanup;
+# otherwise a keypair file path (`<ROLE>_KEYPAIR`).
+#
+# NB: sets a global rather than echoing, so it must NOT be called in a $(...)
+# subshell — otherwise the temp-file it registers in TMP_KEYS would be lost to
+# the parent and leak the private key on disk.
+RESOLVED_KEYPAIR=""
 resolve_signer() {
   local role="$1"
   local pk_var="${role}_PRIVATE_KEY" file_var="${role}_KEYPAIR"
@@ -42,9 +51,9 @@ resolve_signer() {
     SECRET="$pk" node "$SCRIPT_DIR/secret-to-keypair.mjs" "$out" >/dev/null \
       || die "could not parse ${pk_var} (expected base58 or JSON array secret key)"
     TMP_KEYS+=("$out")
-    echo "$out"
+    RESOLVED_KEYPAIR="$out"
   elif [ -n "$file" ]; then
-    case "$file" in /*) echo "$file";; *) echo "$CONTRACTS_DIR/$file";; esac
+    case "$file" in /*) RESOLVED_KEYPAIR="$file";; *) RESOLVED_KEYPAIR="$CONTRACTS_DIR/$file";; esac
   else
     die "set ${role}_PRIVATE_KEY or ${role}_KEYPAIR in $ENV_FILE"
   fi
@@ -54,7 +63,8 @@ load_env() {
   [ -f "$ENV_FILE" ] || die "missing $ENV_FILE (copy .env.devnet.example and fill it in)"
   set -a; . "$ENV_FILE"; set +a
   : "${DEVNET_RPC_URL:?set DEVNET_RPC_URL in $ENV_FILE}"
-  DEPLOYER_KEYPAIR="$(resolve_signer DEPLOYER)"
+  resolve_signer DEPLOYER            # sets RESOLVED_KEYPAIR (no subshell — see note)
+  DEPLOYER_KEYPAIR="$RESOLVED_KEYPAIR"
   [ -f "$DEPLOYER_KEYPAIR" ] || die "deployer keypair could not be resolved"
   DEPLOYER_PUBKEY="$(solana-keygen pubkey "$DEPLOYER_KEYPAIR")"
 }
