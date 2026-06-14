@@ -333,8 +333,9 @@ export const IdentityTrading = ({
 	);
 	// Only an unassigned name is sellable; never offer a primary handle to the
 	// listing form (the backend rejects it anyway).
-	const sellableHandle = ownedActive.find((identity) => !identity.primary)
-		?.username;
+	const sellableHandle = ownedActive.find(
+		(identity) => !identity.primary
+	)?.username;
 
 	return (
 		<div className="space-y-4">

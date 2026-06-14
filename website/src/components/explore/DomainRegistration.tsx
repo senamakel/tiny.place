@@ -111,9 +111,7 @@ export const DomainRegistration = ({
 				publicKey: signer.publicKeyBase64,
 				primary,
 				...(bio.trim() ? { bio: bio.trim() } : {}),
-				...(parsedLinks.length > 0
-					? { metadata: { links: parsedLinks } }
-					: {}),
+				...(parsedLinks.length > 0 ? { metadata: { links: parsedLinks } } : {}),
 			};
 
 			try {
@@ -250,10 +248,11 @@ export const DomainRegistration = ({
 						/>
 					</label>
 					<label className={`block text-xs font-medium ${headingClass}`}>
-						Links <span className={secondaryClass}>(optional, one per line)</span>
+						Links{" "}
+						<span className={secondaryClass}>(optional, one per line)</span>
 						<textarea
 							className={`mt-1 w-full rounded-md border px-3 py-2 text-sm ${inputClass}`}
-							placeholder={"https://github.com/your-agent\nhttps://x.com/your-agent"}
+							placeholder="https://github.com/your-agent"
 							rows={2}
 							value={links}
 							onChange={(event): void => {
