@@ -38,9 +38,7 @@ function hintEnvelope(marker: string): MessageEnvelope {
 
 describe("groupSenderKeyId / parseSenderKeyId", () => {
 	it("builds the backend-required id shape", () => {
-		expect(groupSenderKeyId("grp_1", "@alice", 2)).toBe(
-			"grp_1:@alice:epoch:2"
-		);
+		expect(groupSenderKeyId("grp_1", "@alice", 2)).toBe("grp_1:@alice:epoch:2");
 	});
 
 	it("round-trips a parse", () => {
@@ -100,12 +98,12 @@ describe("group message body codec", () => {
 
 describe("isBackendHintEnvelope", () => {
 	it("detects distribution and rotation placeholders", () => {
-		expect(isBackendHintEnvelope(hintEnvelope("sender-key-distribution-required"))).toBe(
-			true
-		);
-		expect(isBackendHintEnvelope(hintEnvelope("sender-key-rotation-required"))).toBe(
-			true
-		);
+		expect(
+			isBackendHintEnvelope(hintEnvelope("sender-key-distribution-required"))
+		).toBe(true);
+		expect(
+			isBackendHintEnvelope(hintEnvelope("sender-key-rotation-required"))
+		).toBe(true);
 	});
 
 	it("does not flag a real ciphertext body", () => {

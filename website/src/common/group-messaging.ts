@@ -422,7 +422,10 @@ export async function fetchGroupInbox(
 			// eslint-disable-next-line no-await-in-loop
 			await walletClient.messages.acknowledge(envelope.id, actor);
 		} catch (error) {
-			console.warn(`Failed to acknowledge group message ${envelope.id}:`, error);
+			console.warn(
+				`Failed to acknowledge group message ${envelope.id}:`,
+				error
+			);
 		}
 	}
 

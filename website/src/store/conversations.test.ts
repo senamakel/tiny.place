@@ -48,9 +48,11 @@ describe("useConversationsStore", () => {
 		const store = useConversationsStore;
 		store.getState().reset();
 
-		store.getState().appendIncoming([
-			{ id: "m1", from: "alice", text: "hi", at: "2026-01-01T00:00:00.000Z" },
-		]);
+		store
+			.getState()
+			.appendIncoming([
+				{ id: "m1", from: "alice", text: "hi", at: "2026-01-01T00:00:00.000Z" },
+			]);
 		expect(unreadForPeer(store.getState().threads, "alice")).toBe(1);
 
 		store.getState().markThreadRead("alice");
@@ -62,7 +64,9 @@ describe("useConversationsStore", () => {
 	it("outgoing messages never count as unread", () => {
 		const store = useConversationsStore;
 		store.getState().reset();
-		store.getState().appendOutgoing("bob", entry("o1", { outgoing: true, read: true }));
+		store
+			.getState()
+			.appendOutgoing("bob", entry("o1", { outgoing: true, read: true }));
 		expect(unreadForPeer(store.getState().threads, "bob")).toBe(0);
 		store.getState().reset();
 	});

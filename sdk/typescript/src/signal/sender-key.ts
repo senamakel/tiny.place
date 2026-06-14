@@ -1,6 +1,12 @@
 import { ed25519 } from "@noble/curves/ed25519.js";
 
-import { decrypt, encrypt, fromBase64, kdfChainKey, toBase64 } from "./crypto.js";
+import {
+  decrypt,
+  encrypt,
+  fromBase64,
+  kdfChainKey,
+  toBase64,
+} from "./crypto.js";
 
 const cryptoRef = globalThis.crypto;
 
@@ -81,7 +87,12 @@ export class GroupSenderKey {
     const chainKey = cryptoRef.getRandomValues(new Uint8Array(32));
     const signaturePrivateKey = ed25519.utils.randomSecretKey();
     const signaturePublicKey = ed25519.getPublicKey(signaturePrivateKey);
-    return new GroupSenderKey(chainKey, 0, signaturePrivateKey, signaturePublicKey);
+    return new GroupSenderKey(
+      chainKey,
+      0,
+      signaturePrivateKey,
+      signaturePublicKey,
+    );
   }
 
   /** Rebuilds a sender key from {@link serialize} output. */

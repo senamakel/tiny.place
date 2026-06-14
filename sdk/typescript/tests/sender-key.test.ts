@@ -65,7 +65,9 @@ describe("GroupSenderKey / GroupSenderKeyReceiver", () => {
 
   it("lets a member who joins mid-stream read only messages from its distribution forward", async () => {
     const sender = GroupSenderKey.create();
-    const early = GroupSenderKeyReceiver.fromDistribution(sender.distribution());
+    const early = GroupSenderKeyReceiver.fromDistribution(
+      sender.distribution(),
+    );
 
     await sender.encrypt(text("before join 0"));
     await sender.encrypt(text("before join 1"));
