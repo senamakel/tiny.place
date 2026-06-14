@@ -145,7 +145,14 @@ function childPda(program: PublicKey, seed: string, parent: PublicKey, who: Publ
   )[0];
 }
 
-function payload(payerKey: PublicKey, amount: number, nonce: number): {
+// Monotonic nonce source. The escrow nonce tracker is a persistent per-payer
+// account requiring strictly increasing nonces, so a fixed nonce breaks when a
+// wallet is reused across modes (e.g. the tester in poker then lottery) or
+// across reruns. Seeding from the clock keeps it increasing run-to-run too.
+let nonceSeq = Date.now();
+const nextNonce = (): number => ++nonceSeq;
+
+function payload(payerKey: PublicKey, amount: number): {
   amount: BN;
   payer: PublicKey;
   payee: PublicKey;
@@ -156,7 +163,7 @@ function payload(payerKey: PublicKey, amount: number, nonce: number): {
     amount: new BN(amount),
     payer: payerKey,
     payee: payerKey,
-    nonce: new BN(nonce),
+    nonce: new BN(nextNonce()),
     expiry: new BN(Math.floor(Date.now() / 1000) + 3600),
   };
 }
@@ -184,10 +191,14 @@ async function bal(token: PublicKey): Promise<bigint> {
   return (await getAccount(connection, token)).amount;
 }
 async function initNonce(owner: Keypair): Promise<void> {
+  // The nonce tracker persists on-chain; a reused wallet (e.g. the tester across
+  // modes, or a rerun) already has one. Initialize only if it doesn't exist.
+  const tracker = noncePda(owner.publicKey);
+  if (await connection.getAccountInfo(tracker)) return;
   await escrowProgram.methods
     .initNonce()
     .accounts({
-      nonceTracker: noncePda(owner.publicKey),
+      nonceTracker: tracker,
       owner: owner.publicKey,
       systemProgram: SystemProgram.programId,
     })
@@ -261,7 +272,7 @@ describe("devnet e2e (escrow + settlement modes, real USDC)", function () {
     const depositorToken = await ataFor(depositor.publicKey);
 
     await escrowProgram.methods
-      .deposit(payload(depositor.publicKey, AMOUNT, 1))
+      .deposit(payload(depositor.publicKey, AMOUNT))
       .accounts({
         vault,
         nonceTracker: noncePda(depositor.publicKey),
@@ -302,7 +313,7 @@ describe("devnet e2e (escrow + settlement modes, real USDC)", function () {
     await initNonce(client);
     const clientToken = await ataFor(client.publicKey);
     await jobProgram.methods
-      .fund(payload(client.publicKey, AMOUNT, 1))
+      .fund(payload(client.publicKey, AMOUNT))
       .accounts({
         job,
         vault,
@@ -364,11 +375,11 @@ describe("devnet e2e (escrow + settlement modes, real USDC)", function () {
     if (tester) await giveUsdc(tester.publicKey, AMOUNT);
     const winner = p2; // tester wins if provided, else ephemeral p2
 
-    for (const [p, nonce] of [[p1, 1], [p2, 1]] as Array<[Keypair, number]>) {
+    for (const p of [p1, p2]) {
       await initNonce(p);
       const playerToken = await ataFor(p.publicKey);
       await pokerProgram.methods
-        .join(payload(p.publicKey, AMOUNT, nonce))
+        .join(payload(p.publicKey, AMOUNT))
         .accounts({
           game,
           playerEntry: childPda(pokerProgram.programId, "player", game, p.publicKey),
@@ -435,7 +446,7 @@ describe("devnet e2e (escrow + settlement modes, real USDC)", function () {
       await initNonce(p);
       const playerToken = await ataFor(p.publicKey);
       await lotteryProgram.methods
-        .buy(payload(p.publicKey, AMOUNT, 1))
+        .buy(payload(p.publicKey, AMOUNT))
         .accounts({
           round,
           ticketEntry: childPda(lotteryProgram.programId, "ticket", round, p.publicKey),
