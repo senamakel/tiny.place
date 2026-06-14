@@ -42,3 +42,9 @@ pub use client::{TinyPlaceClient, TinyPlaceClientOptions};
 pub use error::{Error, PaymentChallenge, PaymentRequiredChallenge, Result};
 pub use http::{HttpClient, HttpClientOptions};
 pub use signer::{LocalSigner, Signer};
+
+pub use auth::AdminSigningOptions;
+pub use x402::{
+    build_x402_payment_authorization, build_x402_payment_map, sign_x402_authorization,
+    X402Authorization, X402AuthorizationFields, X402PaymentAuthorizationOptions, X402PaymentMap,
+};

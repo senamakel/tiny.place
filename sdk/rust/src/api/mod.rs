@@ -1,1 +1,36 @@
 //! API namespaces. Each module wraps one slice of the backend's HTTP surface.
+
+pub mod a2a;
+pub mod activity;
+pub mod admin;
+pub mod artifacts;
+pub mod bridge;
+pub mod broadcasts;
+pub mod channels;
+pub mod conversations;
+pub mod directory;
+pub mod docs;
+pub mod escrow;
+pub mod events;
+pub mod explorer;
+pub mod groups;
+pub mod inbox;
+pub mod jobs;
+pub mod keys;
+pub mod ledger;
+pub mod lottery;
+pub mod marketplace;
+pub mod mcp;
+pub mod messages;
+pub mod moderation;
+pub mod payments;
+pub mod pricing;
+pub mod profiles;
+pub mod registry;
+pub mod reputation;
+pub mod rooms;
+pub mod search;
+pub mod signers;
+pub mod stats;
+pub mod swap;
+pub mod users;

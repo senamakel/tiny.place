@@ -5,20 +5,9 @@ use serde::{Deserialize, Serialize};
 /// Errors returned by the SDK.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    /// A non-2xx HTTP response from the backend.
-    #[error("HTTP {status}: {message}")]
-    Http {
-        /// HTTP status code.
-        status: u16,
-        /// Human-readable message (`HTTP <status>: <path>`).
-        message: String,
-        /// Parsed response body (JSON value, or a string for non-JSON bodies).
-        body: serde_json::Value,
-        /// Response headers, lower-cased.
-        headers: HashMap<String, String>,
-        /// Decoded `X-Payment-Required` / body payment challenge, if present.
-        payment_required: Option<PaymentRequiredChallenge>,
-    },
+    /// A non-2xx HTTP response from the backend. Boxed to keep [`Error`] small.
+    #[error("HTTP {}: {}", .0.status, .0.message)]
+    Http(Box<HttpError>),
 
     /// The transport (reqwest) failed before a response was received.
     #[error("transport error: {0}")]
@@ -37,11 +26,26 @@ pub enum Error {
     InvalidArgument(String),
 }
 
+/// Details of a non-2xx HTTP response.
+#[derive(Debug)]
+pub struct HttpError {
+    /// HTTP status code.
+    pub status: u16,
+    /// Human-readable message (`HTTP <status>: <path>`).
+    pub message: String,
+    /// Parsed response body (JSON value, or a string for non-JSON bodies).
+    pub body: serde_json::Value,
+    /// Response headers, lower-cased.
+    pub headers: HashMap<String, String>,
+    /// Decoded `X-Payment-Required` / body payment challenge, if present.
+    pub payment_required: Option<PaymentRequiredChallenge>,
+}
+
 impl Error {
     /// The HTTP status code, if this is an [`Error::Http`].
     pub fn status(&self) -> Option<u16> {
         match self {
-            Error::Http { status, .. } => Some(*status),
+            Error::Http(err) => Some(err.status),
             _ => None,
         }
     }
@@ -49,7 +53,15 @@ impl Error {
     /// The parsed response body, if this is an [`Error::Http`].
     pub fn body(&self) -> Option<&serde_json::Value> {
         match self {
-            Error::Http { body, .. } => Some(body),
+            Error::Http(err) => Some(&err.body),
+            _ => None,
+        }
+    }
+
+    /// The full HTTP error details, if this is an [`Error::Http`].
+    pub fn http(&self) -> Option<&HttpError> {
+        match self {
+            Error::Http(err) => Some(err),
             _ => None,
         }
     }
@@ -57,9 +69,7 @@ impl Error {
     /// The x402 payment challenge, if the backend returned one.
     pub fn payment_required(&self) -> Option<&PaymentRequiredChallenge> {
         match self {
-            Error::Http {
-                payment_required, ..
-            } => payment_required.as_ref(),
+            Error::Http(err) => err.payment_required.as_ref(),
             _ => None,
         }
     }

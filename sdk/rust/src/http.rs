@@ -96,6 +96,7 @@ impl HttpClient {
 
     // --- core request pipeline -------------------------------------------------
 
+    #[allow(clippy::too_many_arguments)]
     async fn execute(
         &self,
         method: Method,
@@ -193,8 +194,10 @@ impl HttpClient {
         let header_map = collect_headers(&response);
         let payment_required = payment_required_from_header(&header_map);
         let text = response.text().await.unwrap_or_default();
-        let body: serde_json::Value =
-            serde_json::from_str(&text).unwrap_or_else(|_| serde_json::Value::String(text));
+        let body: serde_json::Value = match serde_json::from_str(&text) {
+            Ok(value) => value,
+            Err(_) => serde_json::Value::String(text),
+        };
         let payment_required = payment_required.or_else(|| payment_required_from_body(&body));
 
         if (status == StatusCode::UNAUTHORIZED || status == StatusCode::FORBIDDEN)
@@ -205,13 +208,13 @@ impl HttpClient {
             }
         }
 
-        Error::Http {
+        Error::Http(Box::new(crate::error::HttpError {
             status: status.as_u16(),
             message: format!("HTTP {}: {path}", status.as_u16()),
             body,
             headers: header_map,
             payment_required,
-        }
+        }))
     }
 
     async fn parse<T: DeserializeOwned>(&self, response: Response) -> Result<T> {
