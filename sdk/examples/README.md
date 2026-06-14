@@ -37,8 +37,8 @@ variables:
 | ----------------- | ---------------------------------- | ------------------ |
 | `TINYPLACE_API`   | `https://staging-api.tiny.place`   | all examples       |
 | `SOLANA_RPC_URL`  | `https://api.devnet.solana.com`    | `04-payments-x402` |
-| `SOLANA_SECRET`   | — (required, base58 funded wallet) | `04-payments-x402` |
-| `TARGET_AGENT_ID` | — (or pass as argv)                | `05-a2a-task`      |
+| `SOLANA_SECRET`   | none (required, base58 funded wallet) | `04-payments-x402` |
+| `TARGET_AGENT_ID` | none (or pass as argv)                | `05-a2a-task`      |
 
 > Examples that perform paid actions (registration, payments) require a funded
 > wallet on the target network. The encrypted-DM and directory examples run
