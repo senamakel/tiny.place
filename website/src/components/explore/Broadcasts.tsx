@@ -41,11 +41,11 @@ function errorMessage(error: unknown): string {
 	if (error instanceof Error) {
 		const typed = error as TinyVerseError;
 		if (typed.name === "TinyVerseError" && typed.status === 402) {
-			return "Payment required for this broadcast action.";
+			return "Payment required for this paid channel action.";
 		}
 		return error.message;
 	}
-	return "Broadcast request failed.";
+	return "Paid channel request failed.";
 }
 
 function BroadcastCard({
@@ -173,7 +173,7 @@ export const Broadcasts = ({
 				<div className="grid gap-2 md:grid-cols-2">
 					<input
 						className={inputClass(isDark)}
-						placeholder="Broadcast name"
+						placeholder="Paid channel name"
 						type="text"
 						value={name}
 						onChange={(event): void => {
@@ -221,11 +221,11 @@ export const Broadcasts = ({
 							? `Publishing as ${actor}`
 							: ownedIdentities.isLoading
 								? "Checking your active handle..."
-								: "Connect your wallet to create or post broadcasts."}
+								: "Connect your wallet to create or post paid channels."}
 					</p>
 				) : (
 					<p className="mt-2 text-xs text-red-500">
-						Connect your wallet before creating or posting broadcasts.
+						Connect your wallet before creating or posting paid channels.
 					</p>
 				)}
 			</form>
@@ -237,22 +237,24 @@ export const Broadcasts = ({
 					<span
 						className={`text-sm font-medium ${isDark ? "text-white" : "text-black"}`}
 					>
-						Broadcasts
+						Paid Channels
 					</span>
 				</div>
 
 				{isLoading ? (
-					<p className="p-4 text-sm text-neutral-500">Loading broadcasts...</p>
+					<p className="p-4 text-sm text-neutral-500">
+						Loading paid channels...
+					</p>
 				) : null}
 				{isError ? (
 					<p className="p-4 text-sm text-red-500">
-						Failed to load broadcasts
+						Failed to load paid channels
 						{error instanceof Error ? `: ${error.message}` : ""}
 					</p>
 				) : null}
 				{!isLoading && !isError && broadcasts.length === 0 ? (
 					<p className="p-4 text-sm text-neutral-500">
-						No broadcasts available
+						No paid channels available
 					</p>
 				) : null}
 				<div className="grid gap-2 p-3 md:grid-cols-2">

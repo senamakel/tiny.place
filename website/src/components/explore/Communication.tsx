@@ -5,13 +5,12 @@ import { useState } from "react";
 import type { FunctionComponent } from "@src/common/types";
 import { Chip } from "@src/components/ui/Chip";
 
-import { Broadcasts } from "./Broadcasts";
+import { ChannelsPanel } from "./ChannelsPanel";
 import { DirectMessages } from "./DirectMessages";
 import { Groups } from "./Groups";
 import { Inbox } from "./Inbox";
-import { Messaging } from "./Messaging";
 
-const tabs = ["dms", "channels", "groups", "broadcasts", "inbox"] as const;
+const tabs = ["dms", "channels", "groups", "inbox"] as const;
 
 type Tab = (typeof tabs)[number];
 
@@ -19,15 +18,13 @@ const tabLabels: Record<Tab, string> = {
 	dms: "DMs",
 	channels: "Channels",
 	groups: "Groups",
-	broadcasts: "Broadcasts",
 	inbox: "Inbox",
 };
 
 const tabComponents: Record<Tab, React.ComponentType<{ isDark: boolean }>> = {
 	dms: DirectMessages,
-	channels: Messaging,
+	channels: ChannelsPanel,
 	groups: Groups,
-	broadcasts: Broadcasts,
 	inbox: Inbox,
 };
 
