@@ -16,7 +16,12 @@ import {
 	usePlaceIdentityBid,
 } from "@src/hooks/use-identity-market";
 
-import { isExpired, strip } from "./identity-management";
+import {
+	accentButtonClass,
+	ghostButtonClass,
+	isExpired,
+	strip,
+} from "./identity-management";
 
 const avatarColors = [
 	"bg-indigo-600",
@@ -83,8 +88,7 @@ export function IdentityListingCard({
 			? "border-neutral-700 bg-neutral-900 text-white placeholder-neutral-600"
 			: "border-neutral-300 bg-white text-black placeholder-neutral-400"
 	}`;
-	const pill =
-		"rounded-full px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50";
+	const ghost = `${ghostButtonClass(isDark)} px-3 py-1`;
 
 	const isAuction = listing.listingType === "auction";
 	const isOwnListing = Boolean(
@@ -173,12 +177,8 @@ export function IdentityListingCard({
 				</div>
 				<div className="flex gap-1">
 					<button
+						className={ghost}
 						type="button"
-						className={`${pill} ${
-							isDark
-								? "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
-								: "bg-neutral-200 text-neutral-600 hover:bg-neutral-300"
-						}`}
 						onClick={(): void => {
 							togglePanel("details");
 						}}
@@ -187,7 +187,7 @@ export function IdentityListingCard({
 					</button>
 					{isAuction ? (
 						<button
-							className={`${pill} bg-orange-600 text-white hover:bg-orange-500`}
+							className={`${accentButtonClass(isDark, "orange")} px-3 py-1`}
 							disabled={!canActAsBuyer || placeBid.isPending}
 							type="button"
 							onClick={(): void => {
@@ -198,7 +198,7 @@ export function IdentityListingCard({
 						</button>
 					) : (
 						<button
-							className={`${pill} bg-neutral-900 text-white hover:bg-neutral-700`}
+							className={`${accentButtonClass(isDark, "blue")} px-3 py-1`}
 							disabled={!canActAsBuyer || buyListing.isPending}
 							type="button"
 							onClick={(): void => {
@@ -217,12 +217,8 @@ export function IdentityListingCard({
 					)}
 					{canActAsBuyer && (
 						<button
+							className={ghost}
 							type="button"
-							className={`${pill} ${
-								isDark
-									? "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
-									: "bg-neutral-200 text-neutral-600 hover:bg-neutral-300"
-							}`}
 							onClick={(): void => {
 								togglePanel("offer");
 							}}
@@ -236,7 +232,7 @@ export function IdentityListingCard({
 			{/* Seller can settle their own auction once it has expired. */}
 			{isAuction && isOwnListing && expired && (
 				<button
-					className="mt-2 w-full rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
+					className={`${accentButtonClass(isDark, "emerald")} mt-2 w-full px-3 py-1.5`}
 					disabled={closeAuction.isPending}
 					type="button"
 					onClick={(): void => {
@@ -289,7 +285,7 @@ export function IdentityListingCard({
 						</p>
 					)}
 					<button
-						className="w-full rounded-md bg-orange-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-orange-500 disabled:opacity-50"
+						className={`${accentButtonClass(isDark, "orange")} w-full px-3 py-1.5`}
 						disabled={placeBid.isPending || !bidAmount}
 						type="submit"
 					>
@@ -323,7 +319,7 @@ export function IdentityListingCard({
 						<p className="text-xs text-emerald-500">Offer submitted.</p>
 					)}
 					<button
-						className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+						className={`${accentButtonClass(isDark, "blue")} w-full px-3 py-1.5`}
 						disabled={createOffer.isPending || !offerAmount}
 						type="submit"
 					>

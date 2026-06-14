@@ -13,6 +13,57 @@ export function strip(name: string): string {
 }
 
 /**
+ * Normalizes raw handle input to the canonical registrable form: lowercase
+ * `a-z`, digits, and `_` only (drops `@`, spaces, and any other character). Use
+ * on every handle text input so the user can't submit an invalid name.
+ */
+export function sanitizeHandle(input: string): string {
+	return input.toLowerCase().replace(/[^a-z0-9_]/g, "");
+}
+
+// --- Button styling (theme-aware, with clear disabled affordance) ----------
+// Centralized so the identity controls read consistently in light/dark mode and
+// disabled buttons are obviously inert (muted + not-allowed cursor), not just
+// faintly translucent.
+
+// Padding is left to the caller (small actions use px-2.5 py-1; full-width
+// submit buttons use px-3 py-1.5), so the helpers compose with any size.
+const BTN_BASE =
+	"rounded-md text-xs font-medium transition-colors disabled:cursor-not-allowed";
+
+/** Secondary/ghost button (outlined), theme-aware. */
+export function ghostButtonClass(isDark: boolean): string {
+	return [
+		BTN_BASE,
+		"border",
+		isDark
+			? "border-neutral-700 text-neutral-200 hover:bg-neutral-800 disabled:border-neutral-800 disabled:text-neutral-600"
+			: "border-neutral-300 text-neutral-700 hover:bg-neutral-100 disabled:border-neutral-200 disabled:text-neutral-400",
+	].join(" ");
+}
+
+/** Solid accent button (blue/orange/emerald/rose), theme-aware disabled state. */
+export function accentButtonClass(
+	isDark: boolean,
+	tone: "blue" | "orange" | "emerald" | "rose" = "blue"
+): string {
+	const tones: Record<string, string> = {
+		blue: "bg-blue-600 hover:bg-blue-500",
+		orange: "bg-orange-600 hover:bg-orange-500",
+		emerald: "bg-emerald-600 hover:bg-emerald-500",
+		rose: "bg-rose-600 hover:bg-rose-500",
+	};
+	return [
+		BTN_BASE,
+		"text-white",
+		tones[tone] ?? tones["blue"],
+		isDark
+			? "disabled:bg-neutral-800 disabled:text-neutral-600"
+			: "disabled:bg-neutral-200 disabled:text-neutral-400",
+	].join(" ");
+}
+
+/**
  * Returns whole days until `expiresAt` (negative once expired), or `null` when
  * the timestamp is missing or unparseable. `now` is injectable for tests.
  */

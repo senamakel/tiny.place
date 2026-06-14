@@ -18,8 +18,10 @@ import {
 } from "@src/hooks/use-registry";
 
 import {
+	accentButtonClass,
 	deriveRecipient,
 	expiryLabel,
+	ghostButtonClass,
 	statusTone,
 	strip,
 } from "./identity-management";
@@ -73,8 +75,7 @@ function IdentityCard({
 			: "border-neutral-300 bg-white text-black placeholder-neutral-400"
 	}`;
 	const labelClass = `text-xs font-medium ${secondaryClass}`;
-	const ghostButton =
-		"rounded-md border border-neutral-600 px-2.5 py-1 text-xs font-medium transition-colors hover:bg-neutral-700/30 disabled:opacity-50";
+	const ghostButton = `${ghostButtonClass(isDark)} px-2.5 py-1`;
 
 	const isPrimary = Boolean(identity.primary);
 	const isListed = Boolean(listing);
@@ -380,7 +381,7 @@ function IdentityCard({
 						</p>
 					)}
 					<button
-						className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+						className={`${accentButtonClass(isDark, "blue")} w-full px-3 py-1.5`}
 						disabled={createListing.isPending || !price}
 						type="submit"
 					>
@@ -429,7 +430,7 @@ function IdentityCard({
 						</p>
 					)}
 					<button
-						className="w-full rounded-md bg-rose-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-rose-500 disabled:opacity-50"
+						className={`${accentButtonClass(isDark, "rose")} w-full px-3 py-1.5`}
 						disabled={transfer.isPending || !confirmTransfer || !recipient}
 						type="submit"
 					>
@@ -464,7 +465,7 @@ function IdentityCard({
 								</div>
 							</div>
 							<button
-								className="rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
+								className={`${accentButtonClass(isDark, "emerald")} px-2.5 py-1`}
 								disabled={acceptOffer.isPending}
 								type="button"
 								onClick={(): void => {

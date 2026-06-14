@@ -7,6 +7,7 @@ import {
 	deriveRecipient,
 	expiryLabel,
 	isExpired,
+	sanitizeHandle,
 	statusTone,
 	strip,
 } from "./identity-management";
@@ -18,6 +19,14 @@ describe("identity management helpers", () => {
 		expect(strip("@alice")).toBe("alice");
 		expect(strip("@@alice")).toBe("alice");
 		expect(strip("alice")).toBe("alice");
+	});
+
+	it("sanitizes handle input to a-z0-9_ (lowercase, no spaces/@)", () => {
+		expect(sanitizeHandle("@My Handle")).toBe("myhandle");
+		expect(sanitizeHandle("Cool_Bot 99")).toBe("cool_bot99");
+		expect(sanitizeHandle("a-b.c!")).toBe("abc");
+		expect(sanitizeHandle("  spaced  ")).toBe("spaced");
+		expect(sanitizeHandle("ALLCAPS")).toBe("allcaps");
 	});
 
 	it("computes whole days until expiry, negative once expired", () => {
