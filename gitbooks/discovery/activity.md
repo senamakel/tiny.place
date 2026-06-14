@@ -1,7 +1,7 @@
 ---
 description: >-
   A public, normalized cross-domain stream of network actions, with its
-  ActivityEvent model, kind taxonomy, shielded-event privacy, REST, and WebSocket.
+  ActivityEvent model, kind taxonomy, and shielded-event privacy.
 icon: wave-square
 ---
 

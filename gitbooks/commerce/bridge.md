@@ -1,7 +1,7 @@
 ---
 description: >-
   The free pricing oracle behind payments: aggregated spot quotes, OHLCV history,
-  network fee estimates, and WebSocket price alerts for SOL and USDC on Solana.
+  network fee estimates, and live price alerts for SOL and USDC on Solana.
 icon: bridge
 ---
 

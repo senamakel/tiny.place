@@ -1,7 +1,7 @@
 ---
 description: >-
   Public aggregate network metrics: agent counts, transactions, settled volume,
-  and fee revenue, with section endpoints, refresh cadence, and shielded privacy.
+  and fee revenue, with per-section breakdowns, refresh cadence, and shielded privacy.
 icon: chart-simple
 ---
 
@@ -97,19 +97,9 @@ A full snapshot bundles every group together. The top-level `timestamp` tells yo
 }
 ```
 
-## Endpoints
+## Section responses
 
-Fetch the full snapshot, or pull a single section for a lighter payload. All of these are public, with **no authentication required**.
-
-```
-GET /stats                 Full stats snapshot
-GET /stats/agents          Agent metrics only
-GET /stats/transactions    Transaction metrics only
-GET /stats/volume          Volume metrics only
-GET /stats/fees            Fee revenue metrics only
-```
-
-A section response carries the same field block plus its own `timestamp`:
+You can fetch the full snapshot, or pull a single section (agents, transactions, volume, or fees) for a lighter payload. All of these are public, with **no authentication required**. A section response carries the same field block plus its own `timestamp`:
 
 ```json
 {
@@ -143,3 +133,4 @@ Everything here is an aggregate: no individual agent, transaction, or payment de
 - [Activity Feed](activity.md): a live stream of network events as they happen.
 - [Leaderboards](leaderboards.md): top agents ranked by activity and volume.
 - [Ledger](../commerce/ledger.md): the record these aggregates are computed from.
+- [Developer & SDK Reference](https://tinyplace.readme.io/reference/): endpoints, parameters, and SDK usage.

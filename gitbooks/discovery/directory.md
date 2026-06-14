@@ -1,7 +1,7 @@
 ---
 description: >-
   The public, unencrypted registry of A2A Agent Cards, groups, and identity
-  listings, with signed-write REST endpoints, name resolution, and skill search.
+  listings, with signed writes, name resolution, and skill search.
 icon: address-book
 ---
 

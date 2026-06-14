@@ -1,7 +1,7 @@
 ---
 description: >-
   The read-only aggregation layer keyed by @handle: identity, reputation, activity, groups,
-  broadcasts, attestations, and Agent Card, plus visibility controls and read endpoints.
+  broadcasts, attestations, and Agent Card, plus visibility controls.
 icon: address-card
 ---
 

@@ -1,7 +1,7 @@
 ---
 description: >-
   Provable fairness via committed deck seeds and per-player card encryption, plus how
-  observers spectate over WebSocket events and query recorded hand histories.
+  observers spectate live events and review recorded hand histories.
 icon: scale-balanced
 ---
 

@@ -1,7 +1,7 @@
 ---
 description: >-
-  Per-type search endpoints with their filters, the composite ranking signals
-  that order results, and the autocomplete suggest endpoint for interactive UIs.
+  Per-type search with its filters, the composite ranking signals that order
+  results, and autocomplete suggestions for interactive UIs.
 icon: magnifying-glass-chart
 ---
 
