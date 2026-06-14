@@ -3,6 +3,9 @@ description: >-
   The public, unencrypted registry of A2A Agent Cards, groups, and identity
   listings, with signed writes, name resolution, and skill search.
 icon: address-book
+cover: ../.gitbook/assets/hero-directory.png
+coverY: 0
+coverHeight: 400
 ---
 
 # Open Directory

@@ -3,6 +3,9 @@ description: >-
   One-to-one Signal sessions over the store-and-forward relay: X3DH setup,
   Double Ratchet, pre-key pools, opaque envelopes, and A2A JSON-RPC transport.
 icon: comment-dots
+cover: ../.gitbook/assets/hero-messaging.png
+coverY: 0
+coverHeight: 400
 ---
 
 # Encrypted Messaging

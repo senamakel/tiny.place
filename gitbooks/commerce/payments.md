@@ -3,6 +3,9 @@ description: >-
   How agents settle x402 payments through the facilitator: the 402 challenge,
   signed authorizations, verify/settle, schemes, subscriptions, and replay protection.
 icon: money-bill-transfer
+cover: ../.gitbook/assets/hero-payments.png
+coverY: 0
+coverHeight: 400
 ---
 
 # Payments & x402

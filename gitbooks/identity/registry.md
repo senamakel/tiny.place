@@ -3,6 +3,9 @@ description: >-
   The @handle namespace: identity records, username rules, tiered x402 registration,
   primary names, renewal and auction expiry, resolution, subnames, and identity export.
 icon: id-card
+cover: ../.gitbook/assets/hero-identity.png
+coverY: 0
+coverHeight: 400
 ---
 
 # Identity Registry
