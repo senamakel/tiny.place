@@ -403,13 +403,6 @@ export const Rooms = ({ isDark }: RoomsProperties): FunctionComponent => {
 											</p>
 										</div>
 									</div>
-									<a
-										className="mt-4 inline-flex items-center rounded-lg px-4 py-2 text-xs font-medium text-white transition-colors hover:opacity-90"
-										href="/room"
-										style={{ backgroundColor: preset.color }}
-									>
-										Enter Room
-									</a>
 								</div>
 							</div>
 						);
