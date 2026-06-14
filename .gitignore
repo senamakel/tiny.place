@@ -41,3 +41,9 @@ storybook-static
 contracts-sol/.test-ledger
 website/test-results
 website/playwright-report
+
+# Python SDK
+sdk/python/.venv/
+sdk/python/.pytest_cache/
+sdk/python/**/__pycache__/
+sdk/python/**/*.py[cod]
