@@ -1,15 +1,26 @@
 "use client";
 
 import type { LeaderboardEntry } from "@tinyhumansai/tinyplace";
+import Link from "next/link";
+import { useState } from "react";
 
 import type { FunctionComponent } from "@src/common/types";
 import { useLeaderboard } from "@src/hooks/use-reputation";
+
+import { ReferralGraph } from "./ReferralGraph";
 
 type ReputationProperties = {
 	isDark: boolean;
 };
 
-export const Reputation = ({
+const tabs = ["leaderboard", "graph"] as const;
+type Tab = (typeof tabs)[number];
+const tabLabels: Record<Tab, string> = {
+	leaderboard: "Leaderboard",
+	graph: "Referral graph",
+};
+
+const LeaderboardView = ({
 	isDark,
 }: ReputationProperties): FunctionComponent => {
 	const { data, isLoading, isError, error } = useLeaderboard("reputation");
@@ -99,14 +110,16 @@ export const Reputation = ({
 						const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
 						const displayName =
 							entry.username ?? entry.cryptoId ?? `Rank ${String(entry.rank)}`;
-
-						return (
-							<div
-								key={entry.rank}
-								className={`border-b pb-2.5 last:border-0 last:pb-0 ${
-									isDark ? "border-neutral-800" : "border-neutral-200"
-								}`}
-							>
+						const profileHref = entry.username
+							? `/@${entry.username.replace(/^@/, "")}`
+							: entry.cryptoId
+								? `/u/${encodeURIComponent(entry.cryptoId)}`
+								: null;
+						const rowClassName = `block border-b pb-2.5 last:border-0 last:pb-0 ${
+							isDark ? "border-neutral-800" : "border-neutral-200"
+						} ${profileHref ? "cursor-pointer hover:opacity-80" : ""}`;
+						const rowBody = (
+							<>
 								<div className="mb-1 flex items-center justify-between">
 									<div className="flex items-center gap-2">
 										<span
@@ -162,11 +175,63 @@ export const Reputation = ({
 										}`}
 									/>
 								</div>
+							</>
+						);
+
+						return profileHref ? (
+							<Link
+								key={entry.rank}
+								className={rowClassName}
+								href={profileHref}
+							>
+								{rowBody}
+							</Link>
+						) : (
+							<div key={entry.rank} className={rowClassName}>
+								{rowBody}
 							</div>
 						);
 					})}
 				</div>
 			</div>
+		</div>
+	);
+};
+
+export const Reputation = ({
+	isDark,
+}: ReputationProperties): FunctionComponent => {
+	const [activeTab, setActiveTab] = useState<Tab>("leaderboard");
+
+	return (
+		<div className="space-y-4">
+			<div className="flex gap-1">
+				{tabs.map((tab) => (
+					<button
+						key={tab}
+						type="button"
+						className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+							activeTab === tab
+								? isDark
+									? "bg-neutral-800 text-white"
+									: "bg-neutral-200 text-black"
+								: isDark
+									? "text-neutral-400 hover:text-white"
+									: "text-neutral-500 hover:text-black"
+						}`}
+						onClick={(): void => {
+							setActiveTab(tab);
+						}}
+					>
+						{tabLabels[tab]}
+					</button>
+				))}
+			</div>
+			{activeTab === "leaderboard" ? (
+				<LeaderboardView isDark={isDark} />
+			) : (
+				<ReferralGraph isDark={isDark} />
+			)}
 		</div>
 	);
 };
