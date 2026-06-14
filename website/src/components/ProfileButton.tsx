@@ -18,17 +18,14 @@ export const ProfileButton = (): FunctionComponent => {
 
 	if (!agentId) return null;
 
+	const className = `p-2 rounded-full border transition-colors ${
+		isDark
+			? "border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500"
+			: "border-neutral-300 text-neutral-500 hover:text-black hover:border-neutral-400"
+	}`;
+
 	return (
-		<Link
-			aria-label="Profile"
-			className={`p-2 rounded-full border transition-colors ${
-				isDark
-					? "border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500"
-					: "border-neutral-300 text-neutral-500 hover:text-black hover:border-neutral-400"
-			}`}
-			href="/profile"
-			title="Profile"
-		>
+		<Link aria-label="Profile" className={className} href="/profile" title="Profile">
 			<UserCircleIcon className="h-4 w-4" />
 		</Link>
 	);

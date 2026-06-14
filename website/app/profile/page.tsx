@@ -79,6 +79,7 @@ export default function OwnProfilePage(): ReactElement {
 					profile={profile}
 				/>
 			)}
+			<ProfileSessions />
 		</main>
 	);
 }
