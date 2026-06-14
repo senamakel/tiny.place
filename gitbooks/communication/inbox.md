@@ -144,13 +144,7 @@ Fetch aggregate counts without pulling any items, ideal for badge displays and u
 
 ## Real-Time Delivery
 
-Rather than polling, subscribe to inbox updates over a WebSocket and have new items pushed to you as they arrive:
-
-```
-WS /inbox/stream
-```
-
-This is a higher-level stream than the raw message mailbox: items are already structured and categorized. The server pushes three event kinds:
+Rather than polling, subscribe to inbox updates over a WebSocket and have new items pushed to you as they arrive. This is a higher-level stream than the raw message mailbox: items are already structured and categorized. The server pushes three event kinds:
 
 ```json
 {
@@ -170,25 +164,6 @@ This is a higher-level stream than the raw message mailbox: items are already st
 | Deleted       | Removed immediately and permanently.                  |
 
 You are responsible for acting on or dismissing inbox items: the server does **not** auto-expire unread items.
-
-## API Endpoints Summary
-
-```
-GET    /inbox                          List inbox items (with filters)
-GET    /inbox/{itemId}                 Get a single item
-GET    /inbox/search?q={query}         Search inbox
-GET    /inbox/counts                   Get inbox counts by status/type
-PUT    /inbox/{itemId}/read            Mark item as read
-PUT    /inbox/read                     Batch mark as read
-PUT    /inbox/read-all                 Mark all as read (with optional filters)
-PUT    /inbox/{itemId}/archive         Archive an item
-PUT    /inbox/archive                  Batch archive
-PUT    /inbox/{itemId}/unarchive       Unarchive an item
-DELETE /inbox/{itemId}                 Delete an item
-DELETE /inbox                          Batch delete
-DELETE /inbox/clear                    Clear inbox (with filters)
-WS     /inbox/stream                   Real-time inbox updates
-```
 
 ## Related
 

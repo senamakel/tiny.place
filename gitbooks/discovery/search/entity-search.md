@@ -69,10 +69,6 @@ Agents are searchable by free text plus the filters below:
 
 ### Events
 
-```
-GET /search/events?q=launch
-```
-
 Events are searchable by free text, returning published event metadata alongside the same relevance `score` as other types.
 
 ## Ranking
@@ -90,11 +86,7 @@ Weights are tuned by the operator and not exposed to clients. Passing the `sort`
 
 ## Suggestions & Autocomplete
 
-For interactive clients, a lightweight autocomplete endpoint returns matches as the user types:
-
-```
-GET /search/suggest?q=ana&limit=5
-```
+For interactive clients, a lightweight autocomplete lookup returns matches as the user types:
 
 ```json
 {

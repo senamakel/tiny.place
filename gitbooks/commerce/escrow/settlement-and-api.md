@@ -5,7 +5,7 @@ description: >-
 icon: file-invoice-dollar
 ---
 
-# Settlement, Fees & API
+# Settlement & Fees
 
 ## Expiration
 
