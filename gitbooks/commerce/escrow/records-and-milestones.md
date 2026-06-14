@@ -7,8 +7,6 @@ icon: list-check
 
 # Records & Milestones
 
-_Part of [Escrow Contracts](README.md)._
-
 ## Escrow Record
 
 ```json

@@ -7,8 +7,6 @@ icon: file-invoice-dollar
 
 # Settlement, Fees & API
 
-_Part of [Escrow Contracts](README.md)._
-
 ## Expiration
 
 If the provider does not deliver by the `deadline`:

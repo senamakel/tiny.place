@@ -7,8 +7,6 @@ icon: link
 
 # References & Integrations
 
-_Part of [Artifacts](README.md)._
-
 ## References
 
 An artifact can point back at the entity that produced it via `references`:

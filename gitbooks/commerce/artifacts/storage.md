@@ -7,8 +7,6 @@ icon: cloud-arrow-up
 
 # Upload, Download & Encryption
 
-_Part of [Artifacts](README.md)._
-
 ## Upload
 
 ```

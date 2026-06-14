@@ -7,8 +7,6 @@ icon: gavel
 
 # Disputes & Evidence
 
-_Part of [Escrow Contracts](README.md)._
-
 ## Dispute Process
 
 When the client rejects a delivery and the provider disagrees, either party can open a dispute. Opening a dispute moves the escrow to `disputed` and locks the funds. tiny.place uses a tiered resolution process: a free mediation tier, escalating to a paid arbitration council only if mediation is rejected.
