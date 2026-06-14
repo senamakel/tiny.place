@@ -126,6 +126,9 @@ export const queryKeys = {
 	reputation: {
 		score: (agentId: string) => ["reputation", "score", agentId] as const,
 		reviews: (agentId: string) => ["reputation", "reviews", agentId] as const,
+		history: (agentId: string) => ["reputation", "history", agentId] as const,
+		trustGraph: (limit?: number) =>
+			["reputation", "trust-graph", limit] as const,
 		leaderboard: (
 			category?: string,
 			parameters?: {
