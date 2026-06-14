@@ -123,6 +123,58 @@ pub mod settlement_game_poker {
         Ok(())
     }
 
+    /// Delegated buy-in: a session-wallet delegate joins on the player's behalf
+    /// via `escrow::deposit_for`. The player never signs — they `approve`d the
+    /// delegate; the server `fee_payer` pays the tx fee and the player-entry rent.
+    pub fn join_for(ctx: Context<JoinFor>, payload: escrow::PaymentPayload) -> Result<()> {
+        {
+            let game = &ctx.accounts.game;
+            require!(game.state == GameState::Open, GameError::InvalidState);
+            require!(game.player_count < game.max_players, GameError::GameFull);
+            require!(payload.amount == game.stake, GameError::InvalidAmount);
+            require!(
+                payload.payer == ctx.accounts.player.key(),
+                GameError::Unauthorized
+            );
+        }
+
+        escrow::cpi::deposit_for(
+            CpiContext::new(
+                ctx.accounts.escrow_program.key(),
+                escrow::cpi::accounts::DepositFor {
+                    vault: ctx.accounts.vault.to_account_info(),
+                    nonce_tracker: ctx.accounts.nonce_tracker.to_account_info(),
+                    authority: ctx.accounts.authority.to_account_info(),
+                    payer_token: ctx.accounts.player_token.to_account_info(),
+                    vault_token: ctx.accounts.vault_token.to_account_info(),
+                    token_program: ctx.accounts.token_program.to_account_info(),
+                },
+            ),
+            payload.clone(),
+        )?;
+
+        let game = &mut ctx.accounts.game;
+        game.player_count = game
+            .player_count
+            .checked_add(1)
+            .ok_or(GameError::MathOverflow)?;
+
+        let entry = &mut ctx.accounts.player_entry;
+        entry.game = game.key();
+        entry.player = ctx.accounts.player.key();
+        entry.amount = payload.amount;
+        entry.refunded = false;
+        entry.bump = ctx.bumps.player_entry;
+
+        emit!(PlayerJoined {
+            game: game.key(),
+            player: entry.player,
+            amount: payload.amount,
+            player_count: game.player_count,
+        });
+        Ok(())
+    }
+
     /// Server settler declares the winner; the whole pot (vault balance) minus
     /// the rake is released to the winner. The winner must have an entry.
     pub fn settle(ctx: Context<SettleGame>) -> Result<()> {
@@ -401,6 +453,51 @@ pub struct Join<'info> {
     pub player: Signer<'info>,
     /// Player's source token account.
     #[account(mut)]
+    pub player_token: Account<'info, TokenAccount>,
+    /// The vault's pinned token account (deposit destination).
+    #[account(mut)]
+    pub vault_token: Account<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>,
+    /// The escrow program, invoked via CPI.
+    pub escrow_program: Program<'info, Escrow>,
+    pub system_program: Program<'info, System>,
+}
+
+/// Accounts for [`settlement_game_poker::join_for`]. Like [`Join`] but the player
+/// never signs: the session-wallet delegate (`authority`) authorizes the deposit
+/// and the server `fee_payer` pays the tx fee and the player-entry rent.
+#[derive(Accounts)]
+pub struct JoinFor<'info> {
+    /// The game being joined; must point at `vault`. `player_count` is bumped.
+    #[account(mut, constraint = game.vault == vault.key() @ GameError::VaultMismatch)]
+    pub game: Account<'info, Game>,
+    /// The new per-player entry; PDA `["player", game, player]`, rent-paid by the
+    /// server fee payer. `init` also prevents the same player from joining twice.
+    #[account(
+        init,
+        payer = fee_payer,
+        space = PlayerEntry::SIZE,
+        seeds = [b"player", game.key().as_ref(), player.key().as_ref()],
+        bump
+    )]
+    pub player_entry: Account<'info, PlayerEntry>,
+    /// The escrow vault (mutated by the CPI deposit).
+    #[account(mut)]
+    pub vault: Account<'info, Vault>,
+    /// CHECK: escrow nonce tracker PDA for the player; validated inside
+    /// `escrow::deposit_for`.
+    #[account(mut)]
+    pub nonce_tracker: UncheckedAccount<'info>,
+    /// The session-wallet delegate authorizing the buy-in on the player's behalf.
+    pub authority: Signer<'info>,
+    /// The server fee payer: pays the tx fee and the player-entry account rent.
+    #[account(mut)]
+    pub fee_payer: Signer<'info>,
+    /// CHECK: the player being joined; used only for the entry PDA seed, the
+    /// recorded `entry.player`, and the token-owner check. Never signs.
+    pub player: UncheckedAccount<'info>,
+    /// Player's source token account; must be owned by `player`.
+    #[account(mut, constraint = player_token.owner == player.key() @ GameError::Unauthorized)]
     pub player_token: Account<'info, TokenAccount>,
     /// The vault's pinned token account (deposit destination).
     #[account(mut)]

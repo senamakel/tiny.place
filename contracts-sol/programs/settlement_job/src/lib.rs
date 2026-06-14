@@ -93,6 +93,36 @@ pub mod settlement_job {
         )
     }
 
+    /// Delegated fund: a session-wallet delegate funds the job on the client's
+    /// behalf via `escrow::deposit_for`. The client never signs — they `approve`d
+    /// the delegate, and a server fee-payer pays the gas. `payload.payer` must be
+    /// the job's client (the recorded depositor).
+    pub fn fund_for(ctx: Context<FundFor>, payload: escrow::PaymentPayload) -> Result<()> {
+        require!(
+            ctx.accounts.job.state == JobState::Open,
+            JobError::InvalidState
+        );
+        require!(
+            payload.payer == ctx.accounts.job.client,
+            JobError::Unauthorized
+        );
+
+        escrow::cpi::deposit_for(
+            CpiContext::new(
+                ctx.accounts.escrow_program.key(),
+                escrow::cpi::accounts::DepositFor {
+                    vault: ctx.accounts.vault.to_account_info(),
+                    nonce_tracker: ctx.accounts.nonce_tracker.to_account_info(),
+                    authority: ctx.accounts.authority.to_account_info(),
+                    payer_token: ctx.accounts.client_token.to_account_info(),
+                    vault_token: ctx.accounts.vault_token.to_account_info(),
+                    token_program: ctx.accounts.token_program.to_account_info(),
+                },
+            ),
+            payload,
+        )
+    }
+
     /// Provider marks the work delivered.
     pub fn mark_delivered(ctx: Context<UpdateJob>) -> Result<()> {
         let job = &mut ctx.accounts.job;
@@ -329,6 +359,34 @@ pub struct Fund<'info> {
     pub client: Signer<'info>,
     /// Client's source token account.
     #[account(mut)]
+    pub client_token: Account<'info, TokenAccount>,
+    /// The vault's pinned token account (deposit destination).
+    #[account(mut)]
+    pub vault_token: Account<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>,
+    /// The escrow program, invoked via CPI.
+    pub escrow_program: Program<'info, Escrow>,
+}
+
+/// Accounts for [`settlement_job::fund_for`]. Like [`Fund`] but the signer is the
+/// session-wallet delegate (`authority`), not the client — the client never
+/// signs. `client_token` must be owned by the job's client.
+#[derive(Accounts)]
+pub struct FundFor<'info> {
+    /// The job being funded; must point at `vault`.
+    #[account(constraint = job.vault == vault.key() @ JobError::VaultMismatch)]
+    pub job: Account<'info, Job>,
+    /// The escrow vault (mutated by the CPI deposit).
+    #[account(mut)]
+    pub vault: Account<'info, Vault>,
+    /// CHECK: escrow nonce tracker PDA for the client; validated inside
+    /// `escrow::deposit_for`.
+    #[account(mut)]
+    pub nonce_tracker: UncheckedAccount<'info>,
+    /// The session-wallet delegate authorizing the deposit on the client's behalf.
+    pub authority: Signer<'info>,
+    /// Client's source token account; must be owned by the job's client.
+    #[account(mut, constraint = client_token.owner == job.client @ JobError::Unauthorized)]
     pub client_token: Account<'info, TokenAccount>,
     /// The vault's pinned token account (deposit destination).
     #[account(mut)]
