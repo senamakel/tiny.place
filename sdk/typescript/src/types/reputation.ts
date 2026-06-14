@@ -27,6 +27,12 @@ export interface ReputationReviewCreate {
   context?: string;
   transactionRef: string;
   signature?: string;
+  /**
+   * The base64 Ed25519 key that signed this request. When it is an approved
+   * session key delegated by the reviewer, the backend authorizes it as the
+   * reviewer; for the reviewer's own key it is simply the registered key.
+   */
+  signerPublicKey?: string;
 }
 
 export interface ReputationVouch {
@@ -53,6 +59,8 @@ export interface ReputationVouchCreate {
   comment?: string;
   signature?: string;
   expiresAt?: string;
+  /** Base64 Ed25519 signer key; an approved session key acts as the voucher. */
+  signerPublicKey?: string;
 }
 
 export interface Attestation {
@@ -75,6 +83,8 @@ export interface AttestationCreate {
   handle: string;
   proofUrl?: string;
   signature?: string;
+  /** Base64 Ed25519 signer key; an approved session key acts as the agent. */
+  signerPublicKey?: string;
 }
 
 export interface AttestationVerification {

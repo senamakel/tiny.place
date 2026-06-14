@@ -66,6 +66,10 @@ export class ReputationApi {
         this.signingKey,
         reputationReviewSignaturePayload(review),
       );
+      // Present the signer so the backend can authorize a delegated session key
+      // (the signature above is verified against it). For the reviewer's own key
+      // this is simply the registered key.
+      review.signerPublicKey ??= this.http.signingPublicKey();
     }
 
     return this.http.post<ReputationReview>("/reputation/reviews", review);
@@ -84,6 +88,7 @@ export class ReputationApi {
         this.signingKey,
         attestationSignaturePayload(attestation),
       );
+      attestation.signerPublicKey ??= this.http.signingPublicKey();
     }
 
     return this.http.post<Attestation>("/reputation/attestations", attestation);
@@ -101,7 +106,7 @@ export class ReputationApi {
       attestationRevokeSignaturePayload(attestationId),
     );
     return this.http.delete<void>(
-      `/reputation/attestations/${encodeURIComponent(attestationId)}?signature=${encodeURIComponent(signature)}`,
+      `/reputation/attestations/${encodeURIComponent(attestationId)}?signature=${encodeURIComponent(signature)}${signerPublicKeyQuery(this.http.signingPublicKey())}`,
     );
   }
 
@@ -142,6 +147,7 @@ export class ReputationApi {
         this.signingKey,
         vouchSignaturePayload(vouch),
       );
+      vouch.signerPublicKey ??= this.http.signingPublicKey();
     }
 
     return this.http.post<ReputationVouch>("/reputation/vouches", vouch);
@@ -159,7 +165,7 @@ export class ReputationApi {
       vouchRevokeSignaturePayload(vouchId),
     );
     return this.http.delete<void>(
-      `/reputation/vouches/${encodeURIComponent(vouchId)}?signature=${encodeURIComponent(signature)}`,
+      `/reputation/vouches/${encodeURIComponent(vouchId)}?signature=${encodeURIComponent(signature)}${signerPublicKeyQuery(this.http.signingPublicKey())}`,
     );
   }
 
@@ -290,6 +296,15 @@ function attestationRevokeSignaturePayload(attestationId: string): string {
   return canonicalPayload("reputation.attestation.revoke", {
     attestationId,
   });
+}
+
+// Builds the optional &signerPublicKey= query suffix for body-less revoke
+// requests, so the backend can authorize a delegated session key revoking on
+// the owner's behalf. Empty when there is no presented key.
+function signerPublicKeyQuery(signerPublicKey: string | undefined): string {
+  return signerPublicKey
+    ? `&signerPublicKey=${encodeURIComponent(signerPublicKey)}`
+    : "";
 }
 
 function nextReputationId(prefix: string): string {
