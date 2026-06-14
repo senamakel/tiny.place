@@ -117,6 +117,10 @@ export class MarketplaceApi {
         this.signingKey,
         productSignaturePayload(product),
       );
+      // Present the signer so the backend can authorize a delegated session key
+      // (the signature above is verified against it). For the seller's own key
+      // this is simply the registered key.
+      product.signerPublicKey ??= this.publicKeyBase64;
     }
 
     if (product.seller) {
@@ -147,6 +151,7 @@ export class MarketplaceApi {
           this.signingKey,
           productSignaturePayload(update),
         ),
+        signerPublicKey: update.signerPublicKey ?? this.publicKeyBase64,
       };
     }
 
@@ -176,7 +181,7 @@ export class MarketplaceApi {
       productDeleteSignaturePayload(productId),
     );
     return this.http.deletePublic<void>(
-      `/marketplace/products/${encodeURIComponent(productId)}?signature=${encodeURIComponent(signature)}`,
+      `/marketplace/products/${encodeURIComponent(productId)}?signature=${encodeURIComponent(signature)}${marketplaceSignerQuery(this.publicKeyBase64)}`,
     );
   }
 
@@ -304,6 +309,7 @@ export class MarketplaceApi {
         this.signingKey,
         productReviewSignaturePayload(review),
       );
+      review.signerPublicKey ??= this.publicKeyBase64;
     }
 
     if (review.buyer) {
@@ -344,6 +350,7 @@ export class MarketplaceApi {
         this.signingKey,
         identityListingSignaturePayload(listing),
       );
+      listing.signerPublicKey ??= this.publicKeyBase64;
     }
 
     if (listing.seller) {
@@ -372,7 +379,7 @@ export class MarketplaceApi {
       identityListingCancelSignaturePayload(listingId),
     );
     return this.http.delete<void>(
-      `/marketplace/identities/${encodeURIComponent(listingId)}?signature=${encodeURIComponent(signature)}`,
+      `/marketplace/identities/${encodeURIComponent(listingId)}?signature=${encodeURIComponent(signature)}${marketplaceSignerQuery(this.publicKeyBase64)}`,
     );
   }
 
@@ -471,6 +478,7 @@ export class MarketplaceApi {
         this.signingKey,
         identityBidSignaturePayload(bid),
       );
+      bid.signerPublicKey ??= this.publicKeyBase64;
     }
 
     if (bid.bidder) {
@@ -596,6 +604,7 @@ export class MarketplaceApi {
         this.signingKey,
         identityOfferSignaturePayload(offer),
       );
+      offer.signerPublicKey ??= this.publicKeyBase64;
     }
 
     if (offer.buyer) {
@@ -669,7 +678,7 @@ export class MarketplaceApi {
       identityOfferCancelSignaturePayload(offerId),
     );
     return this.http.delete<void>(
-      `/marketplace/offers/${encodeURIComponent(offerId)}?signature=${encodeURIComponent(signature)}`,
+      `/marketplace/offers/${encodeURIComponent(offerId)}?signature=${encodeURIComponent(signature)}${marketplaceSignerQuery(this.publicKeyBase64)}`,
     );
   }
 
@@ -857,6 +866,15 @@ function identityOfferAcceptSignaturePayload(
     offerId,
     seller,
   });
+}
+
+// Builds the optional &signerPublicKey= query suffix for body-less revoke
+// requests, so the backend can authorize a delegated session key acting on the
+// owner's behalf. Empty when there is no presented key.
+function marketplaceSignerQuery(signerPublicKey: string | undefined): string {
+  return signerPublicKey
+    ? `&signerPublicKey=${encodeURIComponent(signerPublicKey)}`
+    : "";
 }
 
 function nextMarketplaceId(prefix: string): string {

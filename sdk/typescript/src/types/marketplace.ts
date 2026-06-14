@@ -37,6 +37,12 @@ export interface Product {
   salesCount: number;
   rating: number;
   signature?: string;
+  /**
+   * The base64 Ed25519 key that signed this request. When it is an approved
+   * session key the actor delegated to, the backend authorizes it as the actor;
+   * for the actor's own key it is simply the registered key.
+   */
+  signerPublicKey?: string;
 }
 
 export interface ProductCreateRequest {
@@ -52,6 +58,8 @@ export interface ProductCreateRequest {
   deliveryDetails?: Record<string, unknown>;
   stock?: number;
   signature?: string;
+  /** Base64 Ed25519 signer key; an approved session key acts as the seller. */
+  signerPublicKey?: string;
 }
 
 export interface ProductQueryParams {
@@ -100,6 +108,8 @@ export interface ProductReview {
   comment?: string;
   createdAt: string;
   signature?: string;
+  /** Base64 Ed25519 signer key; an approved session key acts as the buyer. */
+  signerPublicKey?: string;
 }
 
 export interface IdentityBuyRequest {
@@ -136,6 +146,8 @@ export interface IdentityListing {
   paymentDueAt?: string;
   settlementStatus?: string;
   signature?: string;
+  /** Base64 Ed25519 signer key; an approved session key acts as the seller. */
+  signerPublicKey?: string;
 }
 
 export interface IdentityBid {
@@ -149,6 +161,8 @@ export interface IdentityBid {
   status: string;
   createdAt: string;
   signature?: string;
+  /** Base64 Ed25519 signer key; an approved session key acts as the bidder. */
+  signerPublicKey?: string;
 }
 
 export interface IdentityOffer {
@@ -165,6 +179,8 @@ export interface IdentityOffer {
   createdAt: string;
   updatedAt: string;
   signature?: string;
+  /** Base64 Ed25519 signer key; an approved session key acts as the buyer. */
+  signerPublicKey?: string;
 }
 
 export interface IdentitySale {
