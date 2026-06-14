@@ -28,6 +28,8 @@ export const escrowProgram = anchor.workspace.Escrow as anchor.Program<any>;
 export const jobProgram = anchor.workspace.SettlementJob as anchor.Program<any>;
 export const pokerProgram =
   anchor.workspace.SettlementGamePoker as anchor.Program<any>;
+export const lotteryProgram =
+  anchor.workspace.SettlementGameLottery as anchor.Program<any>;
 
 export const payer = (provider.wallet as anchor.Wallet).payer;
 export const connection = provider.connection;
@@ -125,6 +127,20 @@ export function playerPda(game: PublicKey, player: PublicKey): PublicKey {
   )[0];
 }
 
+export function roundPda(roundId: number[]): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("round"), Buffer.from(roundId)],
+    lotteryProgram.programId,
+  )[0];
+}
+
+export function ticketPda(round: PublicKey, buyer: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("ticket"), round.toBuffer(), buyer.toBuffer()],
+    lotteryProgram.programId,
+  )[0];
+}
+
 /** An x402 PaymentPayload object matching the on-chain struct. */
 export function payload(
   payerKey: PublicKey,
@@ -174,7 +190,9 @@ export async function createVault(
       ? jobPda(vaultId)
       : settlementProgram.equals(pokerProgram.programId)
         ? gamePda(vaultId)
-        : payer.publicKey);
+        : settlementProgram.equals(lotteryProgram.programId)
+          ? roundPda(vaultId)
+          : payer.publicKey);
 
   await escrowProgram.methods
     .createVault(vaultId, settlementProgram, resolvedOwner)
