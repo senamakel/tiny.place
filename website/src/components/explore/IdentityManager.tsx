@@ -6,8 +6,10 @@ import type { Identity, IdentityListing } from "@tinyhumansai/tinyplace";
 
 import type { FunctionComponent } from "@src/common/types";
 import {
+	useAcceptIdentityOffer,
 	useCreateIdentityListing,
 	useDeleteIdentityListing,
+	useIdentityOffers,
 } from "@src/hooks/use-identity-market";
 import {
 	useRenewIdentity,
@@ -33,7 +35,7 @@ type IdentityCardProperties = {
 	listing: IdentityListing | undefined;
 };
 
-type ActionPanel = "none" | "list" | "transfer";
+type ActionPanel = "none" | "list" | "transfer" | "offers";
 
 function IdentityCard({
 	agentId,
@@ -53,6 +55,9 @@ function IdentityCard({
 	const createListing = useCreateIdentityListing();
 	const deleteListing = useDeleteIdentityListing();
 	const transfer = useTransferIdentity();
+	const offersQuery = useIdentityOffers({ name: identity.username });
+	const acceptOffer = useAcceptIdentityOffer();
+	const offers = offersQuery.data?.offers ?? [];
 
 	const cardClass = isDark
 		? "border-neutral-800 bg-neutral-950"
@@ -232,6 +237,15 @@ function IdentityCard({
 				>
 					Transfer
 				</button>
+				<button
+					className={ghostButton}
+					type="button"
+					onClick={(): void => {
+						togglePanel("offers");
+					}}
+				>
+					Offers{offers.length > 0 ? ` (${String(offers.length)})` : ""}
+				</button>
 			</div>
 
 			{renew.isError && (
@@ -353,6 +367,58 @@ function IdentityCard({
 							: `Transfer ${strip(identity.username)}`}
 					</button>
 				</form>
+			)}
+
+			{panel === "offers" && (
+				<div className="mt-3 space-y-2">
+					{offersQuery.isLoading && (
+						<p className={`text-xs ${secondaryClass}`}>Loading offers…</p>
+					)}
+					{!offersQuery.isLoading && offers.length === 0 && (
+						<p className={`text-xs ${secondaryClass}`}>
+							No pending offers for {identity.username}.
+						</p>
+					)}
+					{offers.map((offer) => (
+						<div
+							key={offer.offerId}
+							className="flex items-center justify-between gap-2"
+						>
+							<div>
+								<div className={`text-xs font-semibold ${headingClass}`}>
+									{offer.price.amount} {offer.price.asset}
+								</div>
+								<div className={`text-xs ${secondaryClass}`}>
+									from {offer.buyer}
+								</div>
+							</div>
+							<button
+								className="rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-emerald-500 disabled:opacity-50"
+								disabled={acceptOffer.isPending}
+								type="button"
+								onClick={(): void => {
+									acceptOffer.mutate(
+										{ offerId: offer.offerId, request: { seller: agentId } },
+										{
+											onSuccess: (): void => {
+												setPanel("none");
+											},
+										}
+									);
+								}}
+							>
+								{acceptOffer.isPending ? "Accepting…" : "Accept"}
+							</button>
+						</div>
+					))}
+					{acceptOffer.isError && (
+						<p className="text-xs text-rose-500">
+							{acceptOffer.error instanceof Error
+								? acceptOffer.error.message
+								: "Failed to accept offer"}
+						</p>
+					)}
+				</div>
 			)}
 		</li>
 	);
