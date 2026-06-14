@@ -96,7 +96,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Unit tests
-        run: pnpm --filter @tinyplace/website vitest run src/
+        run: pnpm --filter @tinyplace/website exec vitest run src/
 
   build:
     name: Build
