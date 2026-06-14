@@ -8,6 +8,17 @@ pub mod math;
 
 declare_id!("MfwLo55Nkv3SCQ2uFuoWXmAe7zJR6t3rMdm9K8Lr5Me");
 
+// On-chain security contact (read by explorers like Solscan).
+#[cfg(not(feature = "no-entrypoint"))]
+solana_security_txt::security_txt! {
+    name: "tiny.place settlement_game_lottery",
+    project_url: "https://tiny.place",
+    contacts: "email:security@tinyhumans.ai",
+    policy: "https://github.com/tinyhumansai/tiny.place/blob/main/SECURITY.md",
+    source_code: "https://github.com/tinyhumansai/tiny.place",
+    preferred_languages: "en"
+}
+
 /// Basis-points denominator: a `fee_bps` of 500 means a 5.00% rake.
 pub const BPS_DENOMINATOR: u64 = 10_000;
 

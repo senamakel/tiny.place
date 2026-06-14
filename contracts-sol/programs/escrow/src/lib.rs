@@ -5,6 +5,19 @@ pub mod math;
 
 declare_id!("6s1cWEMcWjWZ3ut6aDD5g4CFBxpKBz5S4DLkrZdy5jR2");
 
+// On-chain security contact (read by explorers like Solscan). Guarded so it is
+// not linked in when escrow is pulled into a settlement program as a CPI
+// dependency (those builds enable `no-entrypoint`, which strips this).
+#[cfg(not(feature = "no-entrypoint"))]
+solana_security_txt::security_txt! {
+    name: "tiny.place escrow (custody)",
+    project_url: "https://tiny.place",
+    contacts: "email:security@tinyhumans.ai",
+    policy: "https://github.com/tinyhumansai/tiny.place/blob/main/SECURITY.md",
+    source_code: "https://github.com/tinyhumansai/tiny.place",
+    preferred_languages: "en"
+}
+
 /// Seed a settlement program must use for the PDA that authorizes disbursement.
 /// Escrow recomputes `PDA([VAULT_AUTHORITY_SEED], settlement_program)` and
 /// requires it to sign `disburse`, so the custody/policy binding is trustless:
