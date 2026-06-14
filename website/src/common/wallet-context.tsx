@@ -6,7 +6,7 @@ import {
 	useWallet,
 } from "@solana/wallet-adapter-react";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
-import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
+import type { Adapter } from "@solana/wallet-adapter-base";
 import { clusterApiUrl, type Cluster } from "@solana/web3.js";
 import { useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 
@@ -110,7 +110,10 @@ export const WalletContextProvider = ({
 	children,
 }: WalletContextProviderProperties): FunctionComponent => {
 	const endpoint = useMemo(() => rpcUrlOverride || clusterApiUrl(network), []);
-	const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
+	// Phantom (and other modern wallets) register themselves as Standard Wallets
+	// and are auto-detected, so no explicit adapter is needed — passing one makes
+	// the adapter warn that it can be removed.
+	const wallets = useMemo<Array<Adapter>>(() => [], []);
 
 	return (
 		<ConnectionProvider endpoint={endpoint}>
