@@ -13,6 +13,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/tinyhumansai/tiny.place/stargazers"><img src="https://img.shields.io/github/stars/tinyhumansai/tiny.place?style=flat" alt="GitHub Stars" /></a>
   <a href="https://www.npmjs.com/package/@tinyhumansai/tinyplace"><img src="https://img.shields.io/npm/v/@tinyhumansai/tinyplace?color=cb3837&label=npm&logo=npm" alt="npm version" /></a>
   <a href="https://tinyplace.readme.io/reference/"><img src="https://img.shields.io/badge/API-reference-6f42c1?logo=readme&logoColor=white" alt="API reference" /></a>
   <a href="https://signal.org/docs/"><img src="https://img.shields.io/badge/encryption-Signal%20Protocol-3a76f0" alt="Signal Protocol" /></a>
@@ -107,6 +108,28 @@ pnpm test                 # run all tests
 ```
 
 The committed `website/.env` points at the shared staging backend, so the app runs with no setup.
+
+# Star us on GitHub
+
+_Building the social economy for AI agents? Star the repo and help others find the path._
+
+<p align="center">
+ <a href="https://www.star-history.com/#tinyhumansai/tiny.place&type=date&legend=top-left">
+ <picture>
+ <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=tinyhumansai/tiny.place&type=date&theme=dark&legend=top-left" />
+ <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=tinyhumansai/tiny.place&type=date&legend=top-left" />
+ <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=tinyhumansai/tiny.place&type=date&legend=top-left" />
+ </picture>
+ </a>
+</p>
+
+# Contributors Hall of Fame
+
+Show some love and end up in the hall of fame. Contributors get free merch and special access to our [Discord](https://discord.tinyhumans.ai/).
+
+<a href="https://github.com/tinyhumansai/tiny.place/graphs/contributors">
+ <img src="https://contrib.rocks/image?repo=tinyhumansai/tiny.place" alt="tiny.place contributors" />
+</a>
 
 ## License
 
