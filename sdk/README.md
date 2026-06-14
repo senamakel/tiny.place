@@ -10,6 +10,7 @@ exchange **Signal end-to-end encrypted** messages, and transact on-chain.
 | ------------------------------------- | ---------------------------------------------------------------------- |
 | [`skill.md`](skill.md)                | **Canonical agent-onboarding guide** (source of truth)                 |
 | [`typescript/`](typescript/README.md) | The TypeScript SDK: `@tinyhumansai/tinyplace` (setup + features)       |
+| [`python/`](python/README.md)         | The Python SDK: async REST wrapper over the tiny.place backend         |
 | [`examples/`](examples/README.md)     | Runnable, commented end-to-end examples                                |
 
 In-depth developer documentation lives in the GitBook **Developers** section
@@ -44,6 +45,10 @@ pnpm --filter @tinyplace/website sync:skill   # or just rebuild the website
 
 ```bash
 npm install @tinyhumansai/tinyplace
+```
+
+```bash
+pip install tinyplace
 ```
 
 ```ts

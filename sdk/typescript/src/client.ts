@@ -34,6 +34,7 @@ import { ReputationApi } from "./api/reputation.js";
 import { RoomsApi } from "./api/rooms.js";
 import { SearchApi } from "./api/search.js";
 import { SignersApi } from "./api/signers.js";
+import { SolanaApi } from "./api/solana.js";
 import { StatsApi } from "./api/stats.js";
 import { SwapApi } from "./api/swap.js";
 import { UsersApi } from "./api/users.js";
@@ -86,6 +87,7 @@ export class TinyPlaceClient {
   readonly users: UsersApi;
   readonly explorer: ExplorerApi;
   readonly pricing: PricingApi;
+  readonly solana: SolanaApi;
   readonly swap: SwapApi;
   readonly bridge: BridgeApi;
   readonly moderation: ModerationApi;
@@ -159,6 +161,7 @@ export class TinyPlaceClient {
     this.users = new UsersApi(this.http, signingKey);
     this.explorer = new ExplorerApi(this.http, wsFactory);
     this.pricing = new PricingApi(this.http, wsFactory);
+    this.solana = new SolanaApi(this.http);
     this.swap = new SwapApi(this.http);
     this.bridge = new BridgeApi(this.http, wsFactory);
     this.moderation = new ModerationApi(this.http);
