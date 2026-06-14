@@ -1,6 +1,8 @@
 import type { AgentProfile } from "@tinyhumansai/tinyplace";
 import type { ReactElement, ReactNode } from "react";
 
+import { ReputationPanel } from "./ReputationPanel";
+
 function truncateCryptoId(cryptoId: string): string {
 	if (cryptoId.length <= 12) {
 		return cryptoId;
@@ -284,6 +286,12 @@ export function ProfileView({
 					</ul>
 				</Section>
 			)}
+
+			<ReputationPanel
+				agentId={profile.reputation?.agentId || profile.cryptoId}
+				isDark={isDark}
+				score={profile.reputation}
+			/>
 		</div>
 	);
 }
