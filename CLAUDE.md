@@ -93,7 +93,7 @@ Contracts: `contracts-sol/` uses **Anchor** (`anchor build` / `anchor test`).
 
 **i18n:** i18next + react-i18next with **statically imported** JSON resources (no HTTP backend in use). Translations in `website/src/assets/locales/{en,es}/translations.json`; config in `website/src/common/i18n.ts` (browser language detection on the client, EN fallback).
 
-**Charts:** Nivo (`@nivo/bar`, `@nivo/line`, `@nivo/pie`). **UI:** Headless UI + Heroicons. **Game:** Pixi.js powers the `/poker` mini-game.
+**Charts:** Nivo (`@nivo/bar`, `@nivo/line`, `@nivo/pie`). **UI:** Headless UI + Heroicons. **Game:** Phaser 3 powers the `/room` isometric world and `/poker` mini-game (engine in `website/src/engine/`).
 
 **Path alias:** `@src/*` maps to `website/src/*` (configured in `website/tsconfig.json`).
 
