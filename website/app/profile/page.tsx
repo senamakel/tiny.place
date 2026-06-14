@@ -3,6 +3,7 @@
 import { useState, type ReactElement } from "react";
 
 import { ProfileEditor } from "@src/components/profile/ProfileEditor";
+import { ProfileSessions } from "@src/components/profile/ProfileSessions";
 import { ProfileView } from "@src/components/profile/ProfileView";
 import { useOwnedIdentities } from "@src/hooks/use-marketplace";
 import { useProfile } from "@src/hooks/use-profiles";

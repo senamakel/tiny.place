@@ -12,7 +12,6 @@ const sectionTitles: Record<string, string> = {
 	groups: "Groups",
 	broadcasts: "Broadcasts",
 	inbox: "Inbox",
-	signers: "Signers",
 	events: "Events",
 	marketplace: "Marketplace",
 	artifacts: "Artifacts",
