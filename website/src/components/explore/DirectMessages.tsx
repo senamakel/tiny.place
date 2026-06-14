@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { FunctionComponent } from "@src/common/types";
 import { useDirectMessages } from "@src/hooks/use-direct-messages";
+import { unreadForPeer } from "@src/store/conversations";
 
 type DirectMessagesProperties = {
 	isDark: boolean;
@@ -23,12 +24,24 @@ export const DirectMessages = ({
 		addPeer,
 		send,
 		isSending,
+		markThreadRead,
 	} = useDirectMessages();
 
 	const [selected, setSelected] = useState<string>("");
 	const [peerInput, setPeerInput] = useState<string>("");
 	const [messageInput, setMessageInput] = useState<string>("");
 	const [copied, setCopied] = useState<boolean>(false);
+
+	const selectedThread = selected ? threads[selected] : undefined;
+
+	// While a conversation is open, anything in it (including messages that arrive
+	// during the poll) counts as read. Keyed on the thread length so freshly
+	// polled inbound messages are marked read without reopening the thread.
+	useEffect((): void => {
+		if (selected) {
+			markThreadRead(selected);
+		}
+	}, [selected, selectedThread?.length, markThreadRead]);
 
 	const handleCopy = (): void => {
 		if (!address) {
@@ -152,24 +165,32 @@ export const DirectMessages = ({
 					{peers.length === 0 ? (
 						<p className={`px-1 text-xs ${mutedText}`}>No conversations yet</p>
 					) : null}
-					{peers.map((peer) => (
-						<button
-							key={peer.address}
-							type="button"
-							className={`truncate rounded-md px-2 py-1 text-left text-xs transition-colors ${
-								selected === peer.address
-									? isDark
-										? "bg-neutral-800 text-white"
-										: "bg-neutral-200 text-black"
-									: mutedText
-							}`}
-							onClick={(): void => {
-								setSelected(peer.address);
-							}}
-						>
-							{peer.label}
-						</button>
-					))}
+					{peers.map((peer) => {
+						const unread = unreadForPeer(threads, peer.address);
+						return (
+							<button
+								key={peer.address}
+								type="button"
+								className={`flex items-center justify-between gap-1 rounded-md px-2 py-1 text-left text-xs transition-colors ${
+									selected === peer.address
+										? isDark
+											? "bg-neutral-800 text-white"
+											: "bg-neutral-200 text-black"
+										: mutedText
+								}`}
+								onClick={(): void => {
+									setSelected(peer.address);
+								}}
+							>
+								<span className="truncate">{peer.label}</span>
+								{unread > 0 && selected !== peer.address ? (
+									<span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-medium text-white">
+										{unread > 9 ? "9+" : unread}
+									</span>
+								) : null}
+							</button>
+						);
+					})}
 				</div>
 
 				<div className={`flex flex-col rounded-lg border ${panelClass}`}>

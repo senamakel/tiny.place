@@ -35,6 +35,8 @@ type UseDirectMessagesResult = {
 	addPeer: (input: string) => Promise<void>;
 	send: (address: string, text: string) => Promise<void>;
 	isSending: boolean;
+	/** Marks every message in a peer's thread as read. */
+	markThreadRead: (address: string) => void;
 };
 
 /**
@@ -59,6 +61,7 @@ export function useDirectMessages(): UseDirectMessagesResult {
 	const addPeerToStore = useConversationsStore((state) => state.addPeer);
 	const appendOutgoing = useConversationsStore((state) => state.appendOutgoing);
 	const appendIncoming = useConversationsStore((state) => state.appendIncoming);
+	const markThreadRead = useConversationsStore((state) => state.markThreadRead);
 
 	useQuery({
 		queryKey: ["direct-messages", "inbox", identity?.signer.publicKeyBase64],
@@ -127,6 +130,7 @@ export function useDirectMessages(): UseDirectMessagesResult {
 				text: body,
 				at: new Date().toISOString(),
 				outgoing: true,
+				read: true,
 			});
 		},
 		[sendMutation, appendOutgoing]
@@ -143,5 +147,6 @@ export function useDirectMessages(): UseDirectMessagesResult {
 		addPeer,
 		send,
 		isSending: sendMutation.isPending,
+		markThreadRead,
 	};
 }

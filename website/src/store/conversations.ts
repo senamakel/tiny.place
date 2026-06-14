@@ -6,6 +6,8 @@ export interface DirectMessageEntry {
 	text: string;
 	at: string;
 	outgoing: boolean;
+	/** Whether this message has been read. Outgoing messages are always read. */
+	read: boolean;
 }
 
 /** A conversation peer, addressed by encryption pubkey with a display label. */
@@ -28,9 +30,36 @@ type ConversationsState = {
 	appendIncoming: (
 		messages: Array<{ id: string; from: string; text: string; at: string }>
 	) => void;
+	/** Marks every message in a peer's thread as read (e.g. when it is opened). */
+	markThreadRead: (address: string) => void;
 	/** Clears all conversations (e.g. on wallet disconnect). */
 	reset: () => void;
 };
+
+/** Total number of unread (inbound, not-yet-read) messages across all threads. */
+export function unreadTotal(
+	threads: Record<string, Array<DirectMessageEntry>>
+): number {
+	let total = 0;
+	for (const thread of Object.values(threads)) {
+		for (const entry of thread) {
+			if (!entry.outgoing && !entry.read) {
+				total += 1;
+			}
+		}
+	}
+	return total;
+}
+
+/** Number of unread (inbound, not-yet-read) messages in a single peer's thread. */
+export function unreadForPeer(
+	threads: Record<string, Array<DirectMessageEntry>>,
+	address: string
+): number {
+	return (threads[address] ?? []).filter(
+		(entry) => !entry.outgoing && !entry.read
+	).length;
+}
 
 export const useConversationsStore = create<ConversationsState>()((set) => ({
 	peers: [],
@@ -70,6 +99,7 @@ export const useConversationsStore = create<ConversationsState>()((set) => ({
 						text: message.text,
 						at: message.at,
 						outgoing: false,
+						read: false,
 					},
 				];
 				if (!peers.some((peer) => peer.address === message.from)) {
@@ -80,6 +110,22 @@ export const useConversationsStore = create<ConversationsState>()((set) => ({
 				}
 			}
 			return { threads, peers };
+		});
+	},
+	markThreadRead: (address): void => {
+		set((state) => {
+			const thread = state.threads[address];
+			if (!thread || thread.every((entry) => entry.read)) {
+				return state;
+			}
+			return {
+				threads: {
+					...state.threads,
+					[address]: thread.map((entry) =>
+						entry.read ? entry : { ...entry, read: true }
+					),
+				},
+			};
 		});
 	},
 	reset: (): void => {

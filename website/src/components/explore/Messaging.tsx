@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { Channel, ChannelMessage } from "@tinyhumansai/tinyplace";
 
@@ -16,6 +16,7 @@ import {
 	useOwnedIdentities,
 } from "@src/hooks/use-marketplace";
 import { useAuthStore } from "@src/store/auth";
+import { hasUnread, useMessageReadsStore } from "@src/store/message-reads";
 
 function formatTimestamp(timestamp: string): string {
 	const date = new Date(timestamp);
@@ -64,6 +65,8 @@ const ChannelList = ({
 	onSelect: (channelId: string) => void;
 	selectedId: string;
 }): FunctionComponent => {
+	const lastReadAt = useMessageReadsStore((state) => state.lastReadAt);
+
 	if (isLoading) {
 		return (
 			<div className="flex items-center justify-center py-8">
@@ -106,14 +109,21 @@ const ChannelList = ({
 							onSelect(channel.channelId);
 						}}
 					>
-						<div className="flex items-center justify-between">
+						<div className="flex items-center justify-between gap-2">
 							<span
-								className={`text-xs font-medium ${isDark ? "text-white" : "text-black"}`}
+								className={`flex min-w-0 items-center gap-1.5 text-xs font-medium ${isDark ? "text-white" : "text-black"}`}
 							>
-								{channel.name}
+								{hasUnread(
+									lastReadAt,
+									channel.channelId,
+									channel.lastActivityAt
+								) && selectedId !== channel.channelId ? (
+									<span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
+								) : null}
+								<span className="truncate">{channel.name}</span>
 							</span>
 							<span
-								className={`text-[10px] ${isDark ? "text-neutral-600" : "text-neutral-300"}`}
+								className={`shrink-0 text-[10px] ${isDark ? "text-neutral-600" : "text-neutral-300"}`}
 							>
 								{channel.memberCount}
 							</span>
@@ -303,6 +313,25 @@ export const Messaging = ({
 	const channelIdentity = firstActiveIdentity(ownedIdentities.data?.identities);
 	const { data, isLoading, isError, error } = useChannels();
 	const joinChannel = useJoinChannel();
+	const markChannelRead = useMessageReadsStore((state) => state.markRead);
+
+	const channels = data?.channels ?? [];
+	const effectiveActor = channelIdentity?.username ?? agentId ?? "";
+	const activeChannelId =
+		selectedChannelId ||
+		(channels.length > 0 ? channels[0]?.channelId : undefined);
+	const activeChannel = channels.find(
+		(channel): boolean => channel.channelId === activeChannelId
+	);
+
+	// Viewing a channel clears its unread marker. Re-run when its activity moves
+	// so freshly arrived messages in the open channel stay marked read.
+	const activeChannelActivityAt = activeChannel?.lastActivityAt;
+	useEffect((): void => {
+		if (activeChannelId) {
+			markChannelRead(activeChannelId, activeChannelActivityAt);
+		}
+	}, [activeChannelId, activeChannelActivityAt, markChannelRead]);
 
 	const isAuthError =
 		isError &&
@@ -337,15 +366,6 @@ export const Messaging = ({
 			</div>
 		);
 	}
-
-	const channels = data?.channels ?? [];
-	const effectiveActor = channelIdentity?.username ?? agentId ?? "";
-	const activeChannelId =
-		selectedChannelId ||
-		(channels.length > 0 ? channels[0]?.channelId : undefined);
-	const activeChannel = channels.find(
-		(channel): boolean => channel.channelId === activeChannelId
-	);
 
 	return (
 		<div

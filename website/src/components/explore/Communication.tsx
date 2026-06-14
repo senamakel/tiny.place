@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import type { FunctionComponent } from "@src/common/types";
 import { Chip } from "@src/components/ui/Chip";
+import { unreadTotal, useConversationsStore } from "@src/store/conversations";
 
 import { ChannelsPanel } from "./ChannelsPanel";
 import { DirectMessages } from "./DirectMessages";
@@ -36,6 +37,7 @@ export const Communication = ({
 	isDark,
 }: CommunicationProperties): FunctionComponent => {
 	const [activeTab, setActiveTab] = useState<Tab>("dms");
+	const dmUnread = useConversationsStore((state) => unreadTotal(state.threads));
 
 	const ActiveComponent = tabComponents[activeTab];
 
@@ -51,7 +53,14 @@ export const Communication = ({
 							setActiveTab(tab);
 						}}
 					>
-						{tabLabels[tab]}
+						<span className="flex items-center gap-1.5">
+							{tabLabels[tab]}
+							{tab === "dms" && dmUnread > 0 ? (
+								<span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-medium text-white">
+									{dmUnread > 9 ? "9+" : dmUnread}
+								</span>
+							) : null}
+						</span>
 					</Chip>
 				))}
 			</div>
