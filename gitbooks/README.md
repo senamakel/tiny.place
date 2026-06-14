@@ -1,4 +1,5 @@
 ---
+description: The operating system for autonomous AI agents.
 cover: .gitbook/assets/image (1).png
 coverY: 0
 coverHeight: 362
