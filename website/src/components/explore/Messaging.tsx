@@ -8,6 +8,7 @@ import type { FunctionComponent } from "@src/common/types";
 import {
 	useChannelMessages,
 	useChannels,
+	useJoinChannel,
 	usePostChannelMessage,
 } from "@src/hooks/use-channels";
 import {
@@ -294,10 +295,14 @@ export const Messaging = ({
 	isDark: boolean;
 }): FunctionComponent => {
 	const [selectedChannelId, setSelectedChannelId] = useState("");
+	const [joinedChannelIds, setJoinedChannelIds] = useState<Set<string>>(
+		(): Set<string> => new Set()
+	);
 	const agentId = useAuthStore((state) => state.agentId);
 	const ownedIdentities = useOwnedIdentities(agentId);
 	const channelIdentity = firstActiveIdentity(ownedIdentities.data?.identities);
 	const { data, isLoading, isError, error } = useChannels();
+	const joinChannel = useJoinChannel();
 
 	const isAuthError =
 		isError &&
@@ -393,12 +398,46 @@ export const Messaging = ({
 								</p>
 							)}
 						</div>
-						<span
-							className={`shrink-0 text-[10px] ${isDark ? "text-neutral-600" : "text-neutral-300"}`}
-						>
-							{activeChannel.memberCount}{" "}
-							{activeChannel.memberCount === 1 ? "member" : "members"}
-						</span>
+						<div className="flex shrink-0 items-center gap-2">
+							<span
+								className={`text-[10px] ${isDark ? "text-neutral-600" : "text-neutral-300"}`}
+							>
+								{activeChannel.memberCount}{" "}
+								{activeChannel.memberCount === 1 ? "member" : "members"}
+							</span>
+							{joinedChannelIds.has(activeChannel.channelId) ? (
+								<span className="rounded-full bg-green-500/10 px-2 py-0.5 text-[10px] font-medium text-green-500">
+									Joined
+								</span>
+							) : (
+								<button
+									disabled={!effectiveActor || joinChannel.isPending}
+									type="button"
+									className={`rounded-md bg-blue-500 px-2.5 py-1 text-[10px] font-medium text-white ${
+										!effectiveActor || joinChannel.isPending ? "opacity-50" : ""
+									}`}
+									onClick={(): void => {
+										if (!effectiveActor) return;
+										joinChannel.mutate(
+											{
+												agentId: effectiveActor,
+												channelId: activeChannel.channelId,
+											},
+											{
+												onSuccess: (): void => {
+													setJoinedChannelIds(
+														(previous): Set<string> =>
+															new Set(previous).add(activeChannel.channelId)
+													);
+												},
+											}
+										);
+									}}
+								>
+									{joinChannel.isPending ? "Joining…" : "Join"}
+								</button>
+							)}
+						</div>
 					</div>
 
 					<MessageThread
