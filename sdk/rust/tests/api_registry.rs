@@ -71,7 +71,10 @@ async fn registry_update_profile_visibility() {
 async fn registry_renew() {
     let server = any_empty_ok().await;
     let client = client_for(&server);
-    let _ = client.registry.renew("@alice", RenewalRequest::default()).await;
+    let _ = client
+        .registry
+        .renew("@alice", RenewalRequest::default())
+        .await;
     let req = only_request(&server).await;
     assert_eq!(req.method.as_str(), "POST");
     assert!(req.url.path().ends_with("/renew"));

@@ -162,6 +162,65 @@ async fn sign_admin_helper(
 }
 
 #[test]
+fn solana_secret_key_round_trips_64_and_32_bytes() {
+    use tinyplace::crypto::{from_base64, public_key_to_hex};
+
+    let base = LocalSigner::from_seed(&[4u8; 32]).unwrap();
+    let seed = base.seed();
+    let public = *base.public_key();
+
+    // 64-byte secret = seed || public key
+    let mut secret64 = Vec::with_capacity(64);
+    secret64.extend_from_slice(&seed);
+    secret64.extend_from_slice(&public);
+    let from64 = LocalSigner::from_solana_secret_key_bytes(&secret64).unwrap();
+    assert_eq!(from64.agent_id(), base.agent_id());
+
+    // 32-byte secret = seed only
+    let from32 = LocalSigner::from_solana_secret_key_bytes(&seed).unwrap();
+    assert_eq!(from32.agent_id(), base.agent_id());
+
+    // base58 string form
+    let b58 = bs58::encode(&secret64).into_string();
+    let from_str = LocalSigner::from_solana_secret_key(&b58).unwrap();
+    assert_eq!(from_str.agent_id(), base.agent_id());
+
+    // hex / base64 helpers
+    assert_eq!(public_key_to_hex(&public).len(), 64);
+    assert_eq!(
+        from_base64(&base.public_key_base64()).unwrap(),
+        public.to_vec()
+    );
+}
+
+#[test]
+fn solana_secret_key_rejects_bad_input() {
+    // wrong length
+    assert!(LocalSigner::from_solana_secret_key_bytes(&[0u8; 10]).is_err());
+    // 64 bytes whose trailing public key does not match the seed
+    let mut bad = vec![1u8; 32];
+    bad.extend_from_slice(&[9u8; 32]);
+    assert!(LocalSigner::from_solana_secret_key_bytes(&bad).is_err());
+    // invalid base58
+    assert!(LocalSigner::from_solana_secret_key("not base58 !!!").is_err());
+}
+
+#[test]
+fn generate_produces_distinct_identities() {
+    let a = LocalSigner::generate();
+    let b = LocalSigner::generate();
+    assert_ne!(a.agent_id(), b.agent_id());
+    assert_eq!(a.public_key().len(), 32);
+}
+
+#[test]
+fn base58_decode_round_trip() {
+    use tinyplace::crypto::decode_base58;
+    let encoded = bs58::encode([1u8, 2, 3, 4]).into_string();
+    assert_eq!(decode_base58(&encoded).unwrap(), vec![1, 2, 3, 4]);
+}
+
+#[test]
 fn auth_header_format() {
     assert_eq!(
         build_auth_header("@a", "SIG", "2026-01-01T00:00:00.000Z"),

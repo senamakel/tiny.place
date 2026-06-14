@@ -77,10 +77,7 @@ pub async fn any_no_content() -> MockServer {
 
 /// Return the single request the server received (panics if not exactly one).
 pub async fn only_request(server: &MockServer) -> Request {
-    let mut requests = server
-        .received_requests()
-        .await
-        .expect("recording enabled");
+    let mut requests = server.received_requests().await.expect("recording enabled");
     assert_eq!(requests.len(), 1, "expected exactly one request");
     requests.remove(0)
 }

@@ -130,7 +130,10 @@ async fn no_content_returns_unit() {
         signer: Some(signer),
         ..Default::default()
     });
-    let _: () = http.delete::<(), serde_json::Value>("/thing", None).await.unwrap();
+    let _: () = http
+        .delete::<(), serde_json::Value>("/thing", None)
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
