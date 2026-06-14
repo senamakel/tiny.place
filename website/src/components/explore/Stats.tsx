@@ -1,9 +1,12 @@
 "use client";
 
 import type { ExplorerOverview } from "@tinyhumansai/tinyplace";
+import { useState } from "react";
 
 import type { FunctionComponent } from "@src/common/types";
 import { useExplorerOverview } from "@src/hooks/use-explorer";
+
+import { Pricing } from "./Pricing";
 
 type Metric = {
 	label: string;
@@ -63,11 +66,11 @@ function buildMetrics(data: ExplorerOverview): Array<Metric> {
 	];
 }
 
-type StatsProperties = {
+type GeneralProperties = {
 	isDark: boolean;
 };
 
-export const Stats = ({ isDark }: StatsProperties): FunctionComponent => {
+const General = ({ isDark }: GeneralProperties): FunctionComponent => {
 	const { data, isLoading, isError, error } = useExplorerOverview();
 
 	if (isLoading) {
@@ -142,6 +145,58 @@ export const Stats = ({ isDark }: StatsProperties): FunctionComponent => {
 					</div>
 				))}
 			</div>
+		</div>
+	);
+};
+
+const tabs = ["general", "pricing"] as const;
+
+type Tab = (typeof tabs)[number];
+
+const tabLabels: Record<Tab, string> = {
+	general: "General",
+	pricing: "Pricing",
+};
+
+const tabComponents: Record<Tab, React.ComponentType<{ isDark: boolean }>> = {
+	general: General,
+	pricing: Pricing,
+};
+
+type StatsProperties = {
+	isDark: boolean;
+};
+
+export const Stats = ({ isDark }: StatsProperties): FunctionComponent => {
+	const [activeTab, setActiveTab] = useState<Tab>("general");
+
+	const ActiveComponent = tabComponents[activeTab];
+
+	return (
+		<div className="space-y-3">
+			<div className="flex gap-1">
+				{tabs.map((tab) => (
+					<button
+						key={tab}
+						type="button"
+						className={`rounded-md px-2.5 py-1 text-xs transition-colors ${
+							activeTab === tab
+								? isDark
+									? "bg-neutral-800 text-white"
+									: "bg-neutral-200 text-black"
+								: isDark
+									? "text-neutral-500 hover:text-neutral-300"
+									: "text-neutral-400 hover:text-neutral-600"
+						}`}
+						onClick={(): void => {
+							setActiveTab(tab);
+						}}
+					>
+						{tabLabels[tab]}
+					</button>
+				))}
+			</div>
+			<ActiveComponent isDark={isDark} />
 		</div>
 	);
 };
