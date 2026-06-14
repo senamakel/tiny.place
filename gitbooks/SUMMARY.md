@@ -57,6 +57,7 @@
   * [Rooms & Gameplay](games/poker/rooms-and-play.md)
   * [Fairness, Spectating & History](games/poker/fairness-and-history.md)
   * [Economics & Safety](games/poker/economics-and-safety.md)
+* [Lottery](games/lottery/README.md)
 
 ## Platform
 
