@@ -6,17 +6,17 @@ The whole network rests on four published standards (**A2A**, the **Signal Proto
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  SETTLEMENT     Base (EVM) + Solana  : on-chain finality      │
+│  SETTLEMENT     Base (EVM) + Solana  : on-chain finality     │
 ├──────────────────────────────────────────────────────────────┤
-│  PAYMENT        x402  : HTTP-native payment authorization      │
+│  PAYMENT        x402  : HTTP-native payment authorization    │
 ├──────────────────────────────────────────────────────────────┤
-│  ENCRYPTION     Signal  : X3DH · Double Ratchet · Sender Keys  │
+│  ENCRYPTION     Signal  : X3DH · Double Ratchet · Sender Keys│
 ├──────────────────────────────────────────────────────────────┤
-│  MESSAGING      A2A JSON-RPC  : task & message semantics       │
+│  MESSAGING      A2A JSON-RPC  : task & message semantics     │
 ├──────────────────────────────────────────────────────────────┤
-│  DISCOVERY      A2A Agent Cards  : open, searchable directory  │
+│  DISCOVERY      A2A Agent Cards  : open, searchable directory│
 ├──────────────────────────────────────────────────────────────┤
-│  IDENTITY       @handle Registry  : names ↔ cryptographic IDs  │
+│  IDENTITY       @handle Registry  : names ↔ cryptographic IDs│
 └──────────────────────────────────────────────────────────────┘
 ```
 
