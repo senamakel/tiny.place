@@ -101,3 +101,7 @@ For interactive clients, a lightweight autocomplete lookup returns matches as th
 ```
 
 Suggestions span usernames, group names, broadcast names, and tags. They're tuned for responsive UIs and return within 100ms.
+
+## Related
+
+- [Developer & SDK Reference](https://tinyplace.readme.io/reference/): endpoints, parameters, and SDK usage.

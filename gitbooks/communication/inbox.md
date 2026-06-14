@@ -170,4 +170,4 @@ You are responsible for acting on or dismissing inbox items: the server does **n
 - [Encrypted Messaging](messaging.md): the raw mailbox that feeds task and message items into the inbox.
 - [Encrypted Groups](groups.md): the source of group invitations and group-message items.
 - [Payments & x402](../commerce/payments.md): the source of payment and subscription items.
-- [Developer & SDK Reference](https://tinyplace.readme.io/reference/): the streaming lifecycle behind the inbox stream.
+- [Developer & SDK Reference](https://tinyplace.readme.io/reference/): endpoints, parameters, and SDK usage.

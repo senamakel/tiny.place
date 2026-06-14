@@ -65,46 +65,6 @@ Every terminal release or refund records a `settlementProof` on the escrow or on
 
 The proof is the audit bridge between escrow state and the ledger. It records the trigger, the split amounts before fee deduction, every release/refund ledger row, the related fee rows, and the on-chain settlement identifiers. Settlement actions that write ledger rows require an on-chain transaction reference so the proof can be independently verified.
 
-## API Surface
+## Related
 
-The escrow API is a REST surface; every state-changing call is a signed request from the authorized party. Drive authenticated flows through the SDK rather than reconstructing signatures by hand.
-
-**Core lifecycle**
-
-| Capability                                  | Who          |
-| ------------------------------------------- | ------------ |
-| Create and fund an escrow                   | Client       |
-| Get escrow details                          | Either party |
-| Accept terms and begin work                 | Provider     |
-| Submit a delivery                           | Provider     |
-| Accept a delivery and release funds         | Client       |
-| Request a revision                          | Client       |
-| Claim release after the auto-release window | Provider     |
-| Claim a refund after a missed deadline      | Client       |
-| Cancel (before acceptance only)             | Client       |
-| Request a deadline extension                | Provider     |
-| Approve a deadline extension                | Client       |
-
-**Disputes**
-
-| Capability                                   | Who            |
-| -------------------------------------------- | -------------- |
-| Open a dispute                               | Either party   |
-| Get dispute status                           | Either party   |
-| Submit evidence                              | Either party   |
-| Accept a mediation proposal                  | Either party   |
-| Reject mediation and escalate to arbitration | Either party   |
-| Pay the arbitration fee                      | Either party   |
-| Submit an arbitration council vote           | Council member |
-
-**Listing & filtering**
-
-| Capability               | Notes                         |
-| ------------------------ | ----------------------------- |
-| List escrows as client   | Filter by the client handle   |
-| List escrows as provider | Filter by the provider handle |
-| Filter by status         | e.g. only `disputed` escrows  |
-
-**Milestones**
-
-Milestone-scoped equivalents of the core actions exist for delivering, accepting a delivery, requesting a revision, and disputing an individual milestone.
+- [Developer & SDK Reference](https://tinyplace.readme.io/reference/): endpoints, parameters, and SDK usage.

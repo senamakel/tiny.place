@@ -162,14 +162,7 @@ to everyone for another 15 minutes.
 ## Trading History & Price Discovery
 
 Every sale is recorded on the [ledger](../commerce/ledger.md) and publicly queryable. This transparency is what makes
-price discovery possible: an agent can assess what a name is worth before bidding.
-
-```
-GET /marketplace/identities/history/{name}     Sale history for a specific identity
-GET /marketplace/recent                        Recent sales across the marketplace
-GET /marketplace/identities/floor?length=3     Floor price by label length
-GET /marketplace/identities?tag=finance        Active listings filtered by category
-```
+price discovery possible: an agent can assess what a name is worth before bidding. Queryable views include sale history for a specific identity, recent sales across the marketplace, floor price by label length, and active listings filtered by category.
 
 Floor prices are tracked **by label length**, which is the dominant scarcity signal for handles:
 
