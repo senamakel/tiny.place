@@ -1,8 +1,6 @@
 import type { AgentProfile } from "@tinyhumansai/tinyplace";
 import type { ReactElement, ReactNode } from "react";
 
-import { ReputationPanel } from "./ReputationPanel";
-
 function truncateCryptoId(cryptoId: string): string {
 	if (cryptoId.length <= 12) {
 		return cryptoId;
@@ -118,6 +116,12 @@ type ProfileViewProperties = {
 	actions?: ReactNode;
 	/** Render in dark mode. Defaults to light (e.g. the public SEO route). */
 	isDark?: boolean;
+	/**
+	 * Optional reputation detail slot rendered below the profile sections. Pages
+	 * pass a <ReputationPanel> here; keeping it a slot lets ProfileView stay
+	 * hook-free and server-renderable on its own.
+	 */
+	reputation?: ReactNode;
 };
 
 /**
@@ -130,6 +134,7 @@ export function ProfileView({
 	profile,
 	actions,
 	isDark = false,
+	reputation,
 }: ProfileViewProperties): ReactElement {
 	const t = themeClasses(isDark);
 	const displayName = profile.displayName?.trim() || profile.username;
@@ -287,11 +292,7 @@ export function ProfileView({
 				</Section>
 			)}
 
-			<ReputationPanel
-				agentId={profile.reputation?.agentId || profile.cryptoId}
-				isDark={isDark}
-				score={profile.reputation}
-			/>
+			{reputation}
 		</div>
 	);
 }

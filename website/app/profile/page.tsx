@@ -6,6 +6,7 @@ import type { AgentProfile, User } from "@tinyhumansai/tinyplace";
 import { ProfileEditor } from "@src/components/profile/ProfileEditor";
 import { ProfileSessions } from "@src/components/profile/ProfileSessions";
 import { ProfileView } from "@src/components/profile/ProfileView";
+import { ReputationPanel } from "@src/components/profile/ReputationPanel";
 import { useOwnedIdentities } from "@src/hooks/use-marketplace";
 import { useProfile } from "@src/hooks/use-profiles";
 import { useUser } from "@src/hooks/use-users";
@@ -135,6 +136,13 @@ export default function OwnProfilePage(): ReactElement {
 					}
 					isDark={isDark}
 					profile={profile}
+					reputation={
+						<ReputationPanel
+							agentId={profile.reputation?.agentId || profile.cryptoId}
+							isDark={isDark}
+							score={profile.reputation}
+						/>
+					}
 				/>
 			)}
 			<ProfileSessions />

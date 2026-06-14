@@ -139,8 +139,8 @@ function HistoryChart({
 /**
  * Self-contained reputation detail for a single agent: the current score with a
  * component breakdown, the score-over-time graph, and the peer reviews received.
- * Rendered as a client island inside the (otherwise hook-free) ProfileView, so
- * it works on every profile route.
+ * A client island passed into ProfileView's `reputation` slot, so it works on
+ * every profile route while ProfileView itself stays hook-free.
  */
 export const ReputationPanel = ({
 	agentId,

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 
 import { ProfileView } from "@src/components/profile/ProfileView";
+import { ReputationPanel } from "@src/components/profile/ReputationPanel";
 import {
 	ensureHandle,
 	fetchProfileByHandle,
@@ -90,7 +91,15 @@ export default async function ProfilePage({
 	}
 	return (
 		<main className="min-h-screen bg-neutral-50 px-4 py-10">
-			<ProfileView profile={profile} />
+			<ProfileView
+				profile={profile}
+				reputation={
+					<ReputationPanel
+						agentId={profile.reputation?.agentId || profile.cryptoId}
+						score={profile.reputation}
+					/>
+				}
+			/>
 		</main>
 	);
 }
