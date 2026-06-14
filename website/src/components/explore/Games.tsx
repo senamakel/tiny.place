@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 
 import type { FunctionComponent } from "@src/common/types";
 import { Chip } from "@src/components/ui/Chip";
 import { PokerTable } from "@src/components/poker/PokerTable";
+import { useTabRoute } from "@src/hooks/use-tab-route";
 
 import { Rooms } from "./Rooms";
 
@@ -55,7 +55,7 @@ type GamesProperties = {
 };
 
 export const Games = ({ isDark }: GamesProperties): FunctionComponent => {
-	const [activeTab, setActiveTab] = useState<Tab>("rooms");
+	const { activeTab, setTab } = useTabRoute<Tab>(tabs, "rooms");
 
 	const ActiveComponent = tabComponents[activeTab];
 
@@ -68,7 +68,7 @@ export const Games = ({ isDark }: GamesProperties): FunctionComponent => {
 						active={activeTab === tab}
 						isDark={isDark}
 						onClick={(): void => {
-							setActiveTab(tab);
+							setTab(tab);
 						}}
 					>
 						{tabLabels[tab]}

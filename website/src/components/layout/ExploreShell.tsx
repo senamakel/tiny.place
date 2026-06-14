@@ -68,8 +68,9 @@ export const ExploreShell = ({
 		void i18n.changeLanguage(i18n.resolvedLanguage === "en" ? "es" : "en");
 	};
 	const pathname = usePathname();
-	const activeSection =
-		pathname === "/" ? "home" : (pathname.split("/").pop() ?? "directory");
+	// The section is the first path segment so a tab sub-route (e.g.
+	// /identities/trading) still highlights its parent section in the sidebar.
+	const activeSection = pathname.split("/").filter(Boolean)[0] ?? "home";
 
 	return (
 		<div

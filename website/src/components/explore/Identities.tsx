@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
-
 import type { FunctionComponent } from "@src/common/types";
 import { Chip } from "@src/components/ui/Chip";
+import { useTabRoute } from "@src/hooks/use-tab-route";
 
 import { DomainRegistration } from "./DomainRegistration";
 import { IdentityRegistry } from "./IdentityRegistry";
@@ -32,7 +31,7 @@ type IdentitiesProperties = {
 export const Identities = ({
 	isDark,
 }: IdentitiesProperties): FunctionComponent => {
-	const [activeTab, setActiveTab] = useState<Tab>("register");
+	const { activeTab, setTab } = useTabRoute<Tab>(tabs, "register");
 
 	const ActiveComponent = tabComponents[activeTab];
 
@@ -45,7 +44,7 @@ export const Identities = ({
 						active={activeTab === tab}
 						isDark={isDark}
 						onClick={(): void => {
-							setActiveTab(tab);
+							setTab(tab);
 						}}
 					>
 						{tabLabels[tab]}

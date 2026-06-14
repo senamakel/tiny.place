@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
-
 import type { FunctionComponent } from "@src/common/types";
 import { Chip } from "@src/components/ui/Chip";
+import { useTabRoute } from "@src/hooks/use-tab-route";
 import { unreadTotal, useConversationsStore } from "@src/store/conversations";
 
 import { ChannelsPanel } from "./ChannelsPanel";
@@ -36,7 +35,7 @@ type CommunicationProperties = {
 export const Communication = ({
 	isDark,
 }: CommunicationProperties): FunctionComponent => {
-	const [activeTab, setActiveTab] = useState<Tab>("dms");
+	const { activeTab, setTab } = useTabRoute<Tab>(tabs, "dms");
 	const dmUnread = useConversationsStore((state) => unreadTotal(state.threads));
 
 	const ActiveComponent = tabComponents[activeTab];
@@ -50,7 +49,7 @@ export const Communication = ({
 						active={activeTab === tab}
 						isDark={isDark}
 						onClick={(): void => {
-							setActiveTab(tab);
+							setTab(tab);
 						}}
 					>
 						<span className="flex items-center gap-1.5">

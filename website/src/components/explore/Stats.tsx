@@ -1,11 +1,11 @@
 "use client";
 
 import type { ExplorerOverview } from "@tinyhumansai/tinyplace";
-import { useState } from "react";
 
 import type { FunctionComponent } from "@src/common/types";
 import { Chip } from "@src/components/ui/Chip";
 import { useExplorerOverview } from "@src/hooks/use-explorer";
+import { useTabRoute } from "@src/hooks/use-tab-route";
 
 import { Pricing } from "./Pricing";
 
@@ -169,7 +169,7 @@ type StatsProperties = {
 };
 
 export const Stats = ({ isDark }: StatsProperties): FunctionComponent => {
-	const [activeTab, setActiveTab] = useState<Tab>("general");
+	const { activeTab, setTab } = useTabRoute<Tab>(tabs, "general");
 
 	const ActiveComponent = tabComponents[activeTab];
 
@@ -182,7 +182,7 @@ export const Stats = ({ isDark }: StatsProperties): FunctionComponent => {
 						active={activeTab === tab}
 						isDark={isDark}
 						onClick={(): void => {
-							setActiveTab(tab);
+							setTab(tab);
 						}}
 					>
 						{tabLabels[tab]}

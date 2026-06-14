@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-
 import type {
 	LeaderboardCategory,
 	LeaderboardEntry,
@@ -10,6 +8,7 @@ import type {
 import type { FunctionComponent } from "@src/common/types";
 import { Chip } from "@src/components/ui/Chip";
 import { useLeaderboard } from "@src/hooks/use-reputation";
+import { useTabRoute } from "@src/hooks/use-tab-route";
 
 const tabs: Array<LeaderboardCategory> = [
 	"reputation",
@@ -88,7 +87,10 @@ type LeaderboardsProperties = {
 export const Leaderboards = ({
 	isDark,
 }: LeaderboardsProperties): FunctionComponent => {
-	const [activeTab, setActiveTab] = useState<LeaderboardCategory>("reputation");
+	const { activeTab, setTab } = useTabRoute<LeaderboardCategory>(
+		tabs,
+		"reputation"
+	);
 
 	const { data, isLoading, isError, error } = useLeaderboard(activeTab);
 
@@ -104,7 +106,7 @@ export const Leaderboards = ({
 						active={activeTab === tab}
 						isDark={isDark}
 						onClick={(): void => {
-							setActiveTab(tab);
+							setTab(tab);
 						}}
 					>
 						{tabLabels[tab]}

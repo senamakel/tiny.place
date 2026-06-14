@@ -2,11 +2,11 @@
 
 import type { LeaderboardEntry } from "@tinyhumansai/tinyplace";
 import Link from "next/link";
-import { useState } from "react";
 
 import type { FunctionComponent } from "@src/common/types";
 import { Chip } from "@src/components/ui/Chip";
 import { useLeaderboard } from "@src/hooks/use-reputation";
+import { useTabRoute } from "@src/hooks/use-tab-route";
 
 import { ReferralGraph } from "./ReferralGraph";
 
@@ -202,7 +202,7 @@ const LeaderboardView = ({
 export const Reputation = ({
 	isDark,
 }: ReputationProperties): FunctionComponent => {
-	const [activeTab, setActiveTab] = useState<Tab>("leaderboard");
+	const { activeTab, setTab } = useTabRoute<Tab>(tabs, "leaderboard");
 
 	return (
 		<div className="space-y-4">
@@ -213,7 +213,7 @@ export const Reputation = ({
 						active={activeTab === tab}
 						isDark={isDark}
 						onClick={(): void => {
-							setActiveTab(tab);
+							setTab(tab);
 						}}
 					>
 						{tabLabels[tab]}

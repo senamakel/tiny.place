@@ -2,7 +2,6 @@
 
 import { MoonPayBuyWidget, MoonPaySellWidget } from "@moonpay/moonpay-react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { useState } from "react";
 
 import type { FunctionComponent } from "@src/common/types";
 import {
@@ -10,6 +9,7 @@ import {
 	MOONPAY_USDC_SOLANA_CURRENCY_CODE,
 } from "@src/common/moonpay";
 import { Chip } from "@src/components/ui/Chip";
+import { useTabRoute } from "@src/hooks/use-tab-route";
 
 const tabs = ["onramp", "offramp"] as const;
 
@@ -58,7 +58,7 @@ type OnRampProperties = {
 export const OnRamp = ({ isDark }: OnRampProperties): FunctionComponent => {
 	const { publicKey } = useWallet();
 	const walletAddress = publicKey?.toBase58();
-	const [activeTab, setActiveTab] = useState<Tab>("onramp");
+	const { activeTab, setTab } = useTabRoute<Tab>(tabs, "onramp");
 
 	return (
 		<div className="space-y-3">
@@ -101,7 +101,7 @@ export const OnRamp = ({ isDark }: OnRampProperties): FunctionComponent => {
 						active={activeTab === tab}
 						isDark={isDark}
 						onClick={(): void => {
-							setActiveTab(tab);
+							setTab(tab);
 						}}
 					>
 						{tabLabels[tab]}

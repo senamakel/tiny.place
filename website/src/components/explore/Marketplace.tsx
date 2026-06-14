@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
-
 import type { FunctionComponent } from "@src/common/types";
 import { Chip } from "@src/components/ui/Chip";
+import { useTabRoute } from "@src/hooks/use-tab-route";
 
 import { Artifacts } from "./Artifacts";
 import { Disputes } from "./marketplace/Disputes";
@@ -47,7 +46,7 @@ type MarketplaceProperties = {
 export const Marketplace = ({
 	isDark,
 }: MarketplaceProperties): FunctionComponent => {
-	const [activeTab, setActiveTab] = useState<Tab>("search");
+	const { activeTab, setTab } = useTabRoute<Tab>(tabs, "search");
 
 	const ActiveComponent = tabComponents[activeTab];
 
@@ -60,7 +59,7 @@ export const Marketplace = ({
 						active={activeTab === tab}
 						isDark={isDark}
 						onClick={(): void => {
-							setActiveTab(tab);
+							setTab(tab);
 						}}
 					>
 						{tabLabels[tab]}
