@@ -1,7 +1,12 @@
 import {
 	BrowserSessionSigner,
+	clearSession as clearStoredSession,
+	loadSession,
+	saveSession,
+	sessionIsFresh,
 	Signer,
 	SOLANA_MAINNET_NETWORK,
+	type StoredSession,
 	type TinyVerseClient,
 	type X25519KeyPair,
 } from "@tinyhumansai/tinyplace";
@@ -9,6 +14,9 @@ import {
 import { WalletSigner } from "@src/common/wallet-signer";
 
 type SignMessageFunction = (message: Uint8Array) => Promise<Uint8Array>;
+
+/** Builds a client; pass the session signer to make authenticated calls. */
+type ClientFactory = (signer?: Signer) => TinyVerseClient;
 
 // How long a session grant stays valid before the wallet must re-approve.
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
@@ -18,6 +26,17 @@ const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const SESSION_ASSET = "SOL";
 const SESSION_BUDGET = "1000000000"; // 1 SOL in lamports
 
+/** The grant metadata needed to persist and reason about a session. */
+interface SessionGrant {
+	signerKey: string;
+	approvalNonce: string;
+	expiresAt: string;
+	network: string;
+	asset: string;
+	budget: string;
+	grantorPublicKeyBase64: string;
+}
+
 /**
  * A "hot session wallet" signer. The user's wallet (Phantom) approves a fresh
  * in-memory session key ONCE — an x402 "upto" grant registered with the backend
@@ -26,6 +45,10 @@ const SESSION_BUDGET = "1000000000"; // 1 SOL in lamports
  * `agentId` (so the user keeps operating as their wallet) while presenting the
  * session public key for signature verification; the backend's approved-signer
  * delegation authorizes the session key to act as the wallet.
+ *
+ * The grant is persisted (see {@link restoreOrEstablish}) so a page reload
+ * restores the session WITHOUT a wallet prompt, re-prompting only when the grant
+ * has expired or the backend has marked it invalid (revoked / exhausted).
  *
  * Unlike {@link WalletSigner}, this also supports `getX25519KeyPair`, so Signal
  * end-to-end encryption works (an external wallet cannot expose its seed).
@@ -45,13 +68,19 @@ export class SessionWalletSigner extends Signer {
 	public readonly walletSigner: WalletSigner;
 
 	private readonly session: BrowserSessionSigner;
+	private readonly grant: SessionGrant;
 
-	private constructor(grantor: WalletSigner, session: BrowserSessionSigner) {
+	private constructor(
+		grantor: WalletSigner,
+		session: BrowserSessionSigner,
+		grant: SessionGrant
+	) {
 		super();
 		this.agentId = grantor.agentId;
 		this.publicKeyBase64 = session.publicKeyBase64;
 		this.walletSigner = grantor;
 		this.session = session;
+		this.grant = grant;
 	}
 
 	public sign(data: Uint8Array): Promise<Uint8Array> {
@@ -61,6 +90,93 @@ export class SessionWalletSigner extends Signer {
 
 	public getX25519KeyPair(): Promise<X25519KeyPair> {
 		return this.session.getX25519KeyPair();
+	}
+
+	/** Assembles the persistable record for this session. */
+	private toStoredSession(): StoredSession {
+		return {
+			grantorAgentId: this.agentId,
+			grantorPublicKeyBase64: this.grant.grantorPublicKeyBase64,
+			signerKey: this.grant.signerKey,
+			approvalNonce: this.grant.approvalNonce,
+			expiresAt: this.grant.expiresAt,
+			network: this.grant.network,
+			asset: this.grant.asset,
+			budget: this.grant.budget,
+			keyPair: this.session.serialize().keyPair,
+		};
+	}
+
+	/**
+	 * Restores a persisted session for the wallet without a prompt, or — if none
+	 * is stored, it has expired, or the backend reports it inactive — establishes
+	 * a fresh one (the single wallet prompt) and persists it. This is the entry
+	 * point the app should use; {@link establish} is the always-prompt fallback.
+	 */
+	public static async restoreOrEstablish(
+		walletPublicKey: Uint8Array,
+		walletSignMessage: SignMessageFunction,
+		createClient: ClientFactory
+	): Promise<SessionWalletSigner> {
+		const grantor = new WalletSigner(walletPublicKey, walletSignMessage);
+		const stored = await loadSession(grantor.agentId);
+
+		if (stored && sessionIsFresh(stored, Date.now())) {
+			const restored = SessionWalletSigner.fromStored(stored, grantor);
+			if (await restored.backendConfirmsActive(createClient)) {
+				return restored;
+			}
+			// Backend revoked/expired/exhausted the grant — drop it and re-establish.
+			await clearStoredSession(grantor.agentId);
+		} else if (stored) {
+			await clearStoredSession(grantor.agentId);
+		}
+
+		const fresh = await SessionWalletSigner.establish(
+			walletPublicKey,
+			walletSignMessage,
+			createClient()
+		);
+		await saveSession(fresh.toStoredSession());
+		return fresh;
+	}
+
+	/**
+	 * Probes the backend for this session's live status, signing the request with
+	 * the session key itself. Returns true only when the grant is still active —
+	 * the delegation resolver authorizes the read only for active, unexpired
+	 * grants, so a revoked/expired session yields false (via a thrown 403).
+	 */
+	private async backendConfirmsActive(
+		createClient: ClientFactory
+	): Promise<boolean> {
+		try {
+			const client = createClient(this);
+			const signer = await client.signers.get(this.grant.signerKey, this.agentId);
+			return signer.status === "active";
+		} catch {
+			return false;
+		}
+	}
+
+	/** Rebuilds a signer from a persisted record — no prompt, no new grant. */
+	private static fromStored(
+		stored: StoredSession,
+		grantor: WalletSigner
+	): SessionWalletSigner {
+		const session = BrowserSessionSigner.fromStored(
+			stored.keyPair,
+			stored.approvalNonce
+		);
+		return new SessionWalletSigner(grantor, session, {
+			signerKey: stored.signerKey,
+			approvalNonce: stored.approvalNonce,
+			expiresAt: stored.expiresAt,
+			network: stored.network,
+			asset: stored.asset,
+			budget: stored.budget,
+			grantorPublicKeyBase64: stored.grantorPublicKeyBase64,
+		});
 	}
 
 	/**
@@ -96,6 +212,21 @@ export class SessionWalletSigner extends Signer {
 		// delegate that can act as the wallet.
 		await client.signers.approve(approval.authorization);
 
-		return new SessionWalletSigner(grantor, session);
+		const approvalNonce = session.getApprovalNonce();
+		if (!approvalNonce) {
+			throw new Error("session grant missing approval nonce");
+		}
+
+		return new SessionWalletSigner(grantor, session, {
+			signerKey: session.publicKeyHex,
+			approvalNonce,
+			// buildApprovalRequest strips fractional seconds before signing; persist
+			// the same whole-second expiry the grant was actually signed with.
+			expiresAt: approval.authorization.expiresAt,
+			network: SOLANA_MAINNET_NETWORK,
+			asset: SESSION_ASSET,
+			budget: SESSION_BUDGET,
+			grantorPublicKeyBase64: grantor.publicKeyBase64,
+		});
 	}
 }

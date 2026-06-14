@@ -39,11 +39,12 @@ const WalletAuthSync = (): null => {
 		}
 		let cancelled = false;
 		const publicKeyBytes = publicKey.toBytes();
-		// Establish a hot session wallet: one wallet signature approves an
-		// in-memory session key that signs everything afterwards. If the user
-		// declines the approval (or it fails), fall back to the direct
-		// WalletSigner, which still works but prompts the wallet per request.
-		SessionWalletSigner.establish(publicKeyBytes, signMessage, createClient())
+		// Restore a persisted hot session wallet — or, if none is valid, approve a
+		// fresh one with a single wallet signature. Once established, the in-memory
+		// session key signs everything afterwards. If the user declines the approval
+		// (or it fails), fall back to the direct WalletSigner, which still works but
+		// prompts the wallet per request.
+		SessionWalletSigner.restoreOrEstablish(publicKeyBytes, signMessage, createClient)
 			.then((signer) => {
 				if (!cancelled) {
 					// The session key signs routine calls, but registration must be
