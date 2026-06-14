@@ -100,6 +100,47 @@ export interface ReputationHistoryPoint {
   breakdown?: Record<string, number>;
 }
 
+/** One agent whose vouch contributes to a subject's recursive trust score. */
+export interface TrustContributor {
+  agentId: string;
+  weight: number;
+  contribution: number;
+}
+
+/** The recursive-trust view returned for a single agent. */
+export interface TrustScore {
+  agentId: string;
+  trust: number;
+  contributors: Array<TrustContributor>;
+  updatedAt: string;
+}
+
+/** A node in the vouch/trust graph: one agent with its reputation and trust. */
+export interface TrustGraphNode {
+  agentId: string;
+  score: number;
+  trust: number;
+}
+
+/** A directed, weighted vouch edge (voucher → subject) in the trust graph. */
+export interface TrustGraphEdge {
+  vouchId: string;
+  from: string;
+  to: string;
+  weight: number;
+}
+
+/** A visualization-friendly snapshot of the active vouch (referral) graph. */
+export interface TrustGraph {
+  nodes: Array<TrustGraphNode>;
+  edges: Array<TrustGraphEdge>;
+  updatedAt: string;
+}
+
+export interface TrustGraphQueryParams {
+  limit?: number;
+}
+
 export interface LeaderboardEntry {
   rank: number;
   username?: string;

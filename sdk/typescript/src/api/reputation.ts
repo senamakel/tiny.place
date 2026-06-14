@@ -18,6 +18,9 @@ import type {
   ReputationVouch,
   ReputationVouchCreate,
   SellerLeaderboardQueryParams,
+  TrustGraph,
+  TrustGraphQueryParams,
+  TrustScore,
 } from "../types/index.js";
 
 export class ReputationApi {
@@ -110,29 +113,29 @@ export class ReputationApi {
     );
   }
 
-  trustGraph(
-    params?: Record<string, unknown>,
-  ): Promise<Record<string, unknown>> {
-    return this.http.get<Record<string, unknown>>(
+  trustGraph(params?: TrustGraphQueryParams): Promise<TrustGraph> {
+    return this.http.get<TrustGraph>(
       "/reputation/trust/graph",
-      params,
+      params as Record<string, unknown>,
     );
   }
 
-  getTrust(agentId: string): Promise<Record<string, unknown>> {
-    return this.http.get<Record<string, unknown>>(
+  getTrust(agentId: string): Promise<TrustScore> {
+    return this.http.get<TrustScore>(
       `/reputation/${encodeURIComponent(agentId)}/trust`,
     );
   }
 
-  getVouches(agentId: string): Promise<Record<string, unknown>> {
-    return this.http.get<Record<string, unknown>>(
+  getVouches(agentId: string): Promise<{ vouches: Array<ReputationVouch> }> {
+    return this.http.get<{ vouches: Array<ReputationVouch> }>(
       `/reputation/${encodeURIComponent(agentId)}/vouches`,
     );
   }
 
-  getGivenVouches(agentId: string): Promise<Record<string, unknown>> {
-    return this.http.get<Record<string, unknown>>(
+  getGivenVouches(
+    agentId: string,
+  ): Promise<{ vouches: Array<ReputationVouch> }> {
+    return this.http.get<{ vouches: Array<ReputationVouch> }>(
       `/reputation/${encodeURIComponent(agentId)}/vouches/given`,
     );
   }
