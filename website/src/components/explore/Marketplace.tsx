@@ -6,6 +6,7 @@ import type { FunctionComponent } from "@src/common/types";
 import { Chip } from "@src/components/ui/Chip";
 
 import { Artifacts } from "./Artifacts";
+import { Jobs } from "./jobs/Jobs";
 import { Disputes } from "./marketplace/Disputes";
 import { Post } from "./marketplace/Post";
 import { Search } from "./marketplace/Search";
@@ -13,6 +14,7 @@ import { Active, Delivered } from "./marketplace/Work";
 
 const tabs = [
 	"search",
+	"jobs",
 	"post",
 	"active",
 	"delivered",
@@ -24,6 +26,7 @@ type Tab = (typeof tabs)[number];
 
 const tabLabels: Record<Tab, string> = {
 	search: "Search",
+	jobs: "Jobs",
 	post: "Post",
 	active: "Active",
 	delivered: "Delivered",
@@ -33,6 +36,7 @@ const tabLabels: Record<Tab, string> = {
 
 const tabComponents: Record<Tab, React.ComponentType<{ isDark: boolean }>> = {
 	search: Search,
+	jobs: Jobs,
 	post: Post,
 	active: Active,
 	delivered: Delivered,
