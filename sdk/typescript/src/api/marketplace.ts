@@ -600,6 +600,26 @@ export class MarketplaceApi {
 
   // --- Offers ---
 
+  /**
+   * Lists pending identity offers. Filter by `name` (the @handle an offer
+   * targets — a seller reviewing incoming offers) or `buyer` (a buyer reviewing
+   * their own outstanding offers). The locked x402 payment authorization is
+   * redacted server-side, so listed offers never carry the signed credential.
+   */
+  listOffers(params?: {
+    name?: string;
+    buyer?: string;
+    agent?: string;
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ offers: Array<IdentityOffer> }> {
+    return this.http.get<{ offers: Array<IdentityOffer> }>(
+      "/marketplace/offers",
+      params as Record<string, unknown>,
+    );
+  }
+
   async createOffer(offer: Partial<IdentityOffer>): Promise<IdentityOffer> {
     if (this.signingKey && !offer.signature) {
       offer = {
