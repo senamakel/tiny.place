@@ -60,6 +60,31 @@ export class BrowserSessionSigner extends Signer {
     return new BrowserSessionSigner(keyPair);
   }
 
+  /**
+   * Rebuilds a session signer from a previously persisted keypair and approval
+   * nonce (see {@link StoredSession}). No wallet prompt and no new grant — the
+   * caller has already confirmed the grant is still valid. The restored signer
+   * is byte-for-byte the one that was originally approved, so its signatures
+   * remain authorized by the same delegation.
+   */
+  static fromStored(
+    keyPair: KeyPair,
+    approvalNonce: string,
+  ): BrowserSessionSigner {
+    const signer = new BrowserSessionSigner(keyPair);
+    signer.approvalNonce = approvalNonce;
+    return signer;
+  }
+
+  /**
+   * Exposes the material needed to persist this session: the keypair (private
+   * key stays a CryptoKey, never extracted) and the approval nonce. Returns
+   * undefined for the nonce until {@link buildApprovalRequest} has run.
+   */
+  serialize(): { keyPair: KeyPair; approvalNonce: string | undefined } {
+    return { keyPair: this.keyPair, approvalNonce: this.approvalNonce };
+  }
+
   async buildApprovalRequest(
     grantor: SigningKey,
     grantorCryptoId: string,

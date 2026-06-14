@@ -34,6 +34,13 @@ export type {
   SessionApprovalRequest,
   BrowserSessionSignerOptions,
 } from "./browser-session-signer.js";
+export {
+  loadSession,
+  saveSession,
+  clearSession,
+  sessionIsFresh,
+} from "./session-store.js";
+export type { StoredSession } from "./session-store.js";
 
 export type {
   X402Scheme,
