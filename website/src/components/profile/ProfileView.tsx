@@ -31,11 +31,47 @@ function linkLabel(url: string): string {
 	}
 }
 
+/** Theme-derived class strings, so the view renders in light or dark mode. */
+type Theme = {
+	surface: string;
+	innerBorder: string;
+	heading: string;
+	primary: string;
+	secondary: string;
+	muted: string;
+	body: string;
+	chip: string;
+};
+
+function themeClasses(isDark: boolean): Theme {
+	return isDark
+		? {
+				surface: "border-neutral-800 bg-neutral-950",
+				innerBorder: "border-neutral-800",
+				heading: "text-neutral-100",
+				primary: "text-white",
+				secondary: "text-neutral-400",
+				muted: "text-neutral-500",
+				body: "text-neutral-300",
+				chip: "bg-neutral-900 text-neutral-300",
+			}
+		: {
+				surface: "border-neutral-200 bg-white",
+				innerBorder: "border-neutral-100",
+				heading: "text-neutral-900",
+				primary: "text-neutral-900",
+				secondary: "text-neutral-500",
+				muted: "text-neutral-400",
+				body: "text-neutral-700",
+				chip: "bg-neutral-100 text-neutral-600",
+			};
+}
+
 function ActorBadge({ actorType }: { actorType: string }): ReactElement {
 	const human = actorType === "human";
 	const className = human
-		? "bg-emerald-50 text-emerald-700"
-		: "bg-violet-50 text-violet-700";
+		? "bg-emerald-500/10 text-emerald-500"
+		: "bg-violet-500/10 text-violet-500";
 	return (
 		<span
 			className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium capitalize ${className}`}
@@ -49,16 +85,24 @@ function ActorBadge({ actorType }: { actorType: string }): ReactElement {
 type SectionProperties = {
 	title: string;
 	count?: number;
+	theme: Theme;
 	children: ReactNode;
 };
 
-function Section({ title, count, children }: SectionProperties): ReactElement {
+function Section({
+	title,
+	count,
+	theme,
+	children,
+}: SectionProperties): ReactElement {
 	return (
-		<section className="rounded-xl border border-neutral-200 bg-white p-5">
-			<h2 className="mb-3 flex items-baseline gap-2 text-sm font-semibold tracking-wide text-neutral-900 uppercase">
+		<section className={`rounded-xl border p-5 ${theme.surface}`}>
+			<h2
+				className={`mb-3 flex items-baseline gap-2 text-sm font-semibold tracking-wide uppercase ${theme.heading}`}
+			>
 				{title}
 				{count !== undefined && (
-					<span className="text-xs font-normal text-neutral-400">{count}</span>
+					<span className={`text-xs font-normal ${theme.muted}`}>{count}</span>
 				)}
 			</h2>
 			{children}
@@ -70,17 +114,22 @@ type ProfileViewProperties = {
 	profile: AgentProfile;
 	/** Optional action affordances (e.g. an Edit button) rendered in the header. */
 	actions?: ReactNode;
+	/** Render in dark mode. Defaults to light (e.g. the public SEO route). */
+	isDark?: boolean;
 };
 
 /**
  * Presentational, hook-free render of a public agent profile. It is safe to use
  * from both server components (the SEO `/@handle` route) and client components
- * (the signed-in user's own profile page).
+ * (the signed-in user's own profile page). Theme is supplied via the `isDark`
+ * prop so the component stays hook-free.
  */
 export function ProfileView({
 	profile,
 	actions,
+	isDark = false,
 }: ProfileViewProperties): ReactElement {
+	const t = themeClasses(isDark);
 	const displayName = profile.displayName?.trim() || profile.username;
 	const initials = displayName.replace(/^@/, "").slice(0, 2).toUpperCase();
 	const assets = profile.assets ?? [];
@@ -91,7 +140,7 @@ export function ProfileView({
 
 	return (
 		<div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-			<header className="rounded-xl border border-neutral-200 bg-white p-6">
+			<header className={`rounded-xl border p-6 ${t.surface}`}>
 				<div className="flex items-start gap-4">
 					<div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xl font-semibold text-white">
 						{initials}
@@ -100,23 +149,25 @@ export function ProfileView({
 						<div className="flex items-start justify-between gap-3">
 							<div className="min-w-0">
 								<div className="flex items-center gap-2">
-									<h1 className="truncate text-xl font-semibold text-neutral-900">
+									<h1
+										className={`truncate text-xl font-semibold ${t.heading}`}
+									>
 										{displayName}
 									</h1>
 									<ActorBadge actorType={profile.actorType} />
 								</div>
-								<p className="text-sm text-neutral-500">{profile.username}</p>
+								<p className={`text-sm ${t.secondary}`}>{profile.username}</p>
 							</div>
 							{actions}
 						</div>
 						<p
-							className="mt-1 font-mono text-xs text-neutral-400"
+							className={`mt-1 font-mono text-xs ${t.muted}`}
 							title={profile.cryptoId}
 						>
 							{truncateCryptoId(profile.cryptoId)}
 						</p>
 						{profile.bio && (
-							<p className="mt-3 text-sm leading-relaxed text-neutral-700">
+							<p className={`mt-3 text-sm leading-relaxed ${t.body}`}>
 								{profile.bio}
 							</p>
 						)}
@@ -125,7 +176,7 @@ export function ProfileView({
 								{links.map((url) => (
 									<a
 										key={url}
-										className="text-xs font-medium text-blue-600 hover:underline"
+										className="text-xs font-medium text-blue-500 hover:underline"
 										href={url}
 										rel="nofollow noopener noreferrer"
 										target="_blank"
@@ -140,36 +191,34 @@ export function ProfileView({
 								{tags.map((tag) => (
 									<span
 										key={tag}
-										className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600"
+										className={`rounded-full px-2 py-0.5 text-xs ${t.chip}`}
 									>
 										{tag}
 									</span>
 								))}
 							</div>
 						)}
-						<p className="mt-3 text-xs text-neutral-400">
+						<p className={`mt-3 text-xs ${t.muted}`}>
 							Joined {formatDate(profile.registeredAt)}
 						</p>
 					</div>
 				</div>
 			</header>
 
-			<Section count={assets.length} title="Assets">
+			<Section count={assets.length} theme={t} title="Assets">
 				{assets.length === 0 ? (
-					<p className="text-sm text-neutral-400">No domains owned.</p>
+					<p className={`text-sm ${t.muted}`}>No domains owned.</p>
 				) : (
 					<ul className="flex flex-col gap-2">
 						{assets.map((asset) => (
 							<li
 								key={asset.name}
-								className="flex items-center justify-between rounded-lg border border-neutral-100 px-3 py-2"
+								className={`flex items-center justify-between rounded-lg border px-3 py-2 ${t.innerBorder}`}
 							>
-								<span className="font-medium text-neutral-900">
-									{asset.name}
-								</span>
-								<span className="flex items-center gap-2 text-xs text-neutral-400">
+								<span className={`font-medium ${t.primary}`}>{asset.name}</span>
+								<span className={`flex items-center gap-2 text-xs ${t.muted}`}>
 									{asset.primary && (
-										<span className="rounded-full bg-blue-50 px-2 py-0.5 font-medium text-blue-600">
+										<span className="rounded-full bg-blue-500/10 px-2 py-0.5 font-medium text-blue-500">
 											primary
 										</span>
 									)}
@@ -182,23 +231,23 @@ export function ProfileView({
 			</Section>
 
 			{profile.activity && (
-				<Section title="Activity">
+				<Section theme={t} title="Activity">
 					<dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
 						<div>
-							<dt className="text-xs text-neutral-400">Transactions</dt>
-							<dd className="text-lg font-semibold text-neutral-900">
+							<dt className={`text-xs ${t.muted}`}>Transactions</dt>
+							<dd className={`text-lg font-semibold ${t.primary}`}>
 								{profile.activity.transactionCount}
 							</dd>
 						</div>
 						<div>
-							<dt className="text-xs text-neutral-400">Volume (USD)</dt>
-							<dd className="text-lg font-semibold text-neutral-900">
+							<dt className={`text-xs ${t.muted}`}>Volume (USD)</dt>
+							<dd className={`text-lg font-semibold ${t.primary}`}>
 								${profile.activity.totalVolumeUsd}
 							</dd>
 						</div>
 						<div>
-							<dt className="text-xs text-neutral-400">Counterparties</dt>
-							<dd className="text-lg font-semibold text-neutral-900">
+							<dt className={`text-xs ${t.muted}`}>Counterparties</dt>
+							<dd className={`text-lg font-semibold ${t.primary}`}>
 								{profile.activity.uniqueCounterparties}
 							</dd>
 						</div>
@@ -207,15 +256,15 @@ export function ProfileView({
 			)}
 
 			{groups.length > 0 && (
-				<Section count={groups.length} title="Groups">
+				<Section count={groups.length} theme={t} title="Groups">
 					<ul className="flex flex-col gap-2">
 						{groups.map((group) => (
 							<li
 								key={group.groupId}
-								className="flex items-center justify-between rounded-lg border border-neutral-100 px-3 py-2 text-sm"
+								className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${t.innerBorder}`}
 							>
-								<span className="text-neutral-900">{group.name}</span>
-								<span className="text-xs text-neutral-400">{group.role}</span>
+								<span className={t.primary}>{group.name}</span>
+								<span className={`text-xs ${t.muted}`}>{group.role}</span>
 							</li>
 						))}
 					</ul>
@@ -223,15 +272,15 @@ export function ProfileView({
 			)}
 
 			{events.length > 0 && (
-				<Section count={events.length} title="Events">
+				<Section count={events.length} theme={t} title="Events">
 					<ul className="flex flex-col gap-2">
 						{events.map((event) => (
 							<li
 								key={event.eventId}
-								className="flex items-center justify-between rounded-lg border border-neutral-100 px-3 py-2 text-sm"
+								className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${t.innerBorder}`}
 							>
-								<span className="text-neutral-900">{event.name}</span>
-								<span className="text-xs text-neutral-400">{event.status}</span>
+								<span className={t.primary}>{event.name}</span>
+								<span className={`text-xs ${t.muted}`}>{event.status}</span>
 							</li>
 						))}
 					</ul>

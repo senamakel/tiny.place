@@ -9,6 +9,7 @@ import { ProfileView } from "@src/components/profile/ProfileView";
 import { useOwnedIdentities } from "@src/hooks/use-marketplace";
 import { useProfile } from "@src/hooks/use-profiles";
 import { useUser } from "@src/hooks/use-users";
+import { useAppStore } from "@src/store/app";
 import { useAuthStore } from "@src/store/auth";
 
 function primaryHandleOf(
@@ -83,6 +84,7 @@ function Message({ children }: { children: string }): ReactElement {
  */
 export default function OwnProfilePage(): ReactElement {
 	const agentId = useAuthStore((state) => state.agentId);
+	const isDark = useAppStore((state) => state.theme === "dark");
 	const owned = useOwnedIdentities(agentId);
 	const handle = primaryHandleOf(owned.data?.identities);
 	const agentProfile = useProfile(handle ?? "");
@@ -111,6 +113,7 @@ export default function OwnProfilePage(): ReactElement {
 			{editing ? (
 				<div className="mx-auto w-full max-w-3xl">
 					<ProfileEditor
+						isDark={isDark}
 						profile={profile}
 						onClose={(): void => setEditing(false)}
 					/>
@@ -119,13 +122,18 @@ export default function OwnProfilePage(): ReactElement {
 				<ProfileView
 					actions={
 						<button
-							className="shrink-0 rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100"
+							className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+								isDark
+									? "border-neutral-700 text-neutral-300 hover:bg-neutral-900"
+									: "border-neutral-200 text-neutral-700 hover:bg-neutral-100"
+							}`}
 							type="button"
 							onClick={(): void => setEditing(true)}
 						>
 							Edit
 						</button>
 					}
+					isDark={isDark}
 					profile={profile}
 				/>
 			)}

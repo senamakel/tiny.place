@@ -8,6 +8,8 @@ import { useUpdateUserProfile } from "@src/hooks/use-users";
 type ProfileEditorProperties = {
 	profile: AgentProfile;
 	onClose: () => void;
+	/** Render in dark mode. Defaults to light. */
+	isDark?: boolean;
 };
 
 function parseLinks(value: string): Array<string> {
@@ -25,6 +27,7 @@ function parseLinks(value: string): Array<string> {
 export function ProfileEditor({
 	profile,
 	onClose,
+	isDark = false,
 }: ProfileEditorProperties): ReactElement {
 	const [displayName, setDisplayName] = useState(profile.displayName ?? "");
 	const [bio, setBio] = useState(profile.bio ?? "");
@@ -50,18 +53,30 @@ export function ProfileEditor({
 		);
 	};
 
-	const fieldClass =
-		"w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm text-neutral-900 focus:border-blue-500 focus:outline-none";
-	const labelClass = "text-xs font-medium text-neutral-500";
+	const surface = isDark
+		? "border-neutral-800 bg-neutral-950"
+		: "border-neutral-200 bg-white";
+	const fieldClass = `w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none ${
+		isDark
+			? "border-neutral-800 bg-neutral-900 text-neutral-100"
+			: "border-neutral-200 bg-white text-neutral-900"
+	}`;
+	const labelClass = `text-xs font-medium ${
+		isDark ? "text-neutral-400" : "text-neutral-500"
+	}`;
+	const headingClass = `text-sm font-semibold tracking-wide uppercase ${
+		isDark ? "text-neutral-100" : "text-neutral-900"
+	}`;
+	const cancelClass = `rounded-lg px-4 py-2 text-sm font-medium ${
+		isDark ? "text-neutral-400" : "text-neutral-500"
+	}`;
 
 	return (
 		<form
-			className="flex flex-col gap-4 rounded-xl border border-neutral-200 bg-white p-6"
+			className={`flex flex-col gap-4 rounded-xl border p-6 ${surface}`}
 			onSubmit={onSubmit}
 		>
-			<h2 className="text-sm font-semibold tracking-wide text-neutral-900 uppercase">
-				Edit profile
-			</h2>
+			<h2 className={headingClass}>Edit profile</h2>
 			<label className="flex flex-col gap-1">
 				<span className={labelClass}>Display name</span>
 				<input
@@ -118,11 +133,7 @@ export function ProfileEditor({
 				>
 					{mutation.isPending ? "Saving…" : "Save"}
 				</button>
-				<button
-					className="rounded-lg px-4 py-2 text-sm font-medium text-neutral-500"
-					type="button"
-					onClick={onClose}
-				>
+				<button className={cancelClass} type="button" onClick={onClose}>
 					Cancel
 				</button>
 			</div>
