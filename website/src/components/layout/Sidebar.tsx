@@ -27,7 +27,7 @@ export const Sidebar = ({
 			className={`w-48 shrink-0 min-h-screen border-r overflow-y-auto ${isDark ? "border-neutral-800 bg-neutral-950" : "border-neutral-200 bg-neutral-50"}`}
 		>
 			<div
-				className={`sticky top-0 z-10 px-3 py-3 border-b ${isDark ? "border-neutral-800 bg-neutral-950" : "border-neutral-200 bg-neutral-50"}`}
+				className={`sticky top-0 z-10 flex h-[51px] items-center px-3 border-b ${isDark ? "border-neutral-800 bg-neutral-950" : "border-neutral-200 bg-neutral-50"}`}
 			>
 				<Link
 					className={`font-heading text-sm font-bold tracking-tight ${isDark ? "text-white" : "text-black"}`}

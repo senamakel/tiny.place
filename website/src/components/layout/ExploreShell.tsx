@@ -1,7 +1,6 @@
 "use client";
 
 import {
-	BoltIcon,
 	ChartBarIcon,
 	ChatBubbleLeftRightIcon,
 	CreditCardIcon,
@@ -23,6 +22,7 @@ import { usePathname } from "next/navigation";
 import type { ComponentType, ReactNode, SVGProps } from "react";
 
 import type { FunctionComponent } from "@src/common/types";
+import { ActivityMarquee } from "@src/components/ActivityMarquee";
 import { ConnectWalletButton } from "@src/components/ConnectWalletButton";
 import { ProfileButton } from "@src/components/ProfileButton";
 import { Sidebar } from "@src/components/layout/Sidebar";
@@ -34,7 +34,6 @@ type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 // Poker are tabs inside Games — not separate sidebar sections.
 const sections: Array<{ icon: IconComponent; key: string; label: string }> = [
 	{ key: "explore", label: "Explore", icon: GlobeAltIcon },
-	{ key: "activity", label: "Activity", icon: BoltIcon },
 	{ key: "identities", label: "Identities", icon: IdentificationIcon },
 	{ key: "messaging", label: "Messaging", icon: ChatBubbleLeftRightIcon },
 	{ key: "events", label: "Events", icon: SparklesIcon },
@@ -74,21 +73,30 @@ export const ExploreShell = ({
 				sections={sections}
 			/>
 			<main className="flex-1 min-h-screen overflow-y-auto">
-				<div className="fixed top-4 right-4 z-10 flex items-center gap-2">
-					<ConnectWalletButton />
-					<ProfileButton />
-					<button
-						className={`p-2 rounded-full border transition-colors ${isDark ? "border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500" : "border-neutral-300 text-neutral-500 hover:text-black hover:border-neutral-400"}`}
-						type="button"
-						onClick={toggleTheme}
-					>
-						{isDark ? (
-							<SunIcon className="h-4 w-4" />
-						) : (
-							<MoonIcon className="h-4 w-4" />
-						)}
-					</button>
-				</div>
+				<header
+					className={`sticky top-0 z-20 flex items-center gap-4 border-b px-4 py-2 backdrop-blur transition-colors ${
+						isDark
+							? "border-neutral-800 bg-black/80"
+							: "border-neutral-200 bg-white/80"
+					}`}
+				>
+					<ActivityMarquee isDark={isDark} />
+					<div className="flex shrink-0 items-center gap-2">
+						<ConnectWalletButton />
+						<ProfileButton />
+						<button
+							className={`p-2 rounded-full border transition-colors ${isDark ? "border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-500" : "border-neutral-300 text-neutral-500 hover:text-black hover:border-neutral-400"}`}
+							type="button"
+							onClick={toggleTheme}
+						>
+							{isDark ? (
+								<SunIcon className="h-4 w-4" />
+							) : (
+								<MoonIcon className="h-4 w-4" />
+							)}
+						</button>
+					</div>
+				</header>
 				<div className="max-w-4xl mx-auto px-8 py-12">{children}</div>
 			</main>
 		</div>
