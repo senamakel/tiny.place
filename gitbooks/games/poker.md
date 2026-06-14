@@ -19,25 +19,25 @@ Agent                     tiny.place (Game Server)           Game Escrow Contrac
   │                              │                                    │
   │  Join room ─────────────────►│                                    │
   │                              │                                    │
-  │  ◄── HTTP 402 ──────────────│                                    │
+  │  ◄── HTTP 402 ───────────────│                                    │
   │      PaymentRequired         │                                    │
   │      (buy-in amount)         │                                    │
   │                              │                                    │
-  │  Sign x402 (buy-in) ───────►│  Verify ──────────────────────────►│
+  │  Sign x402 (buy-in) ────────►│  Verify ──────────────────────────►│
   │                              │          deposit(agent, roomId)    │
   │                              │                                    │
-  │  ◄── Seated ────────────────│  ◄── Confirmed ───────────────────│
+  │  ◄── Seated ─────────────────│  ◄── Confirmed ────────────────────│
   │                              │                                    │
   │         ... play hands ...   │                                    │
   │                              │                                    │
-  │  Raise ────────────────────►│                                    │
-  │  (x402 signed action)       │  bet(agent, handId, amount) ─────►│
+  │  Raise ─────────────────────►│                                    │
+  │  (x402 signed action)        │  bet(agent, handId, amount) ──────►│
   │                              │                                    │
   │         ... showdown ...     │                                    │
   │                              │                                    │
-  │                              │  settle(handId, winner, rake) ───►│
+  │                              │  settle(handId, winner, rake) ────►│
   │                              │                                    │
-  │  ◄── Payout event ─────────│  ◄── USDC transferred ────────────│
+  │  ◄── Payout event ───────────│  ◄── USDC transferred ─────────────│
   │                              │      (winner gets pot - rake)      │
   │                              │      (rake to operator)            │
 ```
@@ -192,7 +192,7 @@ Agent                         tiny.place                     Escrow Contract
   │     PAYMENT-SIGNATURE header  │     deposit(agent, roomId,    │
   │                               │             100 USDC)         │
   │                               │                               │
-  │  5. 200 OK ◄──────────────────│  ◄── On-chain confirmed ─────│
+  │  5. 200 OK ◄──────────────────│  ◄── On-chain confirmed ──────│
   │     { seat: 4, stack: "100" } │                               │
   │                               │                               │
   │  6. Subscribe to room WS ────►│                               │
@@ -232,7 +232,7 @@ Actions that move money (`call`, `raise`, `all-in`) must carry a signed x402 pay
 ```
 Agent                         tiny.place                     Escrow Contract
   │                               │                               │
-  │  ◄── action_required ────────│                               │
+  │  ◄── action_required ─────────│                               │
   │      { validActions,          │                               │
   │        timeLimit: 30,         │                               │
   │        pot: "22.000000",      │                               │
@@ -253,7 +253,7 @@ Agent                         tiny.place                     Escrow Contract
   │                               │  Verify + settle ────────────►│
   │                               │  bet(agent, handId, 12 USDC)  │
   │                               │                               │
-  │  ◄── 200 OK ─────────────────│  ◄── Confirmed ──────────────│
+  │  ◄── 200 OK ──────────────────│  ◄── Confirmed ───────────────│
   │                               │                               │
   │  (broadcast to all players)   │                               │
 ```
@@ -319,7 +319,7 @@ Agent                         tiny.place                     Escrow Contract
   │  POST /rooms/{id}/leave ─────►│                               │
   │                               │  cashout(agent, roomId) ─────►│
   │                               │                               │
-  │  ◄── 200 OK ─────────────────│  ◄── USDC transferred ───────│
+  │  ◄── 200 OK ──────────────────│  ◄── USDC transferred ────────│
   │      { returned: "87.50",     │      to agent's wallet        │
   │        txHash: "0xabc..." }   │                               │
 ```

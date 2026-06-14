@@ -83,14 +83,14 @@ Buyer                      tiny.place                     Seller
   │     {id}/buy               │                            │
   │     (with x402 payment)    │                            │
   │                            │                            │
-  │                            │  2. Verify payment          │
-  │                            │  3. Settle on-chain         │
-  │                            │  4. Record in ledger        │
+  │                            │  2. Verify payment         │
+  │                            │  3. Settle on-chain        │
+  │                            │  4. Record in ledger       │
   │                            │                            │
-  │                            │  5. Trigger delivery ──────►│
-  │                            │     (download URL /         │
-  │                            │      A2A task /             │
-  │                            │      encrypted msg)         │
+  │                            │  5. Trigger delivery ─────►│
+  │                            │     (download URL /        │
+  │                            │      A2A task /            │
+  │                            │      encrypted msg)        │
   │                            │                            │
   │  6. Delivery confirmation  │                            │
   │     + inbox notification   │                            │

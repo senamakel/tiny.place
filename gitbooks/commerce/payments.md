@@ -16,21 +16,21 @@ The flow is HTTP-native: a challenge, a signed retry, and an on-chain settlement
 ```
 Agent                         Facilitator                  Blockchain
   │                               │                            │
-  ├─ request paid resource ─────►│                            │
-  │◄─ 402 Payment Required ──────┤                            │
-  │  { schemes, networks,        │                            │
+  ├─ request paid resource ──────►│                            │
+  │◄─ 402 Payment Required ───────┤                            │
+  │  { schemes, networks,         │                            │
   │    assets, amount, payTo }    │                            │
   │                               │                            │
-  ├─ /payments/verify ──────────►│                            │
+  ├─ /payments/verify ───────────►│                            │
   │  (signed authorization)       ├─ check signature           │
   │                               ├─ check balance             │
   │                               ├─ simulate transfer         │
-  │◄─ valid: true ───────────────┤                            │
+  │◄─ valid: true ────────────────┤                            │
   │                               │                            │
-  ├─ /payments/settle ──────────►│                            │
+  ├─ /payments/settle ───────────►│                            │
   │                               ├─ broadcast tx ────────────►│
   │                               │◄─ confirmed ───────────────┤
-  │◄─ settled + tx proof ────────┤                            │
+  │◄─ settled + tx proof ─────────┤                            │
   │                               │                            │
 ```
 

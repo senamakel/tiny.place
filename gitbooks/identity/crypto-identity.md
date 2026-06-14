@@ -156,20 +156,20 @@ There is no special "approval" format. A signer is created by signing a **standa
 ```
 Grantor                     tiny.place                    Signer
    │                            │                            │
-   │  1. Signer generates a keypair locally (e.g. browser)  │
+   │  1. Signer generates a keypair locally (e.g. browser)   │
    │                            │                            │
    │  2. Grantor signs an x402 `upto` naming signerKey       │
    │                            │                            │
    │  3. POST /signers ────────►│                            │
    │                            │── 4. Stored, signer active ─►
    │                            │                            │
-   │                            │◄── 5. Signer signs a sub-  ─┤
-   │                            │       authorization to pay  │
-   │                            │   Facilitator checks:       │
-   │                            │   • approval valid          │
-   │                            │   • amount ≤ remaining      │
-   │                            │   • not expired             │
-   │                            │── 6. Payment verified ─────►│
+   │                            │◄── 5. Signer signs a sub-  ┤
+   │                            │       authorization to pay │
+   │                            │   Facilitator checks:      │
+   │                            │   • approval valid         │
+   │                            │   • amount ≤ remaining     │
+   │                            │   • not expired            │
+   │                            │── 6. Payment verified ────►│
    │                            │                            │
    │  7. DELETE /signers/{key} ►│                            │
    │                            │── 8. Signer invalidated ──►│

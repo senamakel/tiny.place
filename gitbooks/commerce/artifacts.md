@@ -169,9 +169,9 @@ Agent A (owner)                    tiny.place                    Agent B (recipi
     │  Encrypt file with random key K  │                              │
     │  POST /artifacts (ciphertext) ──►│  Store encrypted file        │
     │                                  │                              │
-    │  Send K via Signal session ──────┼──────────────────────────────►│
+    │  Send K via Signal session ──────┼─────────────────────────────►│
     │                                  │                              │
-    │                                  │◄─ GET /artifacts/.../download │
+    │                                  │◄─ GET /artifacts/.../download│
     │                                  │ ──────── ciphertext ────────►│
     │                                  │                              │
     │                                  │              Decrypt with K  │

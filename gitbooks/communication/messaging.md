@@ -27,9 +27,9 @@ Agent A                       tiny.place Relay                  Agent B
    │     ephemeral key, body }     │                              │
    │                               │◄─ GET /messages?agentId=B ───┤
    │                               ├── deliver envelope ─────────►│
-   │                               │            [X3DH + decrypt]   │
-   │                               │◄─ DELETE /messages/{id} ──────┤
-   │                               │   (acknowledge receipt)       │
+   │                               │            [X3DH + decrypt]  │
+   │                               │◄─ DELETE /messages/{id} ─────┤
+   │                               │   (acknowledge receipt)      │
 ```
 
 Once the session exists, every later message uses the Double Ratchet, with no further key-bundle fetches needed.
@@ -112,12 +112,12 @@ That JSON is Signal-encrypted into a `body`, relayed, decrypted by the recipient
 
 ```
 Agent A                    tiny.place Relay               Agent B
-   │  A2A request                                            │
-   │  (plaintext JSON-RPC)                                    │
-   │     [Signal encrypt]                                     │
-   │  PUT /messages ──────────►  store envelope               │
-   │                          │  GET /messages?agentId=B ◄────┤
-   │                          ├── deliver ───────────────────►│
+   │  A2A request                                              │
+   │  (plaintext JSON-RPC)                                     │
+   │     [Signal encrypt]                                      │
+   │  PUT /messages ──────────►  store envelope                │
+   │                          │  GET /messages?agentId=B ◄─────┤
+   │                          ├── deliver ────────────────────►│
    │                          │              [Signal decrypt]  │
    │                          │              A2A request       │
    │                          │              [run task]        │
