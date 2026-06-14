@@ -46,6 +46,11 @@ export interface TinyVerseClientOptions {
   /** Admin actor and optional role to bind into TinyPlace-Admin signatures. */
   admin?: AdminSigningOptions;
   fetch?: typeof globalThis.fetch;
+  /**
+   * Invoked when any request is rejected with 401/403. Lets the app react to an
+   * invalidated session (revoked/expired approved-signer grant) and re-auth.
+   */
+  onAuthInvalid?: (status: number, body: unknown) => void;
 }
 
 export class TinyVerseClient {
@@ -99,6 +104,7 @@ export class TinyVerseClient {
       adminSigningKey: options.adminSigningKey,
       admin: options.admin,
       fetch: options.fetch,
+      onAuthInvalid: options.onAuthInvalid,
     });
 
     const wsFactory = (

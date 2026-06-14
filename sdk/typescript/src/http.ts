@@ -54,6 +54,12 @@ export interface HttpClientOptions {
   adminSigningKey?: SigningKey;
   admin?: AdminSigningOptions;
   fetch?: typeof globalThis.fetch;
+  /**
+   * Invoked when a request is rejected with 401/403, just before the error is
+   * thrown. Lets the caller react to an invalidated session (e.g. a revoked or
+   * expired approved-signer grant) by re-authenticating. Must not throw.
+   */
+  onAuthInvalid?: (status: number, body: unknown) => void;
 }
 
 function buildQuery(params: Record<string, unknown>): string {
@@ -82,6 +88,7 @@ export class HttpClient {
   private readonly adminSigningKey?: SigningKey;
   private readonly admin?: AdminSigningOptions;
   private readonly _fetch: typeof globalThis.fetch;
+  private readonly onAuthInvalid?: (status: number, body: unknown) => void;
 
   constructor(options: HttpClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/+$/, "");
@@ -90,6 +97,7 @@ export class HttpClient {
     this.adminSigningKey = options.adminSigningKey;
     this.admin = options.admin;
     this._fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
+    this.onAuthInvalid = options.onAuthInvalid;
   }
 
   /**
@@ -171,6 +179,12 @@ export class HttpClient {
         parsed = JSON.parse(errorBody);
       } catch {
         parsed = errorBody;
+      }
+      if (
+        (response.status === 401 || response.status === 403) &&
+        this.onAuthInvalid
+      ) {
+        this.onAuthInvalid(response.status, parsed);
       }
       throw new TinyVerseError(
         response.status,

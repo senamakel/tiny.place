@@ -4,6 +4,7 @@ import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { TinyVerseClient } from "@tinyhumansai/tinyplace";
 
 import { createClient } from "@src/common/api-client";
+import { notifySessionInvalid } from "@src/common/session-recovery";
 import type { FunctionComponent } from "@src/common/types";
 import { useAuthStore } from "@src/store/auth";
 
@@ -17,7 +18,15 @@ export const ApiProvider = ({
 	children,
 }: ApiProviderProperties): FunctionComponent => {
 	const signer = useAuthStore((state) => state.signer);
-	const client = useMemo(() => createClient(signer), [signer]);
+	// A 401/403 from any app call means the session was invalidated (revoked or
+	// expired server-side); hand off to session recovery, which re-establishes.
+	const client = useMemo(
+		() =>
+			createClient(signer, () => {
+				notifySessionInvalid();
+			}),
+		[signer],
+	);
 
 	return <ApiContext.Provider value={client}>{children}</ApiContext.Provider>;
 };
