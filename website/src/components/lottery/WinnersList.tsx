@@ -48,7 +48,9 @@ export const WinnersList = ({
 	const winners = [...round.winners].sort((a, b) => a.rank - b.rank);
 
 	return (
-		<div className={`flex flex-col gap-3 rounded-xl border px-5 py-4 ${cardClasses}`}>
+		<div
+			className={`flex flex-col gap-3 rounded-xl border px-5 py-4 ${cardClasses}`}
+		>
 			<div className="flex items-center justify-between">
 				<h3
 					className={`flex items-center gap-1.5 text-sm font-semibold ${isDark ? "text-white" : "text-black"}`}

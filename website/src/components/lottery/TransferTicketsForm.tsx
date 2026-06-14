@@ -74,10 +74,15 @@ export const TransferTicketsForm = ({
 			className={`flex flex-col gap-3 rounded-xl border px-5 py-4 ${cardClasses}`}
 			onSubmit={onSubmit}
 		>
-			<h3 className={`text-sm font-semibold ${isDark ? "text-white" : "text-black"}`}>
+			<h3
+				className={`text-sm font-semibold ${isDark ? "text-white" : "text-black"}`}
+			>
 				{t("lottery.transferTitle")}
 			</h3>
-			<label className={`text-xs ${labelClasses}`} htmlFor="lottery-transfer-to">
+			<label
+				className={`text-xs ${labelClasses}`}
+				htmlFor="lottery-transfer-to"
+			>
 				{t("lottery.transferToLabel")}
 			</label>
 			<input

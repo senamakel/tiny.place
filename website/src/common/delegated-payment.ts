@@ -50,7 +50,7 @@ export function associatedTokenAddress(owner: string, mint: string): PublicKey {
 			new PublicKey(SOLANA_TOKEN_PROGRAM_ID).toBuffer(),
 			new PublicKey(mint).toBuffer(),
 		],
-		new PublicKey(ASSOCIATED_TOKEN_PROGRAM_ID),
+		new PublicKey(ASSOCIATED_TOKEN_PROGRAM_ID)
 	);
 	return address;
 }
@@ -169,7 +169,7 @@ export async function buildApproveTransaction(options: {
 			owner,
 			amount: options.amount,
 			decimals: options.decimals,
-		}),
+		})
 	);
 	return transaction;
 }
@@ -199,7 +199,7 @@ export async function buildDelegatedTransferTx(options: {
 	const payerAccount = associatedTokenAddress(options.payer, mint);
 	const payeeAccount = associatedTokenAddress(options.payee, mint);
 	const sessionKey = new PublicKey(
-		Buffer.from(options.sessionPublicKeyBase64, "base64"),
+		Buffer.from(options.sessionPublicKeyBase64, "base64")
 	);
 
 	const connection = new Connection(options.rpcUrl, "confirmed");
@@ -215,7 +215,7 @@ export async function buildDelegatedTransferTx(options: {
 				associatedAccount: payeeAccount,
 				owner: new PublicKey(options.payee),
 				mint: mintKey,
-			}),
+			})
 		);
 	}
 	transaction.add(
@@ -226,7 +226,7 @@ export async function buildDelegatedTransferTx(options: {
 			authority: sessionKey,
 			amount: options.amount,
 			decimals,
-		}),
+		})
 	);
 
 	// Session-sign the message; leave the facilitator (fee-payer) slot empty.
@@ -245,7 +245,7 @@ export async function buildDelegatedTransferTx(options: {
 function nonceTrackerAddress(payer: string): PublicKey {
 	const [address] = PublicKey.findProgramAddressSync(
 		[Buffer.from("nonce"), new PublicKey(payer).toBuffer()],
-		new PublicKey(ESCROW_PROGRAM_ID),
+		new PublicKey(ESCROW_PROGRAM_ID)
 	);
 	return address;
 }
@@ -257,7 +257,7 @@ function nonceTrackerAddress(payer: string): PublicKey {
  */
 export async function readEscrowNextNonce(
 	rpcUrl: string,
-	payer: string,
+	payer: string
 ): Promise<bigint> {
 	const connection = new Connection(rpcUrl, "confirmed");
 	const info = await connection.getAccountInfo(nonceTrackerAddress(payer));
@@ -288,22 +288,24 @@ export async function buildDelegatedDepositTx(options: {
 	expiryUnixSeconds?: number;
 }): Promise<string> {
 	const connection = new Connection(options.rpcUrl, "confirmed");
-	const vaultInfo = await connection.getAccountInfo(new PublicKey(options.vault));
+	const vaultInfo = await connection.getAccountInfo(
+		new PublicKey(options.vault)
+	);
 	if (!vaultInfo) {
 		throw new Error(`escrow vault not found: ${options.vault}`);
 	}
 	const mint = new PublicKey(
-		vaultInfo.data.subarray(VAULT_MINT_OFFSET, VAULT_MINT_OFFSET + 32),
+		vaultInfo.data.subarray(VAULT_MINT_OFFSET, VAULT_MINT_OFFSET + 32)
 	);
 	const vaultToken = new PublicKey(
 		vaultInfo.data.subarray(
 			VAULT_TOKEN_ACCOUNT_OFFSET,
-			VAULT_TOKEN_ACCOUNT_OFFSET + 32,
-		),
+			VAULT_TOKEN_ACCOUNT_OFFSET + 32
+		)
 	);
 	const payerAccount = associatedTokenAddress(options.payer, mint.toBase58());
 	const sessionKey = new PublicKey(
-		Buffer.from(options.sessionPublicKeyBase64, "base64"),
+		Buffer.from(options.sessionPublicKeyBase64, "base64")
 	);
 	const expiry =
 		options.expiryUnixSeconds ?? Math.floor(Date.now() / 1000) + 5 * 60;
@@ -322,8 +324,16 @@ export async function buildDelegatedDepositTx(options: {
 	const instruction = new TransactionInstruction({
 		programId: new PublicKey(ESCROW_PROGRAM_ID),
 		keys: [
-			{ pubkey: new PublicKey(options.vault), isSigner: false, isWritable: true },
-			{ pubkey: nonceTrackerAddress(options.payer), isSigner: false, isWritable: true },
+			{
+				pubkey: new PublicKey(options.vault),
+				isSigner: false,
+				isWritable: true,
+			},
+			{
+				pubkey: nonceTrackerAddress(options.payer),
+				isSigner: false,
+				isWritable: true,
+			},
 			{ pubkey: sessionKey, isSigner: true, isWritable: false },
 			{ pubkey: payerAccount, isSigner: false, isWritable: true },
 			{ pubkey: vaultToken, isSigner: false, isWritable: true },

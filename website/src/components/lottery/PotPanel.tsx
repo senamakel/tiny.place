@@ -34,9 +34,7 @@ export const PotPanel = ({
 		>
 			<div className="flex flex-wrap items-end justify-between gap-4">
 				<div className="flex flex-col">
-					<span
-						className={`text-xs uppercase tracking-wide ${labelClasses}`}
-					>
+					<span className={`text-xs uppercase tracking-wide ${labelClasses}`}>
 						{t("lottery.pot")}
 					</span>
 					<span className="font-heading text-4xl font-bold text-emerald-500">
@@ -51,9 +49,7 @@ export const PotPanel = ({
 
 			<div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
 				<div className="flex flex-col">
-					<span
-						className={`flex items-center gap-1 text-xs ${labelClasses}`}
-					>
+					<span className={`flex items-center gap-1 text-xs ${labelClasses}`}>
 						<TicketIcon className="h-3.5 w-3.5" />
 						{t("lottery.tickets")}
 					</span>
@@ -62,9 +58,7 @@ export const PotPanel = ({
 					</span>
 				</div>
 				<div className="flex flex-col">
-					<span
-						className={`flex items-center gap-1 text-xs ${labelClasses}`}
-					>
+					<span className={`flex items-center gap-1 text-xs ${labelClasses}`}>
 						<UsersIcon className="h-3.5 w-3.5" />
 						{t("lottery.participants")}
 					</span>
@@ -81,9 +75,7 @@ export const PotPanel = ({
 					</span>
 				</div>
 				<div className="flex flex-col">
-					<span className={`text-xs ${labelClasses}`}>
-						{t("lottery.rake")}
-					</span>
+					<span className={`text-xs ${labelClasses}`}>{t("lottery.rake")}</span>
 					<span className={`text-lg font-semibold ${valueClasses}`}>
 						{(round.feeBps / 100).toFixed(2)}%
 					</span>

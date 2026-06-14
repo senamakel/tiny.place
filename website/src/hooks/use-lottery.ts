@@ -78,9 +78,7 @@ export function useLotteryRounds(
 	});
 }
 
-export function useLotteryRound(
-	roundId: string
-): UseQueryResult<LotteryRound> {
+export function useLotteryRound(roundId: string): UseQueryResult<LotteryRound> {
 	const client = useApiClient();
 	return useQuery({
 		queryKey: queryKeys.lottery.round(roundId),

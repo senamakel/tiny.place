@@ -207,8 +207,7 @@ export const queryKeys = {
 		rounds: (parameters?: LotteryRoundQueryParams) =>
 			["lottery", "rounds", parameters] as const,
 		round: (roundId: string) => ["lottery", "round", roundId] as const,
-		holdings: (actorId?: string) =>
-			["lottery", "holdings", actorId] as const,
+		holdings: (actorId?: string) => ["lottery", "holdings", actorId] as const,
 	},
 	artifacts: {
 		list: (parameters?: ArtifactQueryParams) =>

@@ -58,9 +58,7 @@ export const Lottery = (): FunctionComponent => {
 					<p className={`text-sm ${mutedClasses}`}>{t("lottery.noRound")}</p>
 				)}
 
-				{latestSettled && (
-					<WinnersList isDark={isDark} round={latestSettled} />
-				)}
+				{latestSettled && <WinnersList isDark={isDark} round={latestSettled} />}
 			</div>
 		</div>
 	);

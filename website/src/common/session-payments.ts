@@ -14,7 +14,9 @@ import {
 } from "@src/common/delegated-payment";
 import type { SessionWalletSigner } from "@src/common/session-wallet";
 
-type SignTransactionFunction = (transaction: Transaction) => Promise<Transaction>;
+type SignTransactionFunction = (
+	transaction: Transaction
+) => Promise<Transaction>;
 
 /**
  * One-time at login: the wallet (Phantom) approves the browser session key as an
@@ -65,7 +67,7 @@ export interface SessionPaymentOptions {
 export async function payViaSessionDelegate(
 	client: TinyVerseClient,
 	signer: SessionWalletSigner,
-	options: SessionPaymentOptions,
+	options: SessionPaymentOptions
 ): Promise<X402SettleResponse> {
 	const facilitatorInfo = await client.payments.facilitator();
 	const facilitator = facilitatorInfo.address;
@@ -94,7 +96,9 @@ export async function payViaSessionDelegate(
 		recipient = options.payee ?? payer;
 	} else {
 		if (!options.to) {
-			throw new Error("payViaSessionDelegate requires `to` for a direct transfer");
+			throw new Error(
+				"payViaSessionDelegate requires `to` for a direct transfer"
+			);
 		}
 		delegatedTx = await buildDelegatedTransferTx({
 			rpcUrl: options.rpcUrl,

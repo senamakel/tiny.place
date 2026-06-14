@@ -51,9 +51,7 @@ export const BuyTicketsForm = ({
 					setError(mutationError.message);
 				},
 				onSuccess: (response): void => {
-					setSuccess(
-						t("lottery.boughtTickets", { count: response.tickets })
-					);
+					setSuccess(t("lottery.boughtTickets", { count: response.tickets }));
 				},
 			}
 		);
@@ -64,7 +62,9 @@ export const BuyTicketsForm = ({
 			className={`flex flex-col gap-3 rounded-xl border px-5 py-4 ${cardClasses}`}
 			onSubmit={onSubmit}
 		>
-			<h3 className={`text-sm font-semibold ${isDark ? "text-white" : "text-black"}`}>
+			<h3
+				className={`text-sm font-semibold ${isDark ? "text-white" : "text-black"}`}
+			>
 				{t("lottery.buyTitle")}
 			</h3>
 			<label className={`text-xs ${labelClasses}`} htmlFor="lottery-buy-amount">
