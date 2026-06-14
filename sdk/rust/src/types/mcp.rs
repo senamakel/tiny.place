@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 #[allow(unused_imports)]
-use super::*; // sibling types share a flat namespace, like the TS barrel
+use super::*;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap; // sibling types share a flat namespace, like the TS barrel
 
 /// A JSON-RPC id: a string, a number, or null. Modeled as a free-form value.
 pub type McpJsonRpcId = serde_json::Value;

@@ -71,7 +71,11 @@ impl ConversationsApi {
     pub async fn create(&self, request: ConversationCreateRequest) -> Result<Conversation> {
         let mut body = serde_json::to_value(&request)?;
         if let Some(obj) = body.as_object_mut() {
-            if !obj.get("conversationId").map(|v| v.is_string()).unwrap_or(false) {
+            if !obj
+                .get("conversationId")
+                .map(|v| v.is_string())
+                .unwrap_or(false)
+            {
                 obj.insert(
                     "conversationId".to_string(),
                     serde_json::Value::String(next_client_id("conv")),
@@ -83,7 +87,9 @@ impl ConversationsApi {
                 .post_directory_auth_as("/conversations", creator, Some(&body))
                 .await
         } else {
-            self.http.post_directory_auth("/conversations", Some(&body)).await
+            self.http
+                .post_directory_auth("/conversations", Some(&body))
+                .await
         }
     }
 
@@ -100,7 +106,9 @@ impl ConversationsApi {
     ) -> Result<Conversation> {
         let path = format!("/conversations/{}", encode(conversation_id));
         if let Some(actor) = actor_id {
-            self.http.put_directory_auth_as(&path, actor, Some(update)).await
+            self.http
+                .put_directory_auth_as(&path, actor, Some(update))
+                .await
         } else {
             self.http.put_directory_auth(&path, Some(update)).await
         }
@@ -127,7 +135,9 @@ impl ConversationsApi {
         let path = format!("/conversations/{}/join", encode(conversation_id));
         if let Some(agent_id) = agent_id {
             let body = serde_json::json!({ "agentId": agent_id });
-            self.http.post_directory_auth_as(&path, agent_id, Some(&body)).await
+            self.http
+                .post_directory_auth_as(&path, agent_id, Some(&body))
+                .await
         } else {
             self.http
                 .post_directory_auth::<ConversationMember, serde_json::Value>(&path, None)
@@ -169,7 +179,9 @@ impl ConversationsApi {
         let path = format!("/conversations/{}/members", encode(conversation_id));
         let body = serde_json::json!({ "agentId": agent_id });
         if let Some(manager) = manager_id {
-            self.http.post_directory_auth_as(&path, manager, Some(&body)).await
+            self.http
+                .post_directory_auth_as(&path, manager, Some(&body))
+                .await
         } else {
             self.http.post_directory_auth(&path, Some(&body)).await
         }
@@ -202,7 +214,9 @@ impl ConversationsApi {
         let path = format!("/conversations/{}/approve", encode(conversation_id));
         let body = serde_json::json!({ "agentId": agent_id });
         if let Some(manager) = manager_id {
-            self.http.post_directory_auth_as(&path, manager, Some(&body)).await
+            self.http
+                .post_directory_auth_as(&path, manager, Some(&body))
+                .await
         } else {
             self.http.post_directory_auth(&path, Some(&body)).await
         }
@@ -217,7 +231,9 @@ impl ConversationsApi {
         let path = format!("/conversations/{}/reject", encode(conversation_id));
         let body = serde_json::json!({ "agentId": agent_id });
         if let Some(manager) = manager_id {
-            self.http.post_directory_auth_as(&path, manager, Some(&body)).await
+            self.http
+                .post_directory_auth_as(&path, manager, Some(&body))
+                .await
         } else {
             self.http.post_directory_auth(&path, Some(&body)).await
         }
@@ -255,7 +271,9 @@ impl ConversationsApi {
             }
         }
         if let Some(author) = message.author.as_deref() {
-            self.http.post_directory_auth_as(&path, author, Some(&body)).await
+            self.http
+                .post_directory_auth_as(&path, author, Some(&body))
+                .await
         } else {
             self.http.post_directory_auth(&path, Some(&body)).await
         }
@@ -292,7 +310,9 @@ impl ConversationsApi {
         let path = format!("/conversations/{}/moderators", encode(conversation_id));
         let body = serde_json::json!({ "agentId": agent_id });
         if let Some(owner) = owner_id {
-            self.http.post_directory_auth_as(&path, owner, Some(&body)).await
+            self.http
+                .post_directory_auth_as(&path, owner, Some(&body))
+                .await
         } else {
             self.http.post_directory_auth(&path, Some(&body)).await
         }
@@ -329,7 +349,9 @@ impl ConversationsApi {
         let path = format!("/conversations/{}/publishers", encode(conversation_id));
         let body = serde_json::json!({ "agentId": agent_id });
         if let Some(owner) = owner_id {
-            self.http.post_directory_auth_as(&path, owner, Some(&body)).await
+            self.http
+                .post_directory_auth_as(&path, owner, Some(&body))
+                .await
         } else {
             self.http.post_directory_auth(&path, Some(&body)).await
         }

@@ -112,11 +112,19 @@ impl HttpClient {
         let url = format!("{}{request_uri}", self.inner.base_url);
         let body = body_str.unwrap_or_default();
 
-        let mut headers: Headers = vec![("Content-Type".to_string(), "application/json".to_string())];
+        let mut headers: Headers =
+            vec![("Content-Type".to_string(), "application/json".to_string())];
         headers.extend(extra_headers.iter().cloned());
 
-        self.apply_auth(&mut headers, &method, &request_uri, &body, auth, directory_actor)
-            .await?;
+        self.apply_auth(
+            &mut headers,
+            &method,
+            &request_uri,
+            &body,
+            auth,
+            directory_actor,
+        )
+        .await?;
 
         let mut builder = self.inner.client.request(method, &url);
         for (name, value) in &headers {
@@ -283,12 +291,24 @@ impl HttpClient {
         query: &Query,
     ) -> Result<T> {
         let response = self
-            .execute(Method::GET, path, query, None, Auth::Directory, Some(actor), &[])
+            .execute(
+                Method::GET,
+                path,
+                query,
+                None,
+                Auth::Directory,
+                Some(actor),
+                &[],
+            )
             .await?;
         self.parse(response).await
     }
 
-    pub async fn get_agent_auth<T: DeserializeOwned>(&self, path: &str, query: &Query) -> Result<T> {
+    pub async fn get_agent_auth<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        query: &Query,
+    ) -> Result<T> {
         let response = self
             .execute(Method::GET, path, query, None, Auth::Agent, None, &[])
             .await?;
@@ -318,8 +338,16 @@ impl HttpClient {
         actor: &str,
         query: &Query,
     ) -> Result<Response> {
-        self.execute(Method::GET, path, query, None, Auth::Directory, Some(actor), &[])
-            .await
+        self.execute(
+            Method::GET,
+            path,
+            query,
+            None,
+            Auth::Directory,
+            Some(actor),
+            &[],
+        )
+        .await
     }
 
     // --- POST ------------------------------------------------------------------
@@ -391,7 +419,15 @@ impl HttpClient {
     ) -> Result<T> {
         let body = Self::body_string(body)?;
         let response = self
-            .execute(Method::POST, path, &[], body, Auth::Directory, Some(actor), &[])
+            .execute(
+                Method::POST,
+                path,
+                &[],
+                body,
+                Auth::Directory,
+                Some(actor),
+                &[],
+            )
             .await?;
         self.parse(response).await
     }
@@ -442,7 +478,15 @@ impl HttpClient {
     ) -> Result<T> {
         let body = Self::body_string(body)?;
         let response = self
-            .execute(Method::PUT, path, &[], body, Auth::Directory, Some(actor), &[])
+            .execute(
+                Method::PUT,
+                path,
+                &[],
+                body,
+                Auth::Directory,
+                Some(actor),
+                &[],
+            )
             .await?;
         self.parse(response).await
     }
@@ -518,7 +562,15 @@ impl HttpClient {
     ) -> Result<T> {
         let body = Self::body_string(body)?;
         let response = self
-            .execute(Method::DELETE, path, &[], body, Auth::Directory, Some(actor), &[])
+            .execute(
+                Method::DELETE,
+                path,
+                &[],
+                body,
+                Auth::Directory,
+                Some(actor),
+                &[],
+            )
             .await?;
         self.parse(response).await
     }

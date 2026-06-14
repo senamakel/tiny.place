@@ -158,7 +158,9 @@ impl InboxApi {
     ) -> Result<InboxListResult> {
         let query = list_query(params);
         if let Some(owner) = owner {
-            self.http.get_directory_auth_as("/inbox", owner, &query).await
+            self.http
+                .get_directory_auth_as("/inbox", owner, &query)
+                .await
         } else {
             self.http.get_agent_auth("/inbox", &query).await
         }
@@ -176,7 +178,9 @@ impl InboxApi {
     pub async fn search(&self, query: &str, owner: Option<&str>) -> Result<InboxSearchResult> {
         let q: Vec<(String, String)> = vec![("q".into(), query.to_string())];
         if let Some(owner) = owner {
-            self.http.get_directory_auth_as("/inbox/search", owner, &q).await
+            self.http
+                .get_directory_auth_as("/inbox/search", owner, &q)
+                .await
         } else {
             self.http.get_agent_auth("/inbox/search", &q).await
         }
@@ -184,7 +188,9 @@ impl InboxApi {
 
     pub async fn counts(&self, owner: Option<&str>) -> Result<InboxCounts> {
         if let Some(owner) = owner {
-            self.http.get_directory_auth_as("/inbox/counts", owner, &[]).await
+            self.http
+                .get_directory_auth_as("/inbox/counts", owner, &[])
+                .await
         } else {
             self.http.get_agent_auth("/inbox/counts", &[]).await
         }
@@ -194,7 +200,9 @@ impl InboxApi {
         let path = format!("/inbox/{}/read", encode(item_id));
         let body = serde_json::json!({});
         if let Some(owner) = owner {
-            self.http.put_directory_auth_as(&path, owner, Some(&body)).await
+            self.http
+                .put_directory_auth_as(&path, owner, Some(&body))
+                .await
         } else {
             self.http.put_agent_auth(&path, Some(&body)).await
         }
@@ -207,7 +215,9 @@ impl InboxApi {
     ) -> Result<InboxMarkResult> {
         let body = serde_json::json!({ "itemIds": item_ids });
         if let Some(owner) = owner {
-            self.http.put_directory_auth_as("/inbox/read", owner, Some(&body)).await
+            self.http
+                .put_directory_auth_as("/inbox/read", owner, Some(&body))
+                .await
         } else {
             self.http.put_agent_auth("/inbox/read", Some(&body)).await
         }
@@ -224,7 +234,9 @@ impl InboxApi {
                 .put_directory_auth_as("/inbox/read-all", owner, Some(&body))
                 .await
         } else {
-            self.http.put_agent_auth("/inbox/read-all", Some(&body)).await
+            self.http
+                .put_agent_auth("/inbox/read-all", Some(&body))
+                .await
         }
     }
 
@@ -232,7 +244,9 @@ impl InboxApi {
         let path = format!("/inbox/{}/archive", encode(item_id));
         let body = serde_json::json!({});
         if let Some(owner) = owner {
-            self.http.put_directory_auth_as(&path, owner, Some(&body)).await
+            self.http
+                .put_directory_auth_as(&path, owner, Some(&body))
+                .await
         } else {
             self.http.put_agent_auth(&path, Some(&body)).await
         }
@@ -249,7 +263,9 @@ impl InboxApi {
                 .put_directory_auth_as("/inbox/archive", owner, Some(&body))
                 .await
         } else {
-            self.http.put_agent_auth("/inbox/archive", Some(&body)).await
+            self.http
+                .put_agent_auth("/inbox/archive", Some(&body))
+                .await
         }
     }
 
@@ -257,7 +273,9 @@ impl InboxApi {
         let path = format!("/inbox/{}/unarchive", encode(item_id));
         let body = serde_json::json!({});
         if let Some(owner) = owner {
-            self.http.put_directory_auth_as(&path, owner, Some(&body)).await
+            self.http
+                .put_directory_auth_as(&path, owner, Some(&body))
+                .await
         } else {
             self.http.put_agent_auth(&path, Some(&body)).await
         }
@@ -267,7 +285,9 @@ impl InboxApi {
         let path = format!("/inbox/{}", encode(item_id));
         let body = serde_json::json!({});
         if let Some(owner) = owner {
-            self.http.delete_directory_auth_as(&path, owner, Some(&body)).await
+            self.http
+                .delete_directory_auth_as(&path, owner, Some(&body))
+                .await
         } else {
             self.http.delete_agent_auth(&path, Some(&body)).await
         }
@@ -276,7 +296,9 @@ impl InboxApi {
     pub async fn remove_bulk(&self, item_ids: &[String], owner: Option<&str>) -> Result<()> {
         let body = serde_json::json!({ "itemIds": item_ids });
         if let Some(owner) = owner {
-            self.http.delete_directory_auth_as("/inbox", owner, Some(&body)).await
+            self.http
+                .delete_directory_auth_as("/inbox", owner, Some(&body))
+                .await
         } else {
             self.http.delete_agent_auth("/inbox", Some(&body)).await
         }
@@ -293,7 +315,9 @@ impl InboxApi {
                 .delete_directory_auth_as("/inbox/clear", owner, Some(&body))
                 .await
         } else {
-            self.http.delete_agent_auth("/inbox/clear", Some(&body)).await
+            self.http
+                .delete_agent_auth("/inbox/clear", Some(&body))
+                .await
         }
     }
 }

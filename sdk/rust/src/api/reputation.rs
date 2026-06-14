@@ -64,10 +64,7 @@ impl ReputationApi {
         self.http.get(&path, &[]).await
     }
 
-    pub async fn create_review(
-        &self,
-        review: &ReputationReviewCreate,
-    ) -> Result<ReputationReview> {
+    pub async fn create_review(&self, review: &ReputationReviewCreate) -> Result<ReputationReview> {
         let mut review = review.clone();
         if let Some(signer) = self.http.signer() {
             if review.signature.is_none() {
@@ -75,8 +72,7 @@ impl ReputationApi {
                     review.review_id = Some(next_reputation_id("rev"));
                 }
                 let payload = review_signature_payload(&review);
-                review.signature =
-                    Some(sign_canonical_payload(signer.as_ref(), &payload).await?);
+                review.signature = Some(sign_canonical_payload(signer.as_ref(), &payload).await?);
                 if review.signer_public_key.is_none() {
                     review.signer_public_key = self.http.signing_public_key();
                 }
@@ -85,10 +81,7 @@ impl ReputationApi {
         self.http.post("/reputation/reviews", Some(&review)).await
     }
 
-    pub async fn create_attestation(
-        &self,
-        attestation: &AttestationCreate,
-    ) -> Result<Attestation> {
+    pub async fn create_attestation(&self, attestation: &AttestationCreate) -> Result<Attestation> {
         let mut attestation = attestation.clone();
         if let Some(signer) = self.http.signer() {
             if attestation.signature.is_none() {
@@ -112,9 +105,7 @@ impl ReputationApi {
         match self.http.signer() {
             None => {
                 let path = format!("/reputation/attestations/{}", encode(attestation_id));
-                self.http
-                    .delete::<(), serde_json::Value>(&path, None)
-                    .await
+                self.http.delete::<(), serde_json::Value>(&path, None).await
             }
             Some(signer) => {
                 let payload = attestation_revoke_signature_payload(attestation_id);
@@ -125,17 +116,12 @@ impl ReputationApi {
                     encode(&signature),
                     signer_public_key_query(self.http.signing_public_key())
                 );
-                self.http
-                    .delete::<(), serde_json::Value>(&path, None)
-                    .await
+                self.http.delete::<(), serde_json::Value>(&path, None).await
             }
         }
     }
 
-    pub async fn trust_graph(
-        &self,
-        params: Option<&TrustGraphQueryParams>,
-    ) -> Result<TrustGraph> {
+    pub async fn trust_graph(&self, params: Option<&TrustGraphQueryParams>) -> Result<TrustGraph> {
         let mut q: Vec<(String, String)> = Vec::new();
         if let Some(p) = params {
             if let Some(v) = p.limit {
@@ -160,10 +146,7 @@ impl ReputationApi {
         self.http.get(&path, &[]).await
     }
 
-    pub async fn create_vouch(
-        &self,
-        vouch: &ReputationVouchCreate,
-    ) -> Result<ReputationVouch> {
+    pub async fn create_vouch(&self, vouch: &ReputationVouchCreate) -> Result<ReputationVouch> {
         let mut vouch = vouch.clone();
         if let Some(signer) = self.http.signer() {
             if vouch.signature.is_none() {
@@ -171,8 +154,7 @@ impl ReputationApi {
                     vouch.vouch_id = Some(next_reputation_id("vouch"));
                 }
                 let payload = vouch_signature_payload(&vouch);
-                vouch.signature =
-                    Some(sign_canonical_payload(signer.as_ref(), &payload).await?);
+                vouch.signature = Some(sign_canonical_payload(signer.as_ref(), &payload).await?);
                 if vouch.signer_public_key.is_none() {
                     vouch.signer_public_key = self.http.signing_public_key();
                 }
@@ -185,9 +167,7 @@ impl ReputationApi {
         match self.http.signer() {
             None => {
                 let path = format!("/reputation/vouches/{}", encode(vouch_id));
-                self.http
-                    .delete::<(), serde_json::Value>(&path, None)
-                    .await
+                self.http.delete::<(), serde_json::Value>(&path, None).await
             }
             Some(signer) => {
                 let payload = vouch_revoke_signature_payload(vouch_id);
@@ -198,9 +178,7 @@ impl ReputationApi {
                     encode(&signature),
                     signer_public_key_query(self.http.signing_public_key())
                 );
-                self.http
-                    .delete::<(), serde_json::Value>(&path, None)
-                    .await
+                self.http.delete::<(), serde_json::Value>(&path, None).await
             }
         }
     }

@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
 #[allow(unused_imports)]
-use super::*; // sibling types share a flat namespace, like the TS barrel
+use super::*;
+use serde::{Deserialize, Serialize}; // sibling types share a flat namespace, like the TS barrel
 
 /// A wallet's self-declared, trust-based actor type. The web app registers
 /// humans; autonomous SDK agents register as agents. The backend trusts whatever

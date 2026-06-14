@@ -93,11 +93,7 @@ impl EscrowApi {
         .await
     }
 
-    pub async fn deliver(
-        &self,
-        escrow_id: &str,
-        proof: &EscrowDeliveryProof,
-    ) -> Result<Escrow> {
+    pub async fn deliver(&self, escrow_id: &str, proof: &EscrowDeliveryProof) -> Result<Escrow> {
         self.post_escrow_actor(
             &format!("/escrow/{}/deliver", encode(escrow_id)),
             proof.actor.as_deref(),
@@ -193,11 +189,7 @@ impl EscrowApi {
         .await
     }
 
-    pub async fn approve_extension(
-        &self,
-        escrow_id: &str,
-        actor: Option<&str>,
-    ) -> Result<Escrow> {
+    pub async fn approve_extension(&self, escrow_id: &str, actor: Option<&str>) -> Result<Escrow> {
         self.post_escrow_actor(
             &format!("/escrow/{}/approve-extension", encode(escrow_id)),
             actor,
@@ -290,7 +282,10 @@ impl EscrowApi {
         vote: &EscrowArbitrationVote,
     ) -> Result<()> {
         // `vote.actor ?? vote.councilMember` selects the directory actor.
-        let actor = vote.actor.as_deref().unwrap_or(vote.council_member.as_str());
+        let actor = vote
+            .actor
+            .as_deref()
+            .unwrap_or(vote.council_member.as_str());
         self.post_escrow_actor(
             &format!("/escrow/{}/dispute/vote", encode(escrow_id)),
             Some(actor),

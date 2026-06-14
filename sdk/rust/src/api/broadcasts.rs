@@ -65,7 +65,9 @@ impl BroadcastsApi {
                 .post_directory_auth_as("/broadcasts", &owner, Some(&body))
                 .await;
         }
-        self.http.post_directory_auth("/broadcasts", Some(&body)).await
+        self.http
+            .post_directory_auth("/broadcasts", Some(&body))
+            .await
     }
 
     /// Fetch a broadcast channel by id.

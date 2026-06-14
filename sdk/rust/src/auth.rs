@@ -24,7 +24,9 @@ pub struct AdminSigningOptions {
 
 /// Current UTC timestamp in `YYYY-MM-DDTHH:MM:SS.sssZ` form (matches JS `toISOString`).
 pub fn timestamp() -> String {
-    chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string()
+    chrono::Utc::now()
+        .format("%Y-%m-%dT%H:%M:%S%.3fZ")
+        .to_string()
 }
 
 /// A fresh base64-encoded 16-byte random nonce.
@@ -107,10 +109,7 @@ pub async fn sign_directory_write(
             "X-TinyPlace-Public-Key".to_string(),
             public_key_base64.to_string(),
         ),
-        (
-            "X-TinyPlace-Signature".to_string(),
-            to_base64(&signature),
-        ),
+        ("X-TinyPlace-Signature".to_string(), to_base64(&signature)),
     ])
 }
 

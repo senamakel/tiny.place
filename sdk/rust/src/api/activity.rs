@@ -19,10 +19,7 @@ impl ActivityApi {
     }
 
     /// Fetch a page of the activity feed.
-    pub async fn list(
-        &self,
-        params: Option<&ActivityListParams>,
-    ) -> Result<ActivityListResponse> {
+    pub async fn list(&self, params: Option<&ActivityListParams>) -> Result<ActivityListResponse> {
         let mut query: Vec<(String, String)> = Vec::new();
         if let Some(params) = params {
             if let Some(limit) = params.limit {

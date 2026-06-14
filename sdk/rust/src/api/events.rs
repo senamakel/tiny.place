@@ -117,7 +117,11 @@ impl EventsApi {
             }
         }
         match resolved_host.as_deref() {
-            Some(host) => self.http.post_directory_auth_as("/events", host, Some(&body)).await,
+            Some(host) => {
+                self.http
+                    .post_directory_auth_as("/events", host, Some(&body))
+                    .await
+            }
             None => self.http.post_directory_auth("/events", Some(&body)).await,
         }
     }
@@ -135,7 +139,9 @@ impl EventsApi {
     ) -> Result<Event> {
         let path = format!("/events/{}", encode(event_id));
         if let Some(host) = host_id {
-            self.http.put_directory_auth_as(&path, host, Some(&event)).await
+            self.http
+                .put_directory_auth_as(&path, host, Some(&event))
+                .await
         } else {
             self.http.put_directory_auth(&path, Some(&event)).await
         }
@@ -167,9 +173,7 @@ impl EventsApi {
         if let Some(obj) = body.as_object_mut() {
             obj.remove("agentId");
         }
-        let agent_id = agent_id_override
-            .map(str::to_string)
-            .or(request_agent_id);
+        let agent_id = agent_id_override.map(str::to_string).or(request_agent_id);
         if let (Some(agent_id), Some(obj)) = (&agent_id, body.as_object_mut()) {
             obj.insert(
                 "agentId".to_string(),
@@ -252,7 +256,9 @@ impl EventsApi {
         let path = format!("/events/{}/invite", encode(event_id));
         let body = serde_json::json!({ "agentId": agent_id });
         if let Some(host) = host_id {
-            self.http.post_directory_auth_as(&path, host, Some(&body)).await
+            self.http
+                .post_directory_auth_as(&path, host, Some(&body))
+                .await
         } else {
             self.http.post_directory_auth(&path, Some(&body)).await
         }
@@ -302,7 +308,11 @@ impl EventsApi {
             .or_else(|| body.speaker.clone());
         let path = format!("/events/{}/stage", encode(event_id));
         match resolved.as_deref() {
-            Some(actor) => self.http.post_directory_auth_as(&path, actor, Some(&body)).await,
+            Some(actor) => {
+                self.http
+                    .post_directory_auth_as(&path, actor, Some(&body))
+                    .await
+            }
             None => self.http.post_directory_auth(&path, Some(&body)).await,
         }
     }
@@ -329,7 +339,8 @@ impl EventsApi {
             encode(event_id),
             encode(message_id)
         );
-        self.post_with_optional_body(&path, body, moderator_id).await
+        self.post_with_optional_body(&path, body, moderator_id)
+            .await
     }
 
     pub async fn unpin_stage_message(
@@ -344,7 +355,8 @@ impl EventsApi {
             encode(event_id),
             encode(message_id)
         );
-        self.post_with_optional_body(&path, body, moderator_id).await
+        self.post_with_optional_body(&path, body, moderator_id)
+            .await
     }
 
     pub async fn add_speaker(
@@ -395,7 +407,8 @@ impl EventsApi {
             encode(event_id),
             encode(speaker_id)
         );
-        self.post_with_optional_body(&path, body, moderator_id).await
+        self.post_with_optional_body(&path, body, moderator_id)
+            .await
     }
 
     pub async fn unmute_speaker(
@@ -410,7 +423,8 @@ impl EventsApi {
             encode(event_id),
             encode(speaker_id)
         );
-        self.post_with_optional_body(&path, body, moderator_id).await
+        self.post_with_optional_body(&path, body, moderator_id)
+            .await
     }
 
     pub async fn activate_agenda_item(
@@ -425,7 +439,8 @@ impl EventsApi {
             encode(event_id),
             encode(agenda_item_id)
         );
-        self.post_with_optional_body(&path, body, moderator_id).await
+        self.post_with_optional_body(&path, body, moderator_id)
+            .await
     }
 
     pub async fn questions(&self, event_id: &str) -> Result<EventQuestionsResponse> {
@@ -484,7 +499,8 @@ impl EventsApi {
             encode(event_id),
             encode(question_id)
         );
-        self.post_with_optional_body(&path, body, moderator_id).await
+        self.post_with_optional_body(&path, body, moderator_id)
+            .await
     }
 
     pub async fn dismiss_question(
@@ -499,7 +515,8 @@ impl EventsApi {
             encode(event_id),
             encode(question_id)
         );
-        self.post_with_optional_body(&path, body, moderator_id).await
+        self.post_with_optional_body(&path, body, moderator_id)
+            .await
     }
 
     pub async fn mark_question_answered(
@@ -542,7 +559,11 @@ impl EventsApi {
         });
         let path = format!("/events/{}/polls", encode(event_id));
         match resolved.as_deref() {
-            Some(actor) => self.http.post_directory_auth_as(&path, actor, Some(&poll)).await,
+            Some(actor) => {
+                self.http
+                    .post_directory_auth_as(&path, actor, Some(&poll))
+                    .await
+            }
             None => self.http.post_directory_auth(&path, Some(&poll)).await,
         }
     }
@@ -561,7 +582,9 @@ impl EventsApi {
         );
         let body = serde_json::json!({ "option": option });
         if let Some(voter) = voter_id {
-            self.http.post_directory_auth_as(&path, voter, Some(&body)).await
+            self.http
+                .post_directory_auth_as(&path, voter, Some(&body))
+                .await
         } else {
             self.http.post_directory_auth(&path, Some(&body)).await
         }
@@ -594,7 +617,9 @@ impl EventsApi {
     ) -> Result<Event> {
         let path = format!("/events/{}/recording", encode(event_id));
         if let Some(host) = host_id {
-            self.http.put_directory_auth_as(&path, host, Some(&body)).await
+            self.http
+                .put_directory_auth_as(&path, host, Some(&body))
+                .await
         } else {
             self.http.put_directory_auth(&path, Some(&body)).await
         }
@@ -622,7 +647,11 @@ impl EventsApi {
                     .post_directory_auth_as("/events/series", host, Some(&series))
                     .await
             }
-            None => self.http.post_directory_auth("/events/series", Some(&series)).await,
+            None => {
+                self.http
+                    .post_directory_auth("/events/series", Some(&series))
+                    .await
+            }
         }
     }
 
@@ -679,7 +708,11 @@ impl EventsApi {
         actor: Option<&str>,
     ) -> Result<T> {
         match actor {
-            Some(actor) => self.http.post_directory_auth_as(path, actor, body.as_ref()).await,
+            Some(actor) => {
+                self.http
+                    .post_directory_auth_as(path, actor, body.as_ref())
+                    .await
+            }
             None => self.http.post_directory_auth(path, body.as_ref()).await,
         }
     }

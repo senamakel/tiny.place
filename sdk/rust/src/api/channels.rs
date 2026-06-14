@@ -209,9 +209,13 @@ impl ChannelsApi {
             }
         }
         if let Some(creator) = channel.creator.as_deref() {
-            self.http.post_directory_auth_as("/channels", creator, Some(&body)).await
+            self.http
+                .post_directory_auth_as("/channels", creator, Some(&body))
+                .await
         } else {
-            self.http.post_directory_auth("/channels", Some(&body)).await
+            self.http
+                .post_directory_auth("/channels", Some(&body))
+                .await
         }
     }
 
@@ -228,7 +232,9 @@ impl ChannelsApi {
     ) -> Result<Channel> {
         let path = format!("/channels/{}", encode(channel_id));
         if let Some(actor) = actor {
-            self.http.put_directory_auth_as(&path, actor, Some(channel)).await
+            self.http
+                .put_directory_auth_as(&path, actor, Some(channel))
+                .await
         } else {
             self.http.put_directory_auth(&path, Some(channel)).await
         }
@@ -251,7 +257,9 @@ impl ChannelsApi {
         let path = format!("/channels/{}/join", encode(channel_id));
         if let Some(agent_id) = agent_id {
             let body = serde_json::json!({ "agentId": agent_id });
-            self.http.post_directory_auth_as(&path, agent_id, Some(&body)).await
+            self.http
+                .post_directory_auth_as(&path, agent_id, Some(&body))
+                .await
         } else {
             self.http
                 .post_directory_auth::<ChannelMember, serde_json::Value>(&path, None)
@@ -308,7 +316,9 @@ impl ChannelsApi {
             }
         }
         if let Some(author) = body.author.as_deref() {
-            self.http.post_directory_auth_as(&path, author, Some(&message)).await
+            self.http
+                .post_directory_auth_as(&path, author, Some(&message))
+                .await
         } else {
             self.http.post_directory_auth(&path, Some(&message)).await
         }
@@ -355,7 +365,9 @@ impl ChannelsApi {
         let path = format!("/channels/{}/moderators", encode(channel_id));
         let body = serde_json::json!({ "agentId": agent_id });
         if let Some(actor) = actor {
-            self.http.post_directory_auth_as(&path, actor, Some(&body)).await
+            self.http
+                .post_directory_auth_as(&path, actor, Some(&body))
+                .await
         } else {
             self.http.post_directory_auth(&path, Some(&body)).await
         }

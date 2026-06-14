@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 #[allow(unused_imports)]
-use super::*; // sibling types share a flat namespace, like the TS barrel
+use super::*;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap; // sibling types share a flat namespace, like the TS barrel
 
 /// Coarse grouping of an activity event.
 pub type ActivityCategory = String;

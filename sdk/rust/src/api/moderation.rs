@@ -56,16 +56,17 @@ impl ModerationApi {
         self.http.get("/constitution", &[]).await
     }
 
-    pub async fn create_report(
-        &self,
-        report: &ModerationReportCreate,
-    ) -> Result<ModerationReport> {
+    pub async fn create_report(&self, report: &ModerationReportCreate) -> Result<ModerationReport> {
         let mut report = report.clone();
         if report.report_id.is_none() {
             report.report_id = Some(next_client_id("report"));
         }
         self.http
-            .post_directory_auth_as("/moderation/reports", &report.reporter.clone(), Some(&report))
+            .post_directory_auth_as(
+                "/moderation/reports",
+                &report.reporter.clone(),
+                Some(&report),
+            )
             .await
     }
 

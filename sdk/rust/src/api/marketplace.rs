@@ -150,9 +150,7 @@ impl MarketplaceApi {
                     crate::util::encode(&signature),
                     marketplace_signer_query(self.http.signing_public_key().as_deref()),
                 );
-                self.http
-                    .delete::<(), serde_json::Value>(&path, None)
-                    .await
+                self.http.delete::<(), serde_json::Value>(&path, None).await
             }
         }
     }
@@ -354,9 +352,7 @@ impl MarketplaceApi {
                     crate::util::encode(&signature),
                     marketplace_signer_query(self.http.signing_public_key().as_deref()),
                 );
-                self.http
-                    .delete::<(), serde_json::Value>(&path, None)
-                    .await
+                self.http.delete::<(), serde_json::Value>(&path, None).await
             }
         }
     }
@@ -440,23 +436,29 @@ impl MarketplaceApi {
         mut bid: IdentityBid,
         options: IdentityBidPaymentOptions,
     ) -> Result<IdentityBidPaymentResult> {
-        let signer = self
-            .http
-            .signer()
-            .ok_or_else(|| Error::InvalidArgument("placeBidWithPayment requires a signing key".into()))?;
+        let signer = self.http.signer().ok_or_else(|| {
+            Error::InvalidArgument("placeBidWithPayment requires a signing key".into())
+        })?;
 
         let bidder = bid.bidder.clone().ok_or_else(|| {
             Error::InvalidArgument("identity bid requires bidder and price.amount".into())
         })?;
-        let price = bid.price.clone().filter(|p| !p.amount.is_empty()).ok_or_else(|| {
-            Error::InvalidArgument("identity bid requires bidder and price.amount".into())
-        })?;
+        let price = bid
+            .price
+            .clone()
+            .filter(|p| !p.amount.is_empty())
+            .ok_or_else(|| {
+                Error::InvalidArgument("identity bid requires bidder and price.amount".into())
+            })?;
 
         let listing = match options.listing.clone() {
             Some(listing) => listing,
             None => self.identity_listing(listing_id).await?,
         };
-        let bid_id = bid.bid_id.clone().unwrap_or_else(|| next_marketplace_id("bid"));
+        let bid_id = bid
+            .bid_id
+            .clone()
+            .unwrap_or_else(|| next_marketplace_id("bid"));
         bid.bid_id = Some(bid_id.clone());
         bid.listing_id = Some(listing_id.to_string());
 
@@ -514,7 +516,11 @@ impl MarketplaceApi {
             crate::util::encode(listing_id)
         );
         match seller_id {
-            Some(seller) => self.http.post_directory_auth_as(&path, seller, request).await,
+            Some(seller) => {
+                self.http
+                    .post_directory_auth_as(&path, seller, request)
+                    .await
+            }
             None => self.http.post_directory_auth(&path, request).await,
         }
     }
@@ -531,7 +537,11 @@ impl MarketplaceApi {
             crate::util::encode(listing_id)
         );
         match seller_id {
-            Some(seller) => self.http.post_directory_auth_as(&path, seller, request).await,
+            Some(seller) => {
+                self.http
+                    .post_directory_auth_as(&path, seller, request)
+                    .await
+            }
             None => self.http.post_directory_auth(&path, request).await,
         }
     }
@@ -678,9 +688,7 @@ impl MarketplaceApi {
                     crate::util::encode(&signature),
                     marketplace_signer_query(self.http.signing_public_key().as_deref()),
                 );
-                self.http
-                    .delete::<(), serde_json::Value>(&path, None)
-                    .await
+                self.http.delete::<(), serde_json::Value>(&path, None).await
             }
         }
     }
@@ -699,7 +707,10 @@ impl MarketplaceApi {
             }
         }
 
-        let path = format!("/marketplace/offers/{}/accept", crate::util::encode(offer_id));
+        let path = format!(
+            "/marketplace/offers/{}/accept",
+            crate::util::encode(offer_id)
+        );
         if !request.seller.is_empty() {
             return self
                 .http

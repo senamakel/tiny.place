@@ -78,11 +78,7 @@ impl JobsApi {
 
     // --- Proposals ---
 
-    pub async fn apply(
-        &self,
-        job_id: &str,
-        request: &ProposalCreateRequest,
-    ) -> Result<Proposal> {
+    pub async fn apply(&self, job_id: &str, request: &ProposalCreateRequest) -> Result<Proposal> {
         self.http
             .post_directory_auth_as(
                 &format!("/jobs/{}/proposals", encode(job_id)),
@@ -113,11 +109,7 @@ impl JobsApi {
     ) -> Result<Proposal> {
         self.http
             .get_directory_auth_as(
-                &format!(
-                    "/jobs/{}/proposals/{}",
-                    encode(job_id),
-                    encode(proposal_id)
-                ),
+                &format!("/jobs/{}/proposals/{}", encode(job_id), encode(proposal_id)),
                 actor,
                 &[],
             )

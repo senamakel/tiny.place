@@ -200,11 +200,7 @@ impl PricingApi {
     }
 
     /// Fetch a swap by id, optionally acting on behalf of `agent_id`.
-    pub async fn get_swap(
-        &self,
-        swap_id: &str,
-        agent_id: Option<&str>,
-    ) -> Result<SwapExecution> {
+    pub async fn get_swap(&self, swap_id: &str, agent_id: Option<&str>) -> Result<SwapExecution> {
         let path = format!("/swap/{}", encode(swap_id));
         match agent_id {
             Some(agent_id) => self.http.get_directory_auth_as(&path, agent_id, &[]).await,

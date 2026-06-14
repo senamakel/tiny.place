@@ -1,9 +1,9 @@
 // Jobs marketplace types — a hiring layer over escrow. See the backend spec
 // docs/spec/jobs-marketplace.md.
 
-use serde::{Deserialize, Serialize};
 #[allow(unused_imports)]
-use super::*; // sibling types share a flat namespace, like the TS barrel
+use super::*;
+use serde::{Deserialize, Serialize}; // sibling types share a flat namespace, like the TS barrel
 
 pub type JobStatus = String;
 pub type ProposalStatus = String;

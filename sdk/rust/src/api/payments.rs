@@ -98,12 +98,10 @@ impl PaymentsApi {
     ) -> Result<X402VerifyResponse> {
         let attempts = options.attempts.unwrap_or(DEFAULT_VERIFY_ATTEMPTS);
         let interval_ms = options.interval_ms.unwrap_or(DEFAULT_VERIFY_INTERVAL_MS);
-        let retry_errors: Vec<String> = options.retry_errors.clone().unwrap_or_else(|| {
-            DEFAULT_RETRY_ERRORS
-                .iter()
-                .map(|s| s.to_string())
-                .collect()
-        });
+        let retry_errors: Vec<String> = options
+            .retry_errors
+            .clone()
+            .unwrap_or_else(|| DEFAULT_RETRY_ERRORS.iter().map(|s| s.to_string()).collect());
 
         let mut response = self.verify(request).await?;
         let mut attempt = 1;
@@ -194,10 +192,7 @@ impl PaymentsApi {
         subscription_id: &str,
         request: &SubscriptionRenewRequest,
     ) -> Result<SubscriptionRenewResponse> {
-        let path = format!(
-            "/payments/subscriptions/{}/renew",
-            encode(subscription_id)
-        );
+        let path = format!("/payments/subscriptions/{}/renew", encode(subscription_id));
         self.http.post(&path, Some(request)).await
     }
 

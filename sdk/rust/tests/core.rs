@@ -16,10 +16,7 @@ use tinyplace::{LocalSigner, Signer};
 fn solana_address_of_zero_key_is_all_ones() {
     // 32 zero bytes base58-encode to 32 '1' characters.
     let zero = [0u8; 32];
-    assert_eq!(
-        public_key_to_solana_address(&zero),
-        "1".repeat(32),
-    );
+    assert_eq!(public_key_to_solana_address(&zero), "1".repeat(32),);
     assert_eq!(derive_crypto_id(&zero), "1".repeat(32));
 }
 
@@ -126,7 +123,9 @@ async fn sign_request_builds_expected_header_shape() {
 #[tokio::test]
 async fn fresh_canonical_payload_is_versioned_token() {
     let signer = LocalSigner::from_seed(&[5u8; 32]).unwrap();
-    let token = sign_fresh_canonical_payload(&signer, "payload").await.unwrap();
+    let token = sign_fresh_canonical_payload(&signer, "payload")
+        .await
+        .unwrap();
     let parts: Vec<&str> = token.split(':').collect();
     assert_eq!(parts.len(), 4);
     assert_eq!(parts[0], "v1");
@@ -144,7 +143,11 @@ async fn admin_request_includes_date_and_nonce() {
     assert!(names.contains(&"Authorization"));
     assert!(names.contains(&"X-TinyPlace-Date"));
     assert!(names.contains(&"X-TinyPlace-Nonce"));
-    let auth = &headers.iter().find(|(n, _)| n == "Authorization").unwrap().1;
+    let auth = &headers
+        .iter()
+        .find(|(n, _)| n == "Authorization")
+        .unwrap()
+        .1;
     assert!(auth.starts_with("TinyPlace-Admin actor=\"@root\""));
     assert!(auth.contains("role=\"operator\""));
 }

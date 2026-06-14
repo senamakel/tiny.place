@@ -125,7 +125,10 @@ pub async fn build_x402_payment_authorization(
     let mut metadata: HashMap<String, String> = HashMap::new();
     metadata.insert(
         "domain".to_string(),
-        options.domain.clone().unwrap_or_else(|| "tiny.place".to_string()),
+        options
+            .domain
+            .clone()
+            .unwrap_or_else(|| "tiny.place".to_string()),
     );
     if !public_key_base64.is_empty() {
         metadata.insert("publicKey".to_string(), public_key_base64);
@@ -144,13 +147,19 @@ pub async fn build_x402_payment_authorization(
     });
 
     let fields = X402AuthorizationFields {
-        scheme: options.scheme.clone().unwrap_or_else(|| "exact".to_string()),
+        scheme: options
+            .scheme
+            .clone()
+            .unwrap_or_else(|| "exact".to_string()),
         network: options.network,
         asset: options.asset,
         amount: options.amount,
         from: options.from.clone().unwrap_or_else(|| signer.agent_id()),
         to: options.to,
-        nonce: options.nonce.clone().unwrap_or_else(|| generate_nonce(Some("pay"))),
+        nonce: options
+            .nonce
+            .clone()
+            .unwrap_or_else(|| generate_nonce(Some("pay"))),
         expires_at,
         metadata: Some(metadata),
     };

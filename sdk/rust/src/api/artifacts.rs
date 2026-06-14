@@ -26,7 +26,11 @@ impl ArtifactsApi {
     ) -> Result<ArtifactListResult> {
         let q = artifact_query(params);
         match actor_id {
-            Some(actor) => self.http.get_directory_auth_as("/artifacts", actor, &q).await,
+            Some(actor) => {
+                self.http
+                    .get_directory_auth_as("/artifacts", actor, &q)
+                    .await
+            }
             None => self.http.get_directory_auth("/artifacts", &q).await,
         }
     }
@@ -42,7 +46,11 @@ impl ArtifactsApi {
                     .post_directory_auth_as("/artifacts", owner, Some(request))
                     .await
             }
-            None => self.http.post_directory_auth("/artifacts", Some(request)).await,
+            None => {
+                self.http
+                    .post_directory_auth("/artifacts", Some(request))
+                    .await
+            }
         }
     }
 

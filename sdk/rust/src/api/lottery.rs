@@ -8,8 +8,8 @@ use crate::error::Result;
 use crate::http::HttpClient;
 use crate::types::{
     LotteryBuyRequest, LotteryBuyResponse, LotteryDrawRequest, LotteryHolding, LotteryRound,
-    LotteryRoundQueryParams, LotteryRoundsResponse, LotteryTransferRequest, LotteryTransferResponse,
-    LotteryView,
+    LotteryRoundQueryParams, LotteryRoundsResponse, LotteryTransferRequest,
+    LotteryTransferResponse, LotteryView,
 };
 use crate::util::encode;
 
@@ -28,7 +28,11 @@ impl LotteryApi {
     /// fill in the caller's holdings.
     pub async fn current(&self, actor_id: Option<&str>) -> Result<LotteryView> {
         match actor_id {
-            Some(actor) => self.http.get_directory_auth_as("/lottery", actor, &[]).await,
+            Some(actor) => {
+                self.http
+                    .get_directory_auth_as("/lottery", actor, &[])
+                    .await
+            }
             None => self.http.get("/lottery", &[]).await,
         }
     }
@@ -128,7 +132,11 @@ impl LotteryApi {
             .map(str::to_string)
             .or_else(|| request.and_then(|r| r.operator.clone()));
         match operator {
-            Some(actor) => self.http.post_directory_auth_as(&path, &actor, request).await,
+            Some(actor) => {
+                self.http
+                    .post_directory_auth_as(&path, &actor, request)
+                    .await
+            }
             None => self.http.post_directory_auth(&path, request).await,
         }
     }

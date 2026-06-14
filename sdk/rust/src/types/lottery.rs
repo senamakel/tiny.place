@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
 #[allow(unused_imports)]
-use super::*; // sibling types share a flat namespace, like the TS barrel
+use super::*;
+use serde::{Deserialize, Serialize}; // sibling types share a flat namespace, like the TS barrel
 
 /// Lifecycle state of a lottery round. Exactly one round is `open` at a time.
 pub type LotteryRoundStatus = String;

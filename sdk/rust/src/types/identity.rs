@@ -1,8 +1,8 @@
 //! Identity registry types. Mirrors `sdk/typescript/src/types/identity.ts`.
 
-use serde::{Deserialize, Serialize};
 #[allow(unused_imports)]
-use super::*; // sibling types share a flat namespace, like the TS barrel
+use super::*;
+use serde::{Deserialize, Serialize}; // sibling types share a flat namespace, like the TS barrel
 
 /// Lifecycle status of a registered name.
 pub type IdentityStatus = String;

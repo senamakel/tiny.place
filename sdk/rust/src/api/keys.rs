@@ -33,7 +33,9 @@ impl KeysApi {
     /// Upload a batch of one-time pre-keys.
     pub async fn upload_pre_keys(&self, agent_id: &str, request: &PreKeysRequest) -> Result<()> {
         let path = format!("/keys/{}/prekeys", encode(agent_id));
-        self.http.put_directory_auth_as(&path, agent_id, Some(request)).await
+        self.http
+            .put_directory_auth_as(&path, agent_id, Some(request))
+            .await
     }
 
     /// Rotate the agent's signed pre-key.
@@ -43,6 +45,8 @@ impl KeysApi {
         request: &SignedPreKeyRequest,
     ) -> Result<()> {
         let path = format!("/keys/{}/signed-prekey", encode(agent_id));
-        self.http.put_directory_auth_as(&path, agent_id, Some(request)).await
+        self.http
+            .put_directory_auth_as(&path, agent_id, Some(request))
+            .await
     }
 }

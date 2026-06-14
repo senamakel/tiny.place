@@ -189,8 +189,7 @@ impl RegistryApi {
         };
         let mut body = SignatureBody { signature: None };
         if let Some(signer) = self.http.signer() {
-            let payload =
-                canonical_payload(action, serde_json::json!({ "username": name }));
+            let payload = canonical_payload(action, serde_json::json!({ "username": name }));
             body.signature = Some(sign_fresh_canonical_payload(signer.as_ref(), &payload).await?);
         }
         let segment = if primary { "assign" } else { "unassign" };

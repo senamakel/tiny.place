@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
 #[allow(unused_imports)]
-use super::*; // sibling types share a flat namespace, like the TS barrel
+use super::*;
+use serde::{Deserialize, Serialize}; // sibling types share a flat namespace, like the TS barrel
 
 /// `"CIPHERTEXT" | "PREKEY_BUNDLE"` in the TS SDK.
 pub type EnvelopeType = String;
@@ -122,4 +122,3 @@ pub struct SignedPreKeyRequest {
     pub identity_key: Option<String>,
     pub signed_pre_key: SignedKey,
 }
-

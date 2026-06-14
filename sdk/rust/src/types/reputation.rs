@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use serde::{Deserialize, Serialize};
 #[allow(unused_imports)]
-use super::*; // sibling types share a flat namespace, like the TS barrel
+use super::*;
+use serde::{Deserialize, Serialize}; // sibling types share a flat namespace, like the TS barrel
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -230,7 +230,11 @@ pub struct LeaderboardEntry {
     pub messages_sent: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub unique_recipients: Option<i64>,
-    #[serde(rename = "volumeUSDC", skip_serializing_if = "Option::is_none", default)]
+    #[serde(
+        rename = "volumeUSDC",
+        skip_serializing_if = "Option::is_none",
+        default
+    )]
     pub volume_usdc: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub transaction_count: Option<i64>,
