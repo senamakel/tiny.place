@@ -1,6 +1,6 @@
 # Activity Feed
 
-The Activity Feed is a public, normalized, cross-domain stream of network actions — purchases, identity registrations and renewals, subscriptions, event ticket sales, escrow movements, revenue shares, and game wins and losses. It exists so that clients — the web app, explorers, ambient dashboards — can render a single scrolling "what's happening now" view without stitching together every domain API.
+The Activity Feed is a public, normalized, cross-domain stream of network actions: purchases, identity registrations and renewals, subscriptions, event ticket sales, [escrow](../commerce/escrow.md) movements, revenue shares, and game wins and losses. It exists so that clients (the web app, explorers, ambient dashboards) can render a single scrolling "what's happening now" view without stitching together every domain API.
 
 It is a *view*, not a system of record. The [Ledger](../commerce/ledger.md) remains the durable, verifiable record of financial events; activity entries are a renderable projection retained for a short rolling window. When you need provenance, on-chain verification, or deep history, follow an event back to the ledger or the [Explorer](explorer.md).
 
@@ -8,7 +8,7 @@ The feed is fully public: every endpoint is read-only and requires no authentica
 
 ## Event Model
 
-Each entry is an `ActivityEvent` — a flat, render-ready shape that is consistent across every domain that produces it.
+Each entry is an `ActivityEvent`: a flat, render-ready shape that is consistent across every domain that produces it.
 
 | Field | Type | Description |
 | --- | --- | --- |
@@ -69,7 +69,7 @@ The taxonomy is intentionally extensible. Unmapped ledger types fall back to `le
 
 ### Low-signal suppression
 
-Ledger entries that are accounting byproducts of a primary transaction — `FEE`, `REVENUE_SHARE`, and `ARBITRATION_FEE` — are excluded from the feed entirely. They are never persisted or streamed, so the livestream surfaces the meaningful action rather than its fee tail. The full accounting, including those entries, remains in the [Ledger](../commerce/ledger.md).
+Ledger entries that are accounting byproducts of a primary transaction, namely `FEE`, `REVENUE_SHARE`, and `ARBITRATION_FEE`, are excluded from the feed entirely. They are never persisted or streamed, so the livestream surfaces the meaningful action rather than its fee tail. The full accounting, including those entries, remains in the [Ledger](../commerce/ledger.md).
 
 ## How Events Are Sourced
 
@@ -80,7 +80,7 @@ Activity is captured at the source, not by scraping other feeds:
 
 ## Privacy
 
-Ledger-derived events inherit the ledger's shielded-visibility rules. A **shielded** transaction contributes only an existence proof — `kind`, `network`, `timestamp`, and `txId` — and never exposes parties, amounts, references, or metadata through this public feed. This is identical to the redaction applied everywhere the ledger is serialized publicly (see [Explorer](explorer.md)). Treat any of `actor`, `target`, `amount`, `asset`, `reference`, or `metadata` as potentially `null` and render accordingly.
+Ledger-derived events inherit the ledger's shielded-visibility rules. A **shielded** transaction contributes only an existence proof (`kind`, `network`, `timestamp`, and `txId`) and never exposes parties, amounts, references, or metadata through this public feed. This is identical to the redaction applied everywhere the ledger is serialized publicly (see [Explorer](explorer.md)). Treat any of `actor`, `target`, `amount`, `asset`, `reference`, or `metadata` as potentially `null` and render accordingly.
 
 ## Retention
 
@@ -115,7 +115,7 @@ Returns recent events, newest first. Public, no auth.
 }
 ```
 
-Combine `kind` or `category` with `since` to backfill a particular slice — for example, all `game` events since your last seen timestamp — then keep current over the WebSocket.
+Combine `kind` or `category` with `since` to backfill a particular slice, for example all `game` events since your last seen timestamp, then keep current over the WebSocket.
 
 ## Real-Time Streaming
 
@@ -140,10 +140,11 @@ Because both surfaces emit the same `ActivityEvent` shape and a stable `eventId`
 - **Switch on `kind` for the label, group on `category` for layout.** Always keep a generic fallback for unknown `kind` values so future event types render without a client update.
 - **Expect `null`.** Shielded events and non-financial events legitimately omit parties, amounts, and assets.
 - **Format amounts with `asset` and `network`.** `amount` is a decimal string; pair it with `asset` for display and link `txId` to the [Ledger](../commerce/ledger.md) or [Explorer](explorer.md) for provenance.
-- **Lean on `metadata` for kind-specific context** — for example, `roomId`/`handId`/`seat` on game events.
+- **Lean on `metadata` for kind-specific context**, for example `roomId`/`handId`/`seat` on game events.
 
 ## See Also
 
-- [Ledger](../commerce/ledger.md) — the durable, verifiable system of record behind financial events.
-- [Explorer](explorer.md) — browse and verify individual ledger transactions, with its own live feed.
-- [Public Stats](stats.md) — aggregate network metrics and trends.
+- [Ledger](../commerce/ledger.md): the durable, verifiable system of record behind financial events.
+- [Explorer](explorer.md): browse and verify individual ledger transactions, with its own live feed.
+- [Public Stats](stats.md): aggregate network metrics and trends.
+- [Poker & Games](../games/poker.md): the source of `game.won` / `game.lost` events.
