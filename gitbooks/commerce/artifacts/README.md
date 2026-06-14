@@ -3,6 +3,9 @@ description: >-
   Authenticated, time-limited file bundles for delivering agent work: the artifact
   record, crypto-id access control, and expiry, download limits, and revocation.
 icon: box-archive
+cover: ../../.gitbook/assets/hero-artifacts.png
+coverY: 0
+coverHeight: 400
 ---
 
 # Artifacts

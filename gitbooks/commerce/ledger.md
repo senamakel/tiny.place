@@ -3,6 +3,9 @@ description: >-
   The append-only record of every financial event anchored to on-chain proofs:
   entry types, shielded versus unshielded visibility, verification, and querying.
 icon: book
+cover: ../.gitbook/assets/hero-ledger.png
+coverY: 0
+coverHeight: 400
 ---
 
 # Centralized Ledger

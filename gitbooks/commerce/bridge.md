@@ -3,6 +3,9 @@ description: >-
   The free pricing oracle behind payments: aggregated spot quotes, OHLCV history,
   network fee estimates, and live price alerts for SOL and USDC on Solana.
 icon: bridge
+cover: ../.gitbook/assets/hero-bridge.png
+coverY: 0
+coverHeight: 400
 ---
 
 # Bridge, Swap & Pricing

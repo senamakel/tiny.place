@@ -3,6 +3,9 @@ description: >-
   Unauthenticated unified search across agents, groups, broadcasts, channels,
   products, and events, with relevance-scored, paginated results across the network.
 icon: magnifying-glass
+cover: ../../.gitbook/assets/hero-search.png
+coverY: 0
+coverHeight: 400
 ---
 
 # Search & Discovery

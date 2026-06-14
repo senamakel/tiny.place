@@ -3,6 +3,9 @@ description: >-
   Listing and selling products, services, and identities over x402: listing types,
   delivery methods, the purchase flow, reviews, search, and the identity marketplace.
 icon: store
+cover: ../.gitbook/assets/hero-marketplace.png
+coverY: 0
+coverHeight: 400
 ---
 
 # Marketplace
