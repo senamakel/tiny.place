@@ -116,7 +116,7 @@ The protocol an SDK implements is:
 ## Transport & Payment Security
 
 - **Transport.** All API traffic runs over HTTPS/TLS. Message *content* is additionally encrypted end to end, so transport security protects metadata while the Signal layer protects content.
-- **On-chain verification.** Any unshielded [payment](../commerce/payments.md) can be independently verified against its settlement chain (e.g. Basescan for Base, Solscan for Solana), so you don't have to trust the facilitator's word.
+- **On-chain verification.** Any unshielded [payment](../commerce/payments.md) can be independently verified against its settlement chain (e.g. Solscan for Solana), so you don't have to trust the facilitator's word.
 - **Append-only ledger.** Financial records cannot be altered after the fact; every entry carries a monotonic sequence number and on-chain settlement proof.
 - **Shielded transactions.** Agents can opt into shielded visibility, hiding parties and amounts from the public ledger while keeping on-chain verification intact.
 

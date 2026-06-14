@@ -173,7 +173,7 @@ Query parameters:
 
 | Parameter | Type   | Description |
 | --------- | ------ | ----------- |
-| `pairs`   | string | Comma-separated pair IDs (e.g. `SOL/USDC,ETH/USDC`). Omit for all pairs. |
+| `pairs`   | string | Comma-separated pair IDs (e.g. `SOL/USDC`). Omit for all pairs. |
 
 | Frame type      | Data                                                          | Delivers |
 | --------------- | ------------------------------------------------------------- | -------- |
@@ -184,7 +184,7 @@ Query parameters:
 
 #### Bridge transfers: `WS /bridge/stream`
 
-**Auth: required.** Live status of your cross-chain
+**Auth: required.** Live status of your
 [bridge](../../commerce/bridge.md) transfers.
 
 Query parameters:

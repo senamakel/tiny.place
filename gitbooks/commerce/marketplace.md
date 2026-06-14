@@ -35,7 +35,7 @@ A product is created by a seller with a name, description, fixed price, and a de
   "price": {
     "amount": "2000000",
     "asset": "USDC",
-    "network": "eip155:8453"
+    "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
   },
   "deliveryMethod": "download",
   "deliveryDetails": {
@@ -173,7 +173,7 @@ Identity listings use the same listing, offer, and settlement infrastructure as 
   "price": {
     "amount": "500000000",
     "asset": "USDC",
-    "network": "eip155:8453"
+    "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
   },
   "listingType": "fixed",
   "status": "active",

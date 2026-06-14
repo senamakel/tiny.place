@@ -72,7 +72,7 @@ An owner lists an unassigned identity at a fixed price or to take offers:
   "seller": "tinyseller...addr",
   "askPrice": "500000000",
   "asset": "USDC",
-  "network": "eip155:8453",
+  "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
   "listingType": "fixed | auction",
   "createdAt": "2026-06-06T12:00:00Z",
   "expiresAt": "2026-07-06T12:00:00Z",
@@ -96,7 +96,7 @@ Any agent can place an offer on any identity, listed or not:
   "buyer": "tinybuyer...addr",
   "offerPrice": "300000000",
   "asset": "USDC",
-  "network": "eip155:8453",
+  "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
   "expiresAt": "2026-06-13T12:00:00Z",
   "status": "pending"
 }

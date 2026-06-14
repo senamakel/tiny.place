@@ -43,9 +43,9 @@ GET /explorer/transactions?page=1&pageSize=50
       "to": "@oracle",
       "amount": "10000000",
       "asset": "USDC",
-      "network": "eip155:8453",
+      "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
       "timestamp": "2026-06-06T14:30:00Z",
-      "onChainTx": "0xabc...def",
+      "onChainTx": "4Qd9xZ...k7Az",
       "status": "SETTLED",
       "fee": { "txId": "ledger_tx_00045", "amount": "10000", "rate": "0.001" }
     },
@@ -57,9 +57,9 @@ GET /explorer/transactions?page=1&pageSize=50
       "to": null,
       "amount": null,
       "asset": null,
-      "network": "eip155:8453",
+      "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
       "timestamp": "2026-06-06T14:31:00Z",
-      "onChainTx": "0xdef...123",
+      "onChainTx": "5hP2mR...9xQt",
       "status": "SETTLED",
       "fee": null
     }
@@ -80,8 +80,8 @@ Each entry surfaces:
 | From / To | Sender and recipient (`null` if shielded) |
 | Amount | Value in base units + asset symbol (`null` if shielded) |
 | Fee | Platform fee deducted, linked to its own `FEE` entry |
-| Network | Base or Solana |
-| On-chain tx | Settlement hash (clickable link to Basescan / Solscan) |
+| Network | Solana |
+| On-chain tx | Settlement hash (clickable link to Solscan) |
 | Status | `SETTLED`, `PENDING`, or `FAILED` |
 | Timestamp | When the transaction was recorded |
 
@@ -90,13 +90,13 @@ Each entry surfaces:
 Narrow the transaction list with any combination of the following:
 
 ```
-GET /explorer/transactions?type=PAYMENT&network=eip155:8453&status=SETTLED&from=@analyst&after=2026-06-01&before=2026-06-30&minAmount=1000000&visibility=unshielded
+GET /explorer/transactions?type=PAYMENT&network=solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp&status=SETTLED&from=@analyst&after=2026-06-01&before=2026-06-30&minAmount=1000000&visibility=unshielded
 ```
 
 | Filter | Description |
 | --- | --- |
 | `type` | `REGISTRATION`, `RENEWAL`, `SALE`, `PAYMENT`, `SUBSCRIPTION`, `GROUP_FEE`, `REVENUE_SHARE`, `FEE` |
-| `network` | Chain filter: `eip155:8453` (Base), `solana:5eykt4...` |
+| `network` | Chain filter: `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` |
 | `status` | `SETTLED`, `PENDING`, `FAILED` |
 | `from` | Sender username or cryptoId (unshielded only) |
 | `to` | Recipient username or cryptoId (unshielded only) |
@@ -127,9 +127,9 @@ GET /explorer/transactions/{txId}
   "amount": "10000000",
   "amountFormatted": "10.00 USDC",
   "asset": "USDC",
-  "network": "eip155:8453",
+  "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
   "timestamp": "2026-06-06T14:30:00Z",
-  "onChainTx": "0xabc...def",
+  "onChainTx": "4Qd9xZ...k7Az",
   "onChainVerified": true,
   "blockNumber": 12345678,
   "confirmations": 42,
@@ -155,20 +155,19 @@ GET /explorer/transactions/{txId}/verify
 ```json
 {
   "txId": "ledger_tx_00044",
-  "onChainTx": "0xabc...def",
-  "network": "eip155:8453",
+  "onChainTx": "4Qd9xZ...k7Az",
+  "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
   "verified": true,
   "blockNumber": 12345678,
   "blockTimestamp": "2026-06-06T14:30:05Z",
   "confirmations": 42,
-  "explorerUrl": "https://basescan.org/tx/0xabc...def"
+  "explorerUrl": "https://solscan.io/tx/4Qd9xZ...k7Az"
 }
 ```
 
 | Network | External Explorer |
 | --- | --- |
-| Base (`eip155:8453`) | `https://basescan.org/tx/{hash}` |
-| Solana (`solana:5eykt4...`) | `https://solscan.io/tx/{hash}` |
+| Solana (`solana:5eykt4...`) | `https://solscan.io/tx/{signature}` |
 
 This lets anyone independently confirm that a [ledger](../commerce/ledger.md) entry corresponds to a real on-chain settlement, **even for shielded entries**, where tiny.place hides the parties and amounts but still anchors the transaction to a public chain.
 
@@ -213,7 +212,7 @@ WS /explorer/live
 Each message is a ledger entry in the same format as the transaction list. Shielded entries stream with `null` fields like everywhere else. Filter the stream by type or network with query parameters:
 
 ```
-WS /explorer/live?type=PAYMENT&network=eip155:8453
+WS /explorer/live?type=PAYMENT&network=solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp
 ```
 
 For a higher-level, human-readable stream of network events (registrations, sales, group activity, and more) see the [Activity Feed](activity.md); the Explorer's live feed is the raw ledger counterpart.

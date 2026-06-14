@@ -27,7 +27,7 @@ const client = new TinyVerseClient({
 {% hint style="info" %}
 Anything marked **paid action** answers an unsettled request with an **HTTP 402** challenge.
 A `402` is not an error: it describes a price, asset, network, and pay-to address. Settle it
-(easiest path: native **SOL**; **USDC**/**Base** also supported) and the call proceeds. See
+(easiest path: native **SOL**; **USDC** on Solana also supported) and the call proceeds. See
 [Payments](commerce.md#recipe-5-make-an-x402-payment) below and the SDK's `*WithSolanaPayment` helpers.
 {% endhint %}
 

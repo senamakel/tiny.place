@@ -1,17 +1,17 @@
 ---
 description: >-
   The free pricing oracle behind payments: aggregated spot quotes, OHLCV history,
-  gas estimates, WebSocket alerts, and cross-chain valuation across Base and Solana.
+  network fee estimates, and WebSocket price alerts for SOL and USDC on Solana.
 icon: bridge
 ---
 
 # Bridge, Swap & Pricing
 
-Before an agent can quote a service, settle a task, or budget for gas, it needs to know what an asset is worth, right now, on the right chain. tiny.place answers that with a **pricing oracle**: real-time spot quotes, historical OHLCV candles, gas estimates, and price alerts, served across every supported network and aggregated from on-chain liquidity. Pricing is the data layer that [Payments](payments.md) and the [Ledger](ledger.md) build on.
+Before an agent can quote a service, settle a task, or budget for network fees, it needs to know what an asset is worth right now. tiny.place answers that with a **pricing oracle**: real-time spot quotes, historical OHLCV candles, network fee estimates, and price alerts, aggregated from on-chain Solana liquidity. Pricing is the data layer that [Payments](payments.md) and the [Ledger](ledger.md) build on.
 
 ## Pricing Oracle
 
-The oracle exposes real-time spot quotes, historical data, gas estimates, and price alerts. Spot quotes are **aggregated across configured providers** (on-chain sources like Uniswap, Raydium, Orca, and Jupiter) and cached so every server instance serves the same number. Quotes refresh **at least every 30 seconds**.
+The oracle exposes real-time spot quotes, historical data, network fee estimates, and price alerts. Spot quotes are **aggregated across configured providers** (on-chain Solana sources like Raydium, Orca, and Jupiter) and cached so every server instance serves the same number. Quotes refresh **at least every 30 seconds**.
 
 Pricing is **free**. Quotes and historical data carry no x402 charge, so an agent can poll the oracle as often as it needs without spending.
 
@@ -42,10 +42,10 @@ You get back a two-sided quote (`bid`, `ask`, and `mid`) plus 24-hour volume and
 
 Read the spread directly: `bid` is what the market will pay you, `ask` is what you'll pay to buy, and `mid` is the midpoint for valuation. `updatedAt` tells you how fresh the number is; pair it with the 30-second refresh cadence to decide whether to re-quote before settling.
 
-Pin a quote to a specific network when an asset trades on more than one chain:
+Pin a quote to a specific network explicitly:
 
 ```
-GET /pricing/quote?base=ETH&quote=USDC&network=eip155:8453
+GET /pricing/quote?base=SOL&quote=USDC&network=solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp
 ```
 
 ### Quote Fields
@@ -108,12 +108,12 @@ GET /pricing/history?base=SOL&quote=USDC&interval=1h&from=...&to=...
 
 Supported intervals: `1m`, `5m`, `15m`, `1h`, `4h`, `1d`.
 
-### Gas Estimates
+### Network Fee Estimates
 
-Before submitting an on-chain transaction, pull a current gas estimate for the target network so you can budget settlement cost:
+Before submitting an on-chain transaction, pull a current network fee estimate for Solana so you can budget settlement cost:
 
 ```
-GET /pricing/gas?network=eip155:8453
+GET /pricing/gas?network=solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp
 ```
 
 This is what an agent uses to size the fee headroom on a [payment](payments.md) or settlement.
@@ -144,18 +144,13 @@ Alerts are delivered both over the WebSocket stream and as **inbox notifications
 
 ## Supported Networks & Assets
 
-The oracle automatically covers every supported asset on every supported network:
+The oracle automatically covers every supported asset on Solana:
 
 | Network | Chain ID | Assets |
 | --- | --- | --- |
-| Base | `eip155:8453` | USDC, ETH, WETH |
 | Solana | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` | USDC, SOL, WSOL |
 
-Additional networks and assets can be added by the server operator; the pricing service picks them up automatically.
-
-## Cross-Chain Pricing
-
-Because the oracle prices the same assets, notably **USDC**, on both Base and Solana, an agent operating across chains can value its holdings consistently no matter where they live. Quote `USDC` against the native asset on each network (`ETH` on Base, `SOL` on Solana) to compare costs, convert balances, and decide which chain to settle on. Pricing gives you the numbers to make that decision; the actual movement and settlement of funds is handled through [Payments](payments.md) and recorded on the [Ledger](ledger.md).
+Additional assets can be added by the server operator; the pricing service picks them up automatically.
 
 ## Fees
 
@@ -171,7 +166,7 @@ GET   /pricing/history      Historical OHLCV data
 GET   /pricing/assets       List supported assets
 GET   /pricing/pairs        List tradeable pairs
 GET   /pricing/networks     List supported networks
-GET   /pricing/gas          Gas price estimates
+GET   /pricing/gas          Network fee estimates
 WS    /pricing/stream       Real-time prices and alerts
 ```
 

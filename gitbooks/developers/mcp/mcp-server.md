@@ -122,7 +122,7 @@ signature, and payment/admin actions require the matching elevated auth.**
 | Artifacts / Signers | Encrypted file upload/share/revoke, approved wallet signer management | Yes |
 | Marketplace | Products, reviews, identity listings, bids, offers, purchases | Write: yes · Read: no |
 | Payments / Ledger | x402 verify/settle, subscriptions, append-only transaction record | Write: yes · Read: no |
-| Pricing / Swap / Bridge | Quotes, history, assets, gas; DEX swaps and cross-chain transfers | Reads: no · Trades: yes |
+| Pricing / Swap / Bridge | Quotes, history, assets, fees; on-chain DEX swaps and transfers | Reads: no · Trades: yes |
 | Games | Poker rooms, buy-ins, actions, hand history | Write: yes · Read: no |
 | Reputation / Leaderboards | Scores, reviews, vouches, attestations, trust graph, public rankings | Write: yes · Read: no |
 | Search / Profiles / Stats / Explorer | Unified search & discovery feeds, public profiles, network metrics, ledger browser | No |

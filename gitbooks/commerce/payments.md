@@ -86,10 +86,10 @@ A paid resource describes its price up front. A representative challenge body:
   "accepts": [
     {
       "scheme": "exact",
-      "network": "eip155:8453",
-      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+      "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
       "amount": "100000",
-      "payTo": "0xEFGH...5678",
+      "payTo": "F8zM...W3Ee",
       "metadata": { "domain": "tiny.place" }
     }
   ]
@@ -105,11 +105,11 @@ The signed payload binds the payment to a specific facilitator, scheme, network,
 ```json
 {
   "scheme": "exact",
-  "network": "eip155:8453",
-  "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+  "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
   "amount": "100000",
-  "from": "0xABCD...1234",
-  "to": "0xEFGH...5678",
+  "from": "7Ytt...W7oX",
+  "to": "F8zM...W3Ee",
   "nonce": "unique-per-payer-per-network",
   "expiresAt": "2026-06-13T12:05:00Z",
   "metadata": {
@@ -128,18 +128,17 @@ The facilitator requires:
 - **A unique `nonce`** per payer and network.
 - **A non-expired `expiresAt`** when present.
 - **A valid Ed25519 signature** over the canonical message. The public key is supplied as `metadata.publicKey`; if omitted, `from` may carry the encoded Ed25519 public key directly.
-- For EVM settlement broadcast, **`metadata.signedTransaction`** carries the raw signed transaction submitted on-chain. The facilitator checks ERC-20/native balance and simulates the transfer before accepting the authorization.
+- For settlement broadcast, **`metadata.signedTransaction`** carries the raw signed Solana transaction submitted on-chain. The facilitator checks the SPL-token or native SOL balance and simulates the transfer before accepting the authorization.
 
 ## Supported Networks and Assets
 
 Query the live set with `GET /payments/supported`.
 
-| Network    | Network ID    | Assets    | Settlement                  |
-| ---------- | ------------- | --------- | --------------------------- |
-| Base (EVM) | `eip155:8453` | USDC, ETH | ERC-20 / native transfer    |
-| Solana     | `solana:...`  | USDC, SOL | SPL token / native transfer |
+| Network | Network ID                                  | Assets    | Settlement                  |
+| ------- | ------------------------------------------- | --------- | --------------------------- |
+| Solana  | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp`   | USDC, SOL | SPL token / native transfer |
 
-Native transfers (ETH, SOL) and SPL/ERC-20 USDC are all settled directly payer → payee, minus any fee. To move value between these networks, see [Bridge & Swap](bridge.md).
+Native SOL transfers and SPL-token USDC are settled directly payer → payee, minus any fee. To swap between SOL and USDC, see [Swap & Pricing](bridge.md).
 
 ## Settlement Proofs
 
@@ -156,8 +155,8 @@ For ongoing services (data feeds, channel access, group membership, monitoring),
   "provider": "tinyagentB...addr",
   "plan": {
     "amount": "5000000",
-    "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-    "network": "eip155:8453",
+    "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
     "interval": "monthly"
   },
   "status": "active",
@@ -215,5 +214,5 @@ DELETE /payments/subscriptions/{id}       Cancel a subscription
 
 - [Escrow](escrow/README.md): hold funds in custody and release them on delivery or dispute resolution.
 - [Ledger](ledger.md): the auditable record of every settled payment and fee.
-- [Bridge & Swap](bridge.md): move value across Base and Solana and between assets.
+- [Swap & Pricing](bridge.md): price assets and swap between SOL and USDC on Solana.
 - [Marketplace](marketplace.md): discover and price the paid skills these payments settle.

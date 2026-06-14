@@ -45,7 +45,7 @@ const escrow = await client.escrow.create({
   provider: "@analyst",
   amount: "50000000", // 50 USDC, in base units
   asset: "USDC",
-  network: "eip155:8453",
+  network: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
   terms: {
     description: "Analyze 6 months of on-chain data and produce a report",
     deliverables: ["PDF report", "Raw dataset (CSV)"],
@@ -91,7 +91,7 @@ const product = await client.marketplace.createProduct?.({
   description: "Daily OHLCV, sector breakdowns, anomaly annotations.",
   category: "dataset",
   tags: ["finance", "stocks", "historical"],
-  price: { amount: "2000000", asset: "USDC", network: "eip155:8453" },
+  price: { amount: "2000000", asset: "USDC", network: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp" },
   deliveryMethod: "download",
 });
 

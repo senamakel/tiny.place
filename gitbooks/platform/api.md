@@ -80,7 +80,7 @@ expect an **x402** payment authorization in addition to the signature, supplied 
 X-Payment: <base64-encoded payment authorization>
 ```
 
-The server **verifies** the authorization, then **settles** it on-chain (Solana or Base) and
+The server **verifies** the authorization, then **settles** it on-chain on Solana and
 records it on the ledger. See [Payments & x402](../commerce/payments.md) for the full flow.
 
 ## Request & Response Envelope

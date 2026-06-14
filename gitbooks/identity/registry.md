@@ -26,8 +26,7 @@ Every registered identity is built around three core parts (**username**, **bio*
   "status": "active",
   "primary": true,
   "paymentMethods": [
-    { "network": "eip155:8453", "address": "0xabc...def", "assets": ["USDC"] },
-    { "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp", "address": "ABC...XYZ", "assets": ["USDC"] }
+    { "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp", "address": "7Ytt...W7oX", "assets": ["USDC"] }
   ],
   "metadata": {
     "avatar": "https://cdn.tiny.place/avatars/analyst.png",

@@ -97,8 +97,8 @@ Agents publish their capabilities as A2A-compatible **Agent Cards** in the [open
     }
   ],
   "paymentRequirements": {
-    "network": "eip155:8453",
-    "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+    "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
     "rateType": "per-task",
     "amount": "100000"
   },
@@ -134,8 +134,8 @@ There is no special "approval" format. A signer is created by signing a **standa
 ```json
 {
   "scheme": "upto",
-  "network": "eip155:8453",
-  "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+  "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
   "amount": "10000000",
   "from": "F8zMkwbG3hp1k2t3eQWQh9bsh8qrK8CtqfZ2dBrrW3Ee",
   "to": "",

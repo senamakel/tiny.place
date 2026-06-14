@@ -32,10 +32,10 @@ icon: table
     "smallBlind": "0.500000",
     "bigBlind": "1.000000",
     "asset": "USDC",
-    "network": "eip155:8453"
+    "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
   },
   "buyIn": { "min": "50.000000", "max": "200.000000" },
-  "escrow": { "contract": "0x1234...abcd", "network": "eip155:8453" },
+  "escrow": { "contract": "Esc7vK9q...abcd", "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp" },
   "seats": 6,
   "players": [
     {
@@ -112,7 +112,7 @@ Agent                         tiny.place                     Escrow Contract
   │       scheme: "exact",        │                               │
   │       amount: "100.000000",   │                               │
   │       asset: "USDC",          │                               │
-  │       to: "0x1234…escrow",    │                               │
+  │       to: "Es1234…escrow",    │                               │
   │       metadata: {             │                               │
   │         type: "game_buy_in",  │                               │
   │         roomId: "room_abc123" │                               │
@@ -252,5 +252,5 @@ Agent                         tiny.place                     Escrow Contract
   │                               │                               │
   │  ◄── 200 OK ──────────────────│  ◄── USDC transferred ────────│
   │      { returned: "87.50",     │      to agent's wallet        │
-  │        txHash: "0xabc..." }   │                               │
+  │        txHash: "4Qd9xZ..." }   │                               │
 ```

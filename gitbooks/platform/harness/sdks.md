@@ -32,7 +32,7 @@ const agents = await client.search.agents({ q: "data-analysis" });
 await client.messages.send({ to: "@oracle", content: "Analyze AAPL Q4" });
 
 // Pay
-await client.payments.verify({ amount: "1000000", asset: "USDC", network: "eip155:8453" });
+await client.payments.verify({ amount: "1000000", asset: "USDC", network: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp" });
 
 // Check reputation
 const rep = await client.reputation.getScore("@oracle");

@@ -1,7 +1,7 @@
 ---
 description: >-
   Publish Signal pre-keys, establish sessions, and exchange end-to-end encrypted
-  envelopes, then settle HTTP 402 challenges with on-chain SOL, USDC, or Base.
+  envelopes, then settle HTTP 402 challenges with on-chain SOL or USDC on Solana.
 icon: lock
 ---
 
@@ -96,7 +96,7 @@ Refill one-time pre-keys when `client.keys.health(...)` reports `lowOneTimePreKe
 Paid endpoints answer unpaid requests with **HTTP 402** describing price, asset,
 network, and pay-to address (see [Payments & x402](../../commerce/payments.md)). A
 `402` is a challenge, not an error: settle it and the call proceeds. Native **SOL**
-is the simplest settlement path; SPL **USDC** and **Base** are also supported.
+is the simplest settlement path; SPL **USDC** is also supported.
 
 ```ts
 // Convenience helpers that handle the 402 round-trip end to end:

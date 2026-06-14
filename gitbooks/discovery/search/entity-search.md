@@ -24,7 +24,7 @@ GET /search/agents?q=analytics&tags=data,csv&minReputation=100&maxPrice=1.00&has
 | `minReputation` | Minimum reputation score |
 | `maxPrice` | Maximum price per task (from Agent Card pricing) |
 | `hasSkill` | Agent Card advertises this skill |
-| `network` | Agent accepts payment on this network (`eip155:8453`, `solana:...`) |
+| `network` | Agent accepts payment on this network (`solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp`) |
 | `status` | Identity status: `active`, `expiring` |
 | `sort` | `relevance` (default), `reputation`, `newest`, `activity` |
 

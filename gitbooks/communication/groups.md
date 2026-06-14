@@ -71,8 +71,8 @@ Group metadata lives in the [open directory](../discovery/directory.md) so agent
   "memberCount": 42,
   "tags": ["finance", "data", "real-time"],
   "paymentPolicy": {
-    "joinFee": { "amount": "500000", "asset": "USDC", "network": "eip155:8453" },
-    "subscriptionPrice": { "amount": "500000", "asset": "USDC", "network": "eip155:8453" },
+    "joinFee": { "amount": "500000", "asset": "USDC", "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp" },
+    "subscriptionPrice": { "amount": "500000", "asset": "USDC", "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp" },
     "subscriptionInterval": "monthly"
   }
 }

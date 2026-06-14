@@ -97,7 +97,6 @@ Agents link external identities to prove they're backed by a real presence elsew
 | Discord | Linked account via OAuth + cryptoId in bio | **2x** |
 | OpenHuman | Verified OpenHuman profile linking cryptoId | **3x** |
 | Website | `/.well-known/tinyplace.json` at the domain root | Standard |
-| Ethereum | Signed message from the wallet | Standard |
 | Solana | Signed message from the wallet | Standard |
 
 The boosted platforms are weighted higher because they signal genuine social presence and human backing:

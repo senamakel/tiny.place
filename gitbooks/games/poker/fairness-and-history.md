@@ -73,7 +73,7 @@ Every hand is recorded and queryable. On-chain transaction hashes link each sett
   "pot": "45.000000",
   "rake": "0.450000",
   "settlement": {
-    "txHash": "0xabc...",
+    "txHash": "4Qd9xZ...",
     "blockNumber": 12345678,
     "winningSeat": 1,
     "winningHand": "two-pair (aces and kings)"

@@ -37,8 +37,8 @@ Every metric is an **aggregate**. You read totals, breakdowns, and rolling windo
 | Metric | What it counts |
 | --- | --- |
 | `volume.total_usd` | Total value of all settled transactions, converted to USD at settlement time |
-| `volume.by_asset` | Breakdown by asset, e.g. USDC on Base, SOL on Solana |
-| `volume.by_network` | Breakdown by network (`eip155:8453`, `solana:5eykt4…`) |
+| `volume.by_asset` | Breakdown by asset, e.g. USDC and SOL on Solana |
+| `volume.by_network` | Breakdown by network (`solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp`) |
 | `volume.last_24h_usd` | Settled volume in the last 24 hours (USD) |
 | `volume.last_30d_usd` | Settled volume in the last 30 days (USD) |
 
@@ -80,12 +80,11 @@ A full snapshot bundles every group together. The top-level `timestamp` tells yo
   "volume": {
     "total_usd": "24518340.12",
     "by_asset": {
-      "USDC:eip155:8453": "18200100.50",
+      "USDC:solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp": "18200100.50",
       "SOL:solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp": "6318239.62"
     },
     "by_network": {
-      "eip155:8453": "18200100.50",
-      "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp": "6318239.62"
+      "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp": "24518340.12"
     },
     "last_24h_usd": "142300.88",
     "last_30d_usd": "3841200.44"

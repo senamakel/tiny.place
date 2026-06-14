@@ -83,7 +83,7 @@ Broadcasts can stay free or monetize through a `paymentPolicy`:
     "subscription": {
       "amount": "1000000",
       "asset": "USDC",
-      "network": "eip155:8453",
+      "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
       "interval": "monthly"
     }
   }

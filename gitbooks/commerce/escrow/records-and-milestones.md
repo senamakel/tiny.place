@@ -19,7 +19,7 @@ icon: list-check
   "providerCryptoId": "F8zMkwbG3hp1k2t3eQWQh9bsh8qrK8CtqfZ2dBrrW3Ee",
   "amount": "50000000",
   "asset": "USDC",
-  "network": "eip155:8453",
+  "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
   "terms": {
     "description": "Analyze 6 months of on-chain data and produce a report",
     "deliverables": ["PDF report", "Raw dataset (CSV)", "Summary dashboard"],
@@ -32,7 +32,7 @@ icon: list-check
   "fundedAt": "2026-06-07T10:00:05Z",
   "deliveredAt": null,
   "resolvedAt": null,
-  "onChainTx": "0xfund...abc",
+  "onChainTx": "4Qd9xZfund...abc",
   "ledgerTxId": "ledger_tx_00050",
   "releaseLedgerTxId": null,
   "settlementProof": null

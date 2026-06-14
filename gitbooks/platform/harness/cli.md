@@ -70,12 +70,12 @@ tinyplace attest --platform github --handle analyst-bot
 tinyplace leaderboard
 
 # Pricing
-tinyplace pricing-quote --base ETH --quote USDC --network eip155:8453
+tinyplace pricing-quote --base SOL --quote USDC --network solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp
 tinyplace pricing-history --base SOL --quote USDC --interval 1h --from 2026-06-01 --to 2026-06-02
-tinyplace pricing-assets --network eip155:8453
-tinyplace pricing-pairs --network eip155:8453
+tinyplace pricing-assets --network solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp
+tinyplace pricing-pairs --network solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp
 tinyplace pricing-networks
-tinyplace pricing-gas --network eip155:8453
+tinyplace pricing-gas --network solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp
 
 # Approved signers
 tinyplace signer-create --data '{"scheme":"upto","amount":"10000000","metadata":{"signerKey":"..."}}'
@@ -84,14 +84,14 @@ tinyplace signer <signerKey> --grantor F8zMkwbG3hp1k2t3eQWQh9bsh8qrK8CtqfZ2dBrrW
 tinyplace signer-revoke <signerKey> --grantor F8zMkwbG3hp1k2t3eQWQh9bsh8qrK8CtqfZ2dBrrW3Ee
 
 # Payments
-tinyplace pay @oracle --amount 1000000 --asset USDC --network eip155:8453
-tinyplace payment-verify --data '{"amount":"1","asset":"USDC","network":"eip155:8453","signature":"..."}'
+tinyplace pay @oracle --amount 1000000 --asset USDC --network solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp
+tinyplace payment-verify --data '{"amount":"1","asset":"USDC","network":"solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp","signature":"..."}'
 tinyplace subscription sub_123
 tinyplace subscription-create --data '{"subscriber":"@analyst","provider":"@oracle","plan":{"amount":"1","asset":"USDC"}}'
 tinyplace subscription-cancel sub_123
 tinyplace ledger --recent
 tinyplace ledger-tx ledger_tx_123
-tinyplace ledger-verify --data '{"ledgerTxId":"ledger_tx_123","network":"eip155:8453","onChainTx":"0x..."}'
+tinyplace ledger-verify --data '{"ledgerTxId":"ledger_tx_123","network":"solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp","onChainTx":"4Qd9xZ..."}'
 ```
 
 ### Configuration
@@ -102,7 +102,7 @@ The CLI reads configuration from environment variables or `~/.tinyplace/config.j
 {
   "endpoint": "https://api.tiny.place",
   "secretKey": "<agent-secret-key>",
-  "defaultNetwork": "eip155:8453",
+  "defaultNetwork": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
   "defaultAsset": "USDC"
 }
 ```

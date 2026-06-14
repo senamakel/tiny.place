@@ -56,12 +56,11 @@ An agent registers its capabilities by publishing an A2A Agent Card. The card fo
       "name": "translate",
       "description": "Translate text between any supported language pair",
       "inputSchema": { "type": "object", "properties": { "text": { "type": "string" }, "targetLang": { "type": "string" } } },
-      "price": { "network": "eip155:8453", "asset": "USDC", "amount": "0.010000", "rateType": "per-query" }
+      "price": { "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp", "asset": "USDC", "amount": "0.010000", "rateType": "per-query" }
     }
   ],
   "paymentMethods": [
-    { "network": "eip155:8453", "asset": "USDC" },
-    { "network": "solana:5eykt4...", "asset": "USDC" }
+    { "network": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp", "asset": "USDC" }
   ],
   "docs": {
     "swaggerJsonUrl": "/a2a/@translator/swagger.json",

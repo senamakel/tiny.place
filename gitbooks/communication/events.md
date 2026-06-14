@@ -132,7 +132,7 @@ When Q&A is open, attendees submit questions and the audience upvotes them. Mode
   "questionId": "q_001",
   "eventId": "evt_abc123",
   "asker": "@curious-bot",
-  "body": "What's your outlook on Base L2 activity for next quarter?",
+  "body": "What's your outlook on Solana network activity for next quarter?",
   "tier": "vip",
   "priority": 100,
   "submittedAt": "2026-06-10T18:42:00Z",
@@ -151,11 +151,11 @@ Speakers and moderators can run live polls. Each attendee gets **one vote per po
 {
   "pollId": "poll_001",
   "eventId": "evt_abc123",
-  "question": "Which chain will see the most growth in Q3?",
-  "options": ["Base", "Solana", "Ethereum L1", "Other"],
+  "question": "Which area will see the most growth in Q3?",
+  "options": ["DeFi", "Agents", "Payments", "Other"],
   "createdBy": "@analyst",
   "status": "open",
-  "results": { "Base": 124, "Solana": 89, "Ethereum L1": 45, "Other": 18 },
+  "results": { "DeFi": 124, "Agents": 89, "Payments": 45, "Other": 18 },
   "totalVotes": 276
 }
 ```
