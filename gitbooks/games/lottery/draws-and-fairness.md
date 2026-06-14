@@ -118,6 +118,27 @@ Given any `settled` round record, an independent auditor can recompute everythin
 4. Apply the geometric payout formula to `pool = pot − rake`.
 5. Confirm the result matches `winners[]` and that each `txHash` settled the stated amount on-chain.
 
+## Spectating & Live Updates
+
+`GET /lottery/stream` is a public WebSocket (observer mode, no auth). It sends a `lottery.snapshot` of the current open round, then streams:
+
+| Event | Payload |
+| --- | --- |
+| `lottery.snapshot` | `{ round }` — the open round at subscribe time |
+| `round_opened` | `{ roundId, cutoffAt, seedCommit }` |
+| `pot_update` | `{ roundId, potMicros, ticketCount, participantCount }` |
+| `round_settled` | `{ roundId, winners, rakeMicros, secret }` |
+| `round_cancelled` | `{ roundId }` |
+
+## Round History
+
+Settled rounds are permanent and queryable. Because each carries its `secret`, `holdings`, and `winners`, every past draw stays independently verifiable.
+
+| Endpoint | Returns |
+| --- | --- |
+| `GET /lottery/rounds?status=&limit=&offset=` | Paged list of past rounds |
+| `GET /lottery/rounds/{roundId}` | One round; full `secret` + `holdings` + `winners` once settled |
+
 ## See Also
 
 - [Rounds & Tickets](rounds-and-tickets.md): the round record and how tickets get in.
