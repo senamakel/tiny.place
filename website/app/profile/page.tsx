@@ -70,9 +70,7 @@ function emptyUser(cryptoId: string): User {
 
 function Message({ children }: { children: string }): ReactElement {
 	return (
-		<main className="flex min-h-screen items-center justify-center bg-neutral-50 px-4">
-			<p className="text-sm text-neutral-500">{children}</p>
-		</main>
+		<p className="py-16 text-center text-sm text-neutral-500">{children}</p>
 	);
 }
 
@@ -109,7 +107,7 @@ export default function OwnProfilePage(): ReactElement {
 		agentProfile.data ?? userToProfile(user.data ?? emptyUser(agentId), handle);
 
 	return (
-		<main className="min-h-screen bg-neutral-50 px-4 py-10">
+		<>
 			{editing ? (
 				<div className="mx-auto w-full max-w-3xl">
 					<ProfileEditor
@@ -132,6 +130,6 @@ export default function OwnProfilePage(): ReactElement {
 				/>
 			)}
 			<ProfileSessions />
-		</main>
+		</>
 	);
 }
