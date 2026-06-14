@@ -6,8 +6,10 @@ import type { Identity, IdentityListing } from "@tinyhumansai/tinyplace";
 
 import type { FunctionComponent } from "@src/common/types";
 import {
+	useAcceptIdentityOffer,
 	useCreateIdentityListing,
 	useDeleteIdentityListing,
+	useIdentityOffers,
 } from "@src/hooks/use-identity-market";
 import {
 	useRenewIdentity,
@@ -16,11 +18,14 @@ import {
 } from "@src/hooks/use-registry";
 
 import {
+	accentButtonClass,
 	deriveRecipient,
 	expiryLabel,
+	ghostButtonClass,
 	statusTone,
 	strip,
 } from "./identity-management";
+import { useX402Confirm } from "./x402-confirm";
 
 // Native-SOL settlement network used for fixed-price identity listings; mirrors
 // the value the marketplace uses elsewhere in the app.
@@ -33,7 +38,7 @@ type IdentityCardProperties = {
 	listing: IdentityListing | undefined;
 };
 
-type ActionPanel = "none" | "list" | "transfer";
+type ActionPanel = "none" | "list" | "transfer" | "offers";
 
 function IdentityCard({
 	agentId,
@@ -44,15 +49,22 @@ function IdentityCard({
 	const [panel, setPanel] = useState<ActionPanel>("none");
 	const [price, setPrice] = useState("");
 	const [description, setDescription] = useState("");
+	const [listingType, setListingType] = useState<"auction" | "fixed">("fixed");
+	const [reserve, setReserve] = useState("");
+	const [durationDays, setDurationDays] = useState("7");
 	const [recipient, setRecipient] = useState("");
 	const [recipientError, setRecipientError] = useState<string | null>(null);
 	const [confirmTransfer, setConfirmTransfer] = useState(false);
 
+	const confirmX402 = useX402Confirm();
 	const setPrimary = useSetPrimaryIdentity();
 	const renew = useRenewIdentity();
 	const createListing = useCreateIdentityListing();
 	const deleteListing = useDeleteIdentityListing();
 	const transfer = useTransferIdentity();
+	const offersQuery = useIdentityOffers({ name: identity.username });
+	const acceptOffer = useAcceptIdentityOffer();
+	const offers = offersQuery.data?.offers ?? [];
 
 	const cardClass = isDark
 		? "border-neutral-800 bg-neutral-950"
@@ -65,8 +77,7 @@ function IdentityCard({
 			: "border-neutral-300 bg-white text-black placeholder-neutral-400"
 	}`;
 	const labelClass = `text-xs font-medium ${secondaryClass}`;
-	const ghostButton =
-		"rounded-md border border-neutral-600 px-2.5 py-1 text-xs font-medium transition-colors hover:bg-neutral-700/30 disabled:opacity-50";
+	const ghostButton = `${ghostButtonClass(isDark)} px-2.5 py-1`;
 
 	const isPrimary = Boolean(identity.primary);
 	const isListed = Boolean(listing);
@@ -80,11 +91,23 @@ function IdentityCard({
 
 	function handleList(event: React.FormEvent): void {
 		event.preventDefault();
+		const isAuction = listingType === "auction";
+		// For an auction the price is the starting bid; the reserve (if set) is the
+		// minimum acceptable winning bid, and the listing runs for durationDays.
+		const days = Number(durationDays) || 7;
 		createListing.mutate(
 			{
 				description,
+				expiresAt: isAuction
+					? new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()
+					: undefined,
+				listingType,
 				name: identity.username,
 				price: { amount: price, asset: "USDC", network: SOLANA_NETWORK },
+				reservePrice:
+					isAuction && reserve
+						? { amount: reserve, asset: "USDC", network: SOLANA_NETWORK }
+						: undefined,
 				seller: identity.username,
 				sellerCryptoId: agentId,
 			},
@@ -92,6 +115,7 @@ function IdentityCard({
 				onSuccess: (): void => {
 					setPrice("");
 					setDescription("");
+					setReserve("");
 					setPanel("none");
 				},
 			}
@@ -129,7 +153,10 @@ function IdentityCard({
 	}
 
 	return (
-		<li className={`rounded-lg border p-3 ${cardClass}`}>
+		<li
+			className={`rounded-lg border p-3 ${cardClass}`}
+			data-testid={`identity-${identity.username}`}
+		>
 			<div className="flex flex-wrap items-center justify-between gap-2">
 				<div className="flex items-center gap-2">
 					<span className={`text-sm font-medium ${headingClass}`}>
@@ -184,7 +211,15 @@ function IdentityCard({
 					disabled={renew.isPending}
 					type="button"
 					onClick={(): void => {
-						renew.mutate({ name: identity.username });
+						confirmX402(
+							{
+								title: "Renew identity",
+								subject: identity.username,
+								note: "Extends the registration by one year; the annual fee is settled via x402.",
+								confirmLabel: "Renew",
+							},
+							() => renew.mutateAsync({ name: identity.username })
+						);
 					}}
 				>
 					{renew.isPending ? "Renewing…" : "Renew"}
@@ -232,6 +267,15 @@ function IdentityCard({
 				>
 					Transfer
 				</button>
+				<button
+					className={ghostButton}
+					type="button"
+					onClick={(): void => {
+						togglePanel("offers");
+					}}
+				>
+					Offers{offers.length > 0 ? ` (${String(offers.length)})` : ""}
+				</button>
 			</div>
 
 			{renew.isError && (
@@ -258,9 +302,33 @@ function IdentityCard({
 
 			{panel === "list" && (
 				<form className="mt-3 space-y-2" onSubmit={handleList}>
+					<div className="flex gap-1.5">
+						{(["fixed", "auction"] as const).map((kind) => (
+							<button
+								key={kind}
+								type="button"
+								className={`rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors ${
+									listingType === kind
+										? "bg-blue-600 text-white"
+										: isDark
+											? "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
+											: "bg-neutral-200 text-neutral-600 hover:bg-neutral-300"
+								}`}
+								onClick={(): void => {
+									setListingType(kind);
+								}}
+							>
+								{kind === "fixed" ? "Fixed price" : "Auction"}
+							</button>
+						))}
+					</div>
 					<div className="grid grid-cols-2 gap-2">
 						<div>
-							<label className={labelClass}>Price (USDC)</label>
+							<label className={labelClass}>
+								{listingType === "auction"
+									? "Starting bid (USDC)"
+									: "Price (USDC)"}
+							</label>
 							<input
 								required
 								className={inputClass}
@@ -287,6 +355,37 @@ function IdentityCard({
 							/>
 						</div>
 					</div>
+					{listingType === "auction" && (
+						<div className="grid grid-cols-2 gap-2">
+							<div>
+								<label className={labelClass}>Reserve (USDC, optional)</label>
+								<input
+									className={inputClass}
+									min="0"
+									placeholder="100.00"
+									step="0.01"
+									type="number"
+									value={reserve}
+									onChange={(event): void => {
+										setReserve(event.target.value);
+									}}
+								/>
+							</div>
+							<div>
+								<label className={labelClass}>Duration (days)</label>
+								<input
+									className={inputClass}
+									min="1"
+									placeholder="7"
+									type="number"
+									value={durationDays}
+									onChange={(event): void => {
+										setDurationDays(event.target.value);
+									}}
+								/>
+							</div>
+						</div>
+					)}
 					{createListing.isError && (
 						<p className="text-xs text-rose-500">
 							{createListing.error instanceof Error
@@ -295,7 +394,7 @@ function IdentityCard({
 						</p>
 					)}
 					<button
-						className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+						className={`${accentButtonClass(isDark, "blue")} w-full px-3 py-1.5`}
 						disabled={createListing.isPending || !price}
 						type="submit"
 					>
@@ -344,7 +443,7 @@ function IdentityCard({
 						</p>
 					)}
 					<button
-						className="w-full rounded-md bg-rose-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-rose-500 disabled:opacity-50"
+						className={`${accentButtonClass(isDark, "rose")} w-full px-3 py-1.5`}
 						disabled={transfer.isPending || !confirmTransfer || !recipient}
 						type="submit"
 					>
@@ -353,6 +452,58 @@ function IdentityCard({
 							: `Transfer ${strip(identity.username)}`}
 					</button>
 				</form>
+			)}
+
+			{panel === "offers" && (
+				<div className="mt-3 space-y-2">
+					{offersQuery.isLoading && (
+						<p className={`text-xs ${secondaryClass}`}>Loading offers…</p>
+					)}
+					{!offersQuery.isLoading && offers.length === 0 && (
+						<p className={`text-xs ${secondaryClass}`}>
+							No pending offers for {identity.username}.
+						</p>
+					)}
+					{offers.map((offer) => (
+						<div
+							key={offer.offerId}
+							className="flex items-center justify-between gap-2"
+						>
+							<div>
+								<div className={`text-xs font-semibold ${headingClass}`}>
+									{offer.price.amount} {offer.price.asset}
+								</div>
+								<div className={`text-xs ${secondaryClass}`}>
+									from {offer.buyer}
+								</div>
+							</div>
+							<button
+								className={`${accentButtonClass(isDark, "emerald")} px-2.5 py-1`}
+								disabled={acceptOffer.isPending}
+								type="button"
+								onClick={(): void => {
+									acceptOffer.mutate(
+										{ offerId: offer.offerId, request: { seller: agentId } },
+										{
+											onSuccess: (): void => {
+												setPanel("none");
+											},
+										}
+									);
+								}}
+							>
+								{acceptOffer.isPending ? "Accepting…" : "Accept"}
+							</button>
+						</div>
+					))}
+					{acceptOffer.isError && (
+						<p className="text-xs text-rose-500">
+							{acceptOffer.error instanceof Error
+								? acceptOffer.error.message
+								: "Failed to accept offer"}
+						</p>
+					)}
+				</div>
 			)}
 		</li>
 	);

@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { IdentityListing } from "@tinyhumansai/tinyplace";
 
 import type { FunctionComponent } from "@src/common/types";
+import { sanitizeHandle } from "@src/components/explore/identity-management";
 import { useDirectoryIdentities } from "@src/hooks/use-directory";
 import { useHandleAvailability } from "@src/hooks/use-registry";
 
@@ -76,7 +77,7 @@ export const IdentityRegistry = ({
 								: "border-neutral-200 bg-white text-black placeholder:text-neutral-400"
 						}`}
 						onChange={(event): void => {
-							setInput(event.target.value);
+							setInput(sanitizeHandle(event.target.value));
 						}}
 					/>
 					<button

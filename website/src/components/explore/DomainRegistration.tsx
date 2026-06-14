@@ -16,6 +16,7 @@ import {
 	getAnnualFee,
 	PRICING_TIERS,
 } from "@src/components/explore/domain-pricing";
+import { sanitizeHandle } from "@src/components/explore/identity-management";
 import { createClient } from "@src/common/api-client";
 import { assertValidX402Challenge } from "@src/common/x402-challenge";
 import { useHandleAvailability } from "@src/hooks/use-registry";
@@ -357,7 +358,7 @@ export const DomainRegistration = ({
 						type="text"
 						value={searchInput}
 						onChange={(event): void => {
-							setSearchInput(event.target.value);
+							setSearchInput(sanitizeHandle(event.target.value));
 						}}
 						onKeyDown={(event): void => {
 							if (event.key === "Enter") {

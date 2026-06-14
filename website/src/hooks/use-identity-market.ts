@@ -87,6 +87,31 @@ export function useIdentityBids(
 	});
 }
 
+/**
+ * Lists pending offers, filtered by the targeted handle (`name`, for a seller
+ * reviewing incoming offers) and/or the `buyer` (reviewing their own). The key
+ * nests under the shared identity-offers prefix so the offer mutations'
+ * invalidations refresh every scoped list. Disabled until a filter is given.
+ */
+export function useIdentityOffers(parameters?: {
+	buyer?: string;
+	name?: string;
+}): UseQueryResult<{ offers: Array<IdentityOffer> }> {
+	const client = useApiClient();
+	const name = parameters?.name;
+	const buyer = parameters?.buyer;
+	return useQuery({
+		queryKey: [
+			...queryKeys.marketplace.identityOffers(),
+			name ?? "",
+			buyer ?? "",
+		],
+		queryFn: (): Promise<{ offers: Array<IdentityOffer> }> =>
+			client.marketplace.listOffers({ buyer, name }),
+		enabled: Boolean(name ?? buyer),
+	});
+}
+
 type IdentityPaymentChallenge = {
 	error: string;
 	payment: Omit<X402AuthorizationFields, "expiresAt" | "nonce"> &
@@ -142,8 +167,11 @@ export function useCreateIdentityListing(): UseMutationResult<
 	Error,
 	{
 		description?: string;
+		expiresAt?: string;
+		listingType?: "auction" | "fixed";
 		name: string;
 		price: MarketplacePrice;
+		reservePrice?: MarketplacePrice;
 		seller: string;
 		sellerCryptoId?: string;
 	}
@@ -154,8 +182,11 @@ export function useCreateIdentityListing(): UseMutationResult<
 	return useMutation({
 		mutationFn: ({
 			description,
+			expiresAt,
+			listingType,
 			name,
 			price,
+			reservePrice,
 			seller,
 			sellerCryptoId,
 		}): Promise<IdentityListing> => {
@@ -164,9 +195,11 @@ export function useCreateIdentityListing(): UseMutationResult<
 			}
 			return client.marketplace.createIdentityListing({
 				description,
-				listingType: "fixed",
+				expiresAt,
+				listingType: listingType ?? "fixed",
 				name,
 				price,
+				reservePrice,
 				seller,
 				sellerCryptoId: sellerCryptoId ?? agentId,
 				status: "active",
