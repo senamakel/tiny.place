@@ -24,6 +24,7 @@ import {
 	isExpired,
 	strip,
 } from "./identity-management";
+import { useX402Confirm } from "./x402-confirm";
 
 const avatarColors = [
 	"bg-indigo-600",
@@ -75,6 +76,7 @@ export function IdentityListingCard({
 	const [bidAmount, setBidAmount] = useState("");
 	const [offerAmount, setOfferAmount] = useState("");
 
+	const confirmX402 = useX402Confirm();
 	const buyListing = useBuyIdentityListing();
 	const placeBid = usePlaceIdentityBid();
 	const closeAuction = useCloseIdentityAuction();
@@ -117,42 +119,60 @@ export function IdentityListingCard({
 
 	function handleBid(event: React.FormEvent): void {
 		event.preventDefault();
-		if (!buyerIdentity || bidBelowMinimum) {
+		const bidder = buyerIdentity;
+		if (!bidder || bidBelowMinimum) {
 			return;
 		}
-		placeBid.mutate(
+		const amount = bidAmount;
+		confirmX402(
 			{
-				bid: {
-					bidder: buyerIdentity.username,
-					price: { amount: bidAmount, asset: "USDC", network: SOLANA_NETWORK },
-				},
-				listingId: listing.listingId,
+				title: "Place auction bid",
+				subject: listing.name,
+				amount,
+				asset: listing.price.asset,
+				recipient: listing.seller,
+				note: "Your bid is locked via x402; you only pay if you win.",
+				confirmLabel: "Place bid",
 			},
-			{
-				onSuccess: (): void => {
-					setBidAmount("");
-					setPanel("none");
-				},
+			async () => {
+				await placeBid.mutateAsync({
+					bid: {
+						bidder: bidder.username,
+						price: { amount, asset: "USDC", network: SOLANA_NETWORK },
+					},
+					listingId: listing.listingId,
+				});
+				setBidAmount("");
+				setPanel("none");
 			}
 		);
 	}
 
 	function handleOffer(event: React.FormEvent): void {
 		event.preventDefault();
-		if (!buyerIdentity) {
+		const buyer = buyerIdentity;
+		if (!buyer) {
 			return;
 		}
-		createOffer.mutate(
+		const amount = offerAmount;
+		confirmX402(
 			{
-				buyer: buyerIdentity.username,
-				name: listing.name,
-				price: { amount: offerAmount, asset: "USDC", network: SOLANA_NETWORK },
+				title: "Make an offer",
+				subject: listing.name,
+				amount,
+				asset: listing.price.asset,
+				recipient: listing.seller,
+				note: "Funds are authorized now and only move if the seller accepts.",
+				confirmLabel: "Submit offer",
 			},
-			{
-				onSuccess: (): void => {
-					setOfferAmount("");
-					setPanel("none");
-				},
+			async () => {
+				await createOffer.mutateAsync({
+					buyer: buyer.username,
+					name: listing.name,
+					price: { amount, asset: "USDC", network: SOLANA_NETWORK },
+				});
+				setOfferAmount("");
+				setPanel("none");
 			}
 		);
 	}
@@ -211,14 +231,28 @@ export function IdentityListingCard({
 							disabled={!canActAsBuyer || buyListing.isPending}
 							type="button"
 							onClick={(): void => {
-								if (!agentId || !buyerIdentity) {
+								const wallet = agentId;
+								const buyer = buyerIdentity;
+								if (!wallet || !buyer) {
 									return;
 								}
-								buyListing.mutate({
-									buyer: buyerIdentity.username,
-									buyerCryptoId: agentId,
-									listingId: listing.listingId,
-								});
+								confirmX402(
+									{
+										title: "Buy identity",
+										subject: listing.name,
+										amount: listing.price.amount,
+										asset: listing.price.asset,
+										recipient: listing.seller,
+										note: "Settled on-chain via the tiny.place facilitator.",
+										confirmLabel: "Buy",
+									},
+									() =>
+										buyListing.mutateAsync({
+											buyer: buyer.username,
+											buyerCryptoId: wallet,
+											listingId: listing.listingId,
+										})
+								);
 							}}
 						>
 							{buyListing.isPending ? "Buying…" : "Buy"}
@@ -290,13 +324,6 @@ export function IdentityListingCard({
 						Minimum bid: {minBid} {listing.price.asset}
 						{highest ? " (5% above the current bid)" : ""}
 					</p>
-					{placeBid.isError && (
-						<p className="text-xs text-rose-500">
-							{placeBid.error instanceof Error
-								? placeBid.error.message
-								: "Failed to place bid"}
-						</p>
-					)}
 					<button
 						className={`${accentButtonClass(isDark, "orange")} w-full px-3 py-1.5`}
 						disabled={placeBid.isPending || bidBelowMinimum}
@@ -321,16 +348,6 @@ export function IdentityListingCard({
 							setOfferAmount(event.target.value);
 						}}
 					/>
-					{createOffer.isError && (
-						<p className="text-xs text-rose-500">
-							{createOffer.error instanceof Error
-								? createOffer.error.message
-								: "Failed to make offer"}
-						</p>
-					)}
-					{createOffer.isSuccess && (
-						<p className="text-xs text-emerald-500">Offer submitted.</p>
-					)}
 					<button
 						className={`${accentButtonClass(isDark, "blue")} w-full px-3 py-1.5`}
 						disabled={createOffer.isPending || !offerAmount}
@@ -341,11 +358,11 @@ export function IdentityListingCard({
 				</form>
 			)}
 
-			{(buyListing.isError || closeAuction.isError) && (
+			{closeAuction.isError && (
 				<p className="mt-2 text-xs text-rose-500">
-					{(buyListing.error ?? closeAuction.error) instanceof Error
-						? ((buyListing.error ?? closeAuction.error) as Error).message
-						: "Action failed"}
+					{closeAuction.error instanceof Error
+						? closeAuction.error.message
+						: "Failed to close auction"}
 				</p>
 			)}
 		</div>

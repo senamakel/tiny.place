@@ -8,6 +8,7 @@ import { Chip } from "@src/components/ui/Chip";
 import { DomainRegistration } from "./DomainRegistration";
 import { IdentityRegistry } from "./IdentityRegistry";
 import { IdentityTrading } from "./IdentityTrading";
+import { X402ConfirmProvider } from "./X402ConfirmDialog";
 
 const tabs = ["register", "registry", "trading"] as const;
 
@@ -37,22 +38,24 @@ export const Identities = ({
 	const ActiveComponent = tabComponents[activeTab];
 
 	return (
-		<div className="space-y-3">
-			<div className="flex gap-1">
-				{tabs.map((tab) => (
-					<Chip
-						key={tab}
-						active={activeTab === tab}
-						isDark={isDark}
-						onClick={(): void => {
-							setActiveTab(tab);
-						}}
-					>
-						{tabLabels[tab]}
-					</Chip>
-				))}
+		<X402ConfirmProvider isDark={isDark}>
+			<div className="space-y-3">
+				<div className="flex gap-1">
+					{tabs.map((tab) => (
+						<Chip
+							key={tab}
+							active={activeTab === tab}
+							isDark={isDark}
+							onClick={(): void => {
+								setActiveTab(tab);
+							}}
+						>
+							{tabLabels[tab]}
+						</Chip>
+					))}
+				</div>
+				<ActiveComponent isDark={isDark} />
 			</div>
-			<ActiveComponent isDark={isDark} />
-		</div>
+		</X402ConfirmProvider>
 	);
 };

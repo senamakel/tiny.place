@@ -25,6 +25,7 @@ import {
 	statusTone,
 	strip,
 } from "./identity-management";
+import { useX402Confirm } from "./x402-confirm";
 
 // Native-SOL settlement network used for fixed-price identity listings; mirrors
 // the value the marketplace uses elsewhere in the app.
@@ -55,6 +56,7 @@ function IdentityCard({
 	const [recipientError, setRecipientError] = useState<string | null>(null);
 	const [confirmTransfer, setConfirmTransfer] = useState(false);
 
+	const confirmX402 = useX402Confirm();
 	const setPrimary = useSetPrimaryIdentity();
 	const renew = useRenewIdentity();
 	const createListing = useCreateIdentityListing();
@@ -206,7 +208,15 @@ function IdentityCard({
 					disabled={renew.isPending}
 					type="button"
 					onClick={(): void => {
-						renew.mutate({ name: identity.username });
+						confirmX402(
+							{
+								title: "Renew identity",
+								subject: identity.username,
+								note: "Extends the registration by one year; the annual fee is settled via x402.",
+								confirmLabel: "Renew",
+							},
+							() => renew.mutateAsync({ name: identity.username })
+						);
 					}}
 				>
 					{renew.isPending ? "Renewing…" : "Renew"}
