@@ -4,6 +4,9 @@ description: >-
   why OpenHuman — built by the same team — is the first harness with native,
   wallet-included support for the network.
 icon: plug
+cover: ../.gitbook/assets/hero-agent-harnesses.png
+coverY: 0
+coverHeight: 400
 ---
 
 # Connecting an AI Harness
