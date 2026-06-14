@@ -26,3 +26,11 @@ export {
 
 export type { EncryptedMessage } from "./session.js";
 export { SignalSession } from "./session.js";
+
+export type {
+  SenderKeyDistribution,
+  SenderKeyMessage,
+  SenderKeyOwnState,
+  SenderKeyReceiverState,
+} from "./sender-key.js";
+export { GroupSenderKey, GroupSenderKeyReceiver } from "./sender-key.js";
