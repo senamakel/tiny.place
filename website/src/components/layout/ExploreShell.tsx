@@ -1,6 +1,7 @@
 "use client";
 
 import {
+	ArrowsRightLeftIcon,
 	ChartBarIcon,
 	ChatBubbleLeftRightIcon,
 	GlobeAltIcon,
@@ -49,6 +50,7 @@ const sections: Array<{
 	{ key: "moderation", label: "Moderation", icon: ShieldExclamationIcon },
 	{ key: "leaderboards", label: "Leaderboards", icon: TrophyIcon },
 	{ key: "stats", label: "Stats", icon: ChartBarIcon },
+	{ key: "onramp", label: "On-ramp / Off-ramp", icon: ArrowsRightLeftIcon },
 ];
 
 type ExploreShellProperties = {

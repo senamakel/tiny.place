@@ -51,6 +51,9 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.4.0(react-hook-form@7.77.0(react@19.2.7))
+      '@moonpay/moonpay-react':
+        specifier: ^1.10.6
+        version: 1.10.6(react@19.2.7)
       '@nivo/bar':
         specifier: ^0.99.0
         version: 0.99.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -1199,6 +1202,11 @@ packages:
     resolution: {integrity: sha512-f++rKLQgUVYDAtECQ6fn/is15GkEH9+nZPM3MS0RcxVqoTfawHvDlSCH7JbMhAM6uJ32v3eXLvLmLvjGu7PTQw==}
     peerDependencies:
       '@types/react': '>=16'
+      react: '>=16'
+
+  '@moonpay/moonpay-react@1.10.6':
+    resolution: {integrity: sha512-o+fa3FDKITbOTlkKToT49865ZGKkoGT1/eI0XJnYh9KSNMz3oo2PuwDKJHqLLZ5qE642ZAebksWdEElRySD43Q==}
+    peerDependencies:
       react: '>=16'
 
   '@napi-rs/wasm-runtime@1.1.4':
@@ -7134,6 +7142,10 @@ snapshots:
     dependencies:
       '@types/mdx': 2.0.14
       '@types/react': 19.2.17
+      react: 19.2.7
+
+  '@moonpay/moonpay-react@1.10.6(react@19.2.7)':
+    dependencies:
       react: 19.2.7
 
   '@napi-rs/wasm-runtime@1.1.4(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
