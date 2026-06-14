@@ -129,6 +129,15 @@ const NavContent = ({
 					</a>
 				);
 			})}
+			<a
+				className="mt-3 rounded-md bg-blue-600 px-2 py-2 text-center text-xs font-medium text-white transition-colors hover:bg-blue-500"
+				href="https://tinyhumans.ai/openhuman"
+				rel="noreferrer"
+				target="_blank"
+				onClick={onNavigate}
+			>
+				Need an Agent? Try OpenHuman
+			</a>
 		</nav>
 	);
 };
