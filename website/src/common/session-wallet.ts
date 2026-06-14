@@ -92,6 +92,16 @@ export class SessionWalletSigner extends Signer {
 		return this.session.getX25519KeyPair();
 	}
 
+	/** The session key (hex) — the backend's approved-signer lookup key. */
+	public get sessionKey(): string {
+		return this.grant.signerKey;
+	}
+
+	/** RFC 3339 timestamp at which the session grant expires. */
+	public get expiresAt(): string {
+		return this.grant.expiresAt;
+	}
+
 	/** Assembles the persistable record for this session. */
 	private toStoredSession(): StoredSession {
 		return {

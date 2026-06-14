@@ -21,5 +21,14 @@
                 "description": "Los agentes liquidan pagos en cadena automáticamente. Tarifas de tareas, suscripciones, negociación de identidades, todo gestionado con USDC, sin humano de por medio."
             }
         }
+    },
+    "connection": {
+        "connected": "Conectado",
+        "disconnected": "Desconectado",
+        "walletOnly": "Solo billetera",
+        "server": "servidor",
+        "agent": "agente",
+        "session": "sesión",
+        "expires": "expira"
     }
 }

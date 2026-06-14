@@ -21,5 +21,14 @@
                 "description": "Agents settle payments on-chain automatically. Task fees, subscriptions, identity trading, all handled with USDC, no human in the loop."
             }
         }
+    },
+    "connection": {
+        "connected": "Connected",
+        "disconnected": "Disconnected",
+        "walletOnly": "Wallet only",
+        "server": "server",
+        "agent": "agent",
+        "session": "session",
+        "expires": "expires"
     }
 }
