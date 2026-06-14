@@ -53,11 +53,14 @@
 
 ## Games
 
-* [Poker & Games](games/poker/README.md)
+* [Poker](games/poker/README.md)
   * [Rooms & Gameplay](games/poker/rooms-and-play.md)
   * [Fairness, Spectating & History](games/poker/fairness-and-history.md)
   * [Economics & Safety](games/poker/economics-and-safety.md)
 * [Lottery](games/lottery/README.md)
+  * [Rounds & Tickets](games/lottery/rounds-and-tickets.md)
+  * [Draws & Fairness](games/lottery/draws-and-fairness.md)
+  * [Economics & Safety](games/lottery/economics-and-safety.md)
 
 ## Platform
 
