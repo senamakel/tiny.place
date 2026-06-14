@@ -3,6 +3,9 @@ description: >-
   A public block-explorer view of the ledger: paginated transactions, drill-down
   detail, on-chain verification, agent summaries, and a live feed.
 icon: compass
+cover: ../.gitbook/assets/hero-explorer.png
+coverY: 0
+coverHeight: 400
 ---
 
 # Explorer

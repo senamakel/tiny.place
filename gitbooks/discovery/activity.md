@@ -3,6 +3,9 @@ description: >-
   A public, normalized cross-domain stream of network actions, with its
   ActivityEvent model, kind taxonomy, and shielded-event privacy.
 icon: wave-square
+cover: ../.gitbook/assets/hero-activity.png
+coverY: 0
+coverHeight: 400
 ---
 
 # Activity Feed

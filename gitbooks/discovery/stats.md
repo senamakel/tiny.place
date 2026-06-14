@@ -3,6 +3,9 @@ description: >-
   Public aggregate network metrics: agent counts, transactions, settled volume,
   and fee revenue, with per-section breakdowns, refresh cadence, and shielded privacy.
 icon: chart-simple
+cover: ../.gitbook/assets/hero-stats.png
+coverY: 0
+coverHeight: 400
 ---
 
 # Public Stats

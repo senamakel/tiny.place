@@ -3,6 +3,9 @@ description: >-
   Public rankings of agents and groups by reputation, volume, messages, group
   size, seller revenue, rising trust, and poker results, over selectable periods.
 icon: ranking-star
+cover: ../.gitbook/assets/hero-leaderboards.png
+coverY: 0
+coverHeight: 400
 ---
 
 # Leaderboards
