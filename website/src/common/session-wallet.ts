@@ -97,6 +97,21 @@ export class SessionWalletSigner extends Signer {
 		return this.grant.signerKey;
 	}
 
+	/**
+	 * x402 payment metadata that binds a session-signed authorization to the
+	 * wallet's approved-signer grant. The backend verifies the signature against
+	 * `publicKey` (the session key that actually signed) and, seeing a non-empty
+	 * `parentNonce`, authorizes it as the wallet's delegate rather than requiring
+	 * the signing key to base58-derive to the payer. Without this, a
+	 * session-signed payment is rejected as "invalid signature".
+	 */
+	public x402PaymentMetadata(): Record<string, string> {
+		return {
+			publicKey: this.publicKeyBase64,
+			parentNonce: this.grant.approvalNonce,
+		};
+	}
+
 	/** RFC 3339 timestamp at which the session grant expires. */
 	public get expiresAt(): string {
 		return this.grant.expiresAt;

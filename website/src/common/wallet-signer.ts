@@ -30,4 +30,13 @@ export class WalletSigner extends Signer {
 				"Signal Protocol encryption requires access to the private key seed."
 		);
 	}
+
+	/**
+	 * x402 payment metadata. The wallet signs payments directly, so the signing
+	 * key is the payer's own key: expose it as `publicKey` so the backend verifies
+	 * the signature against it (and binds it to the payer via base58 derivation).
+	 */
+	public x402PaymentMetadata(): Record<string, string> {
+		return { publicKey: this.publicKeyBase64 };
+	}
 }

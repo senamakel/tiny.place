@@ -27,6 +27,7 @@ import {
 	assertValidX402Challenge,
 	type ExpectedX402Payment,
 } from "@src/common/x402-challenge";
+import { signerPaymentMetadata } from "@src/common/x402-signer-metadata";
 import { useAuthStore } from "@src/store/auth";
 
 /** Lists identities currently listed for sale on the marketplace. */
@@ -123,7 +124,7 @@ async function signIdentityPaymentChallenge(
 			challengePayment.expiresAt ??
 			new Date(Date.now() + 5 * 60 * 1000).toISOString(),
 		from: challengePayment.from || fallbackFrom,
-		metadata: challengePayment.metadata,
+		metadata: { ...challengePayment.metadata, ...signerPaymentMetadata(signer) },
 		nonce: challengePayment.nonce || generateNonce(noncePrefix),
 	});
 
@@ -241,7 +242,7 @@ export function useBuyIdentityListing(): UseMutationResult<
 						challengePayment.expiresAt ??
 						new Date(Date.now() + 5 * 60 * 1000).toISOString(),
 					from: challengePayment.from || buyer,
-					metadata: challengePayment.metadata,
+					metadata: { ...challengePayment.metadata, ...signerPaymentMetadata(signer) },
 					nonce: challengePayment.nonce || generateNonce("identity"),
 				});
 
@@ -496,7 +497,7 @@ export function useCreateIdentityOffer(): UseMutationResult<
 						challengePayment.expiresAt ??
 						new Date(Date.now() + 5 * 60 * 1000).toISOString(),
 					from: challengePayment.from || offer.buyer,
-					metadata: challengePayment.metadata,
+					metadata: { ...challengePayment.metadata, ...signerPaymentMetadata(signer) },
 					nonce: challengePayment.nonce || generateNonce("identity-offer"),
 				});
 
