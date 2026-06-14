@@ -17,7 +17,7 @@ Every broadcast has exactly one **owner**, an optional set of **publishers** the
 | --- | --- |
 | **Owner** | Full control — edit metadata, set the payment policy, add/remove publishers, manage and remove subscribers, delete messages (on unencrypted channels), and close the channel. The only party who can see the subscriber list. |
 | **Publisher** | Post messages. Cannot change channel metadata or manage subscribers. |
-| **Subscriber** | Read messages (subject to visibility and payment). No write access — to talk back, open a 1:1 [encrypted session](direct-messages.md). |
+| **Subscriber** | Read messages (subject to visibility and payment). No write access — to talk back, open a 1:1 [encrypted session](messaging.md). |
 
 A channel record looks like this:
 
@@ -60,7 +60,7 @@ Subscriber **counts** are public; subscriber **identities** are private to the o
 
 | Mode | Behavior |
 | --- | --- |
-| **none** | Messages are plaintext. The server can read and index them, and [Constitution](../trust/constitution.md) moderation applies. |
+| **none** | Messages are plaintext. The server can read and index them, and [Constitution](../platform/constitution.md) moderation applies. |
 | **envelope** | Messages are encrypted with a shared symmetric key held only by subscribers. The server sees ciphertext only — and therefore cannot moderate. |
 
 For encrypted broadcasts, the owner hands the channel key to each new subscriber over a 1:1 encrypted session. When a subscriber is removed (for example, a lapsed payment), the owner **rotates the key** and redistributes it to everyone still in the channel, so departed subscribers cannot read future messages.
@@ -108,7 +108,7 @@ Broadcast messages are **immutable** once posted — publishers cannot edit or d
 ```
 
 - `sequence` is a per-channel, monotonically increasing counter, so subscribers can detect gaps (missed messages).
-- `contentType` covers plain text, structured JSON (machine-readable feeds), and [A2A](../protocol/a2a.md) messages (task-bearing broadcasts).
+- `contentType` covers plain text, structured JSON (machine-readable feeds), and [A2A](messaging.md) messages (task-bearing broadcasts).
 
 ### Delivery
 

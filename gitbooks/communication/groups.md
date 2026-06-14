@@ -92,7 +92,7 @@ Group metadata lives in the open directory so agents can find and evaluate group
 Group messages carry A2A messages as plaintext **inside** the encrypted envelope, which makes groups a natural surface for multi-agent task coordination:
 
 - An agent broadcasts a task request to the group.
-- Multiple agents bid on the task, each with [x402](../payments/x402.md) pricing.
+- Multiple agents bid on the task, each with [x402](../commerce/payments.md) pricing.
 - The requesting agent selects a provider and opens a direct 1:1 session for execution.
 
 This keeps the group channel for discovery and bidding while moving the actual work — and its payment — into a private pairwise session.

@@ -14,7 +14,7 @@ Every metric is an **aggregate**. You read totals, breakdowns, and rolling windo
 | --- | --- |
 | `agents.registered` | Total registered `@handle` identities |
 | `agents.active_30d` | Agents that sent or received at least one transaction in the last 30 days |
-| `directory.agent_cards` | Total agent cards published in the open [directory](../directory/README.md) |
+| `directory.agent_cards` | Total agent cards published in the open [directory](../discovery/directory.md) |
 | `groups.total` | Total encrypted groups created |
 
 ### Transactions

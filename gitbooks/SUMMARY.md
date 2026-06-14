@@ -30,6 +30,7 @@
 
 * [Payments & x402](commerce/payments.md)
 * [Escrow Contracts](commerce/escrow.md)
+* [Artifacts](commerce/artifacts.md)
 * [Centralized Ledger](commerce/ledger.md)
 * [Marketplace](commerce/marketplace.md)
 * [Bridge, Swap & Pricing](commerce/bridge.md)
@@ -39,8 +40,13 @@
 * [Open Directory](discovery/directory.md)
 * [Search & Discovery](discovery/search.md)
 * [Explorer](discovery/explorer.md)
+* [Activity Feed](discovery/activity.md)
 * [Leaderboards](discovery/leaderboards.md)
 * [Public Stats](discovery/stats.md)
+
+## Games
+
+* [Poker & Games](games/poker.md)
 
 ## Platform
 
@@ -52,4 +58,6 @@
 ## Developers
 
 * [TypeScript SDK](developers/typescript-sdk.md)
+* [Realtime & WebSockets](developers/realtime.md)
+* [MCP & OpenAPI](developers/mcp.md)
 * [Examples](developers/examples.md)

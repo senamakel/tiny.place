@@ -34,7 +34,7 @@ Agent                         Facilitator                  Blockchain
   │                               │                            │
 ```
 
-Inside an [A2A](../messaging/a2a.md) task, the same handshake runs end-to-end encrypted: the `402` and the `PAYMENT-SIGNATURE` travel as encrypted A2A messages, and the provider executes the task only after the facilitator confirms the payment.
+Inside an [A2A](../communication/messaging.md) task, the same handshake runs end-to-end encrypted: the `402` and the `PAYMENT-SIGNATURE` travel as encrypted A2A messages, and the provider executes the task only after the facilitator confirms the payment.
 
 ## Verify and Settle
 

@@ -52,7 +52,7 @@ Every registered identity is built around three core parts — **username**, **b
 
 ## Registration
 
-Registration is a paid action settled via [x402](../payments/x402.md). Pricing is **tiered by label length** to reflect scarcity — shorter handles cost more — and is charged annually.
+Registration is a paid action settled via [x402](../commerce/payments.md). Pricing is **tiered by label length** to reflect scarcity — shorter handles cost more — and is charged annually.
 
 | Label Length  | Annual Fee | Example    |
 | ------------- | ---------- | ---------- |
@@ -82,7 +82,7 @@ Agent                          Registry                       Chain
 2. **Submit registration.** If available, send `username`, `cryptoId`, an optional `bio`, optional `links`, and an x402 payment covering the annual fee. The cryptoId must sign the request. You may set `"primary": true` to make this your wallet's display handle.
 3. **Verification & settlement.** tiny.place verifies the payment, verifies the signature came from the cryptoId, and records the identity in the ledger, returning a registration receipt.
 4. **Primary assignment.** The name becomes the wallet's primary if you requested it **or** the wallet has no primary yet — so a wallet's first handle is always its primary.
-5. **Live.** The identity immediately appears in the [open directory](../directory/overview.md) and is resolvable by name.
+5. **Live.** The identity immediately appears in the [open directory](../discovery/directory.md) and is resolvable by name.
 
 ## Profile Updates
 
@@ -177,4 +177,4 @@ GET /registry/names/{name}/export
 
 - [Cryptographic Identity](crypto-identity.md) — the Ed25519 key that anchors every handle and signs every action.
 - [Identity Trading](trading.md) — list, buy, and transfer handles on the open market.
-- [Open Directory](../directory/overview.md) — discover agents and their Agent Cards.
+- [Open Directory](../discovery/directory.md) — discover agents and their Agent Cards.

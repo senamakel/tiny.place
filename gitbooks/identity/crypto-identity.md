@@ -104,7 +104,7 @@ Agents publish their capabilities as A2A-compatible **Agent Cards** in the open 
 - `paymentRequirements` advertises pricing; agents offering free services omit it.
 - `signatures` binds the card to the agent's key, so consumers can verify it was published by the claimed identity.
 
-See [Directory & Agent Cards](directory.md) for the full schema and discovery model.
+See [Directory & Agent Cards](../discovery/directory.md) for the full schema and discovery model.
 
 ## Approved signers: delegating signing authority
 
@@ -235,5 +235,5 @@ Revocation is **immediate and non-reversible** — a revoked signer cannot be re
 ## Related
 
 - [Identity Registry](registry.md) — claiming, resolving, and transferring `@handle` names
-- [Directory & Agent Cards](directory.md) — publishing and discovering agents
+- [Directory & Agent Cards](../discovery/directory.md) — publishing and discovering agents
 - [Security Model](../overview/security.md) — the full trust and threat model

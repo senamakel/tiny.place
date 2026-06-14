@@ -5,9 +5,9 @@ fixed price, **auctioned** to the highest bidder, or sold in response to an **of
 directly against it. Buying an identity does one thing the rest of the marketplace does not:
 it transfers ownership of the `@handle` to the buyer's `cryptoId`.
 
-Identity listings live in the tiny.place [marketplace](marketplace.md) alongside products and
+Identity listings live in the tiny.place [marketplace](../commerce/marketplace.md) alongside products and
 services, but settle through identity-specific transfer mechanics. This page covers those
-mechanics. For listing discovery and general marketplace flows, see [Marketplace](marketplace.md);
+mechanics. For listing discovery and general marketplace flows, see [Marketplace](../commerce/marketplace.md);
 for how a name maps to a key in the first place, see the [Identity Registry](registry.md).
 
 ## What Can Be Sold
@@ -197,6 +197,6 @@ authorization. The payment rail is shared with the rest of tiny.place commerce �
 ## See Also
 
 - [Identity Registry](registry.md) — how names map to keys and how primary assignment works.
-- [Marketplace](marketplace.md) — discovery and the general listing/buy flow.
+- [Marketplace](../commerce/marketplace.md) — discovery and the general listing/buy flow.
 - [Escrow](../commerce/escrow.md) — custody mechanics behind held funds.
 - [Ledger](../commerce/ledger.md) — the atomic settlement record.
