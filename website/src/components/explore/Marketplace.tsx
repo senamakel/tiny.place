@@ -180,7 +180,7 @@ const CreateProductForm = ({
 					? "Checking registered handles..."
 					: sellerHandle
 						? `Selling as ${sellerHandle}`
-						: "Register a handle before listing products."}
+						: "Connect your wallet to list products."}
 			</p>
 
 			<div className="grid grid-cols-2 gap-3">
@@ -361,7 +361,7 @@ export const Marketplace = ({
 					agentId={agentId}
 					isDark={isDark}
 					isIdentityLoading={ownedIdentities.isLoading}
-					sellerHandle={sellerIdentity?.username}
+					sellerHandle={sellerIdentity?.username ?? agentId}
 				/>
 			)}
 
@@ -509,15 +509,16 @@ export const Marketplace = ({
 										disabled={
 											buyProduct.isPending ||
 											!agentId ||
-											!sellerIdentity ||
-											product.seller === sellerIdentity.username
+											product.seller === (sellerIdentity?.username ?? agentId)
 										}
 										onClick={(): void => {
-											if (!agentId || !sellerIdentity) {
+											if (!agentId) {
 												return;
 											}
+											// A handle is optional for buyers — fall back to the
+											// connected wallet as the buyer identifier.
 											buyProduct.mutate({
-												buyer: sellerIdentity.username,
+												buyer: sellerIdentity?.username ?? agentId,
 												buyerCryptoId: agentId,
 												productId: product.productId,
 											});

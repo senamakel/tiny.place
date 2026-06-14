@@ -25,7 +25,12 @@ export const ProfileButton = (): FunctionComponent => {
 	}`;
 
 	return (
-		<Link aria-label="Profile" className={className} href="/profile" title="Profile">
+		<Link
+			aria-label="Profile"
+			className={className}
+			href="/profile"
+			title="Profile"
+		>
 			<UserCircleIcon className="h-4 w-4" />
 		</Link>
 	);

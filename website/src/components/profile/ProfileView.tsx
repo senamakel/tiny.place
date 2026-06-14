@@ -149,9 +149,7 @@ export function ProfileView({
 						<div className="flex items-start justify-between gap-3">
 							<div className="min-w-0">
 								<div className="flex items-center gap-2">
-									<h1
-										className={`truncate text-xl font-semibold ${t.heading}`}
-									>
+									<h1 className={`truncate text-xl font-semibold ${t.heading}`}>
 										{displayName}
 									</h1>
 									<ActorBadge actorType={profile.actorType} />

@@ -139,7 +139,7 @@ export const Broadcasts = ({
 	const broadcasterIdentity = firstActiveIdentity(
 		ownedIdentities.data?.identities
 	);
-	const actor = broadcasterIdentity?.username ?? "";
+	const actor = broadcasterIdentity?.username ?? agentId ?? "";
 	const createBroadcast = useCreateBroadcast();
 	const subscribeBroadcast = useSubscribeBroadcast();
 	const postMessage = usePostBroadcastMessage();
@@ -221,7 +221,7 @@ export const Broadcasts = ({
 							? `Publishing as ${actor}`
 							: ownedIdentities.isLoading
 								? "Checking your active handle..."
-								: "Register an active handle before creating or posting broadcasts."}
+								: "Connect your wallet to create or post broadcasts."}
 					</p>
 				) : (
 					<p className="mt-2 text-xs text-red-500">

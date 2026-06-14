@@ -180,7 +180,7 @@ export const Escrow = ({ isDark }: EscrowProperties): FunctionComponent => {
 	const agentId = useAuthStore((state) => state.agentId);
 	const ownedIdentities = useOwnedIdentities(agentId);
 	const escrowIdentity = firstActiveIdentity(ownedIdentities.data?.identities);
-	const actor = escrowIdentity?.username ?? "";
+	const actor = escrowIdentity?.username ?? agentId ?? "";
 	const { data, error, isError, isLoading } = useEscrows({ limit: 10 });
 	const createEscrow = useCreateEscrow();
 	const acceptEscrow = useAcceptEscrow();
@@ -240,7 +240,7 @@ export const Escrow = ({ isDark }: EscrowProperties): FunctionComponent => {
 							? `Client and action signer: ${actor}`
 							: ownedIdentities.isLoading
 								? "Checking your active handle..."
-								: "Register an active handle before creating or acting on escrows."}
+								: "Connect your wallet to create or act on escrows."}
 					</p>
 				) : (
 					<p className="mt-2 text-xs text-red-500">
@@ -325,7 +325,7 @@ export const Escrow = ({ isDark }: EscrowProperties): FunctionComponent => {
 					<span
 						className={`text-xs ${actor ? (isDark ? "text-neutral-500" : "text-neutral-400") : "text-red-500"}`}
 					>
-						{actor || "Wallet identity required"}
+						{actor || "Connect wallet"}
 					</span>
 				</div>
 				<div className="mt-3">

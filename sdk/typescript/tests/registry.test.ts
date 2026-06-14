@@ -57,7 +57,7 @@ async function verifyFreshSignature(
 }
 
 describe("RegistryApi", () => {
-  it("signs registration with empty omitted metadata and null payment methods", async () => {
+  it("signs registration over cryptoId, publicKey, username and null payment methods", async () => {
     const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(19));
     const requests: Array<Request> = [];
     const client = new TinyVerseClient({
@@ -67,7 +67,6 @@ describe("RegistryApi", () => {
         requests.push(new Request(input, init));
         return Response.json({
           username: "@agent",
-          bio: "Agent",
           cryptoId: signer.agentId,
           publicKey: signer.publicKeyBase64,
           registeredAt: "2026-06-13T00:00:00Z",
@@ -80,14 +79,12 @@ describe("RegistryApi", () => {
 
     await client.registry.register({
       username: "@agent",
-      bio: "Agent",
       cryptoId: signer.agentId,
       publicKey: signer.publicKeyBase64,
     });
 
     expect(requests).toHaveLength(1);
     const body = (await requests[0]!.json()) as {
-      bio: string;
       cryptoId: string;
       publicKey: string;
       signature: string;
@@ -95,13 +92,14 @@ describe("RegistryApi", () => {
     };
     expect(body.signature).toBeTruthy();
 
+    // A handle is just a pointer now: registration signs only the binding
+    // fields. Bio/name/metadata live on the wallet's User and are not signed
+    // here.
     const ok = await verifyFreshSignature(
       signer,
       body.signature,
       canonicalPayload("identity.register", {
-        bio: "Agent",
         cryptoId: signer.agentId,
-        metadata: {},
         paymentMethods: null,
         publicKey: signer.publicKeyBase64,
         username: "@agent",
@@ -110,7 +108,7 @@ describe("RegistryApi", () => {
     expect(ok).toBe(true);
   });
 
-  it("signs an omitted bio as empty string and forwards primary unsigned", async () => {
+  it("forwards actorType and primary unsigned and omits them from the signature", async () => {
     const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(21));
     const requests: Array<Request> = [];
     const client = new TinyVerseClient({
@@ -120,7 +118,6 @@ describe("RegistryApi", () => {
         requests.push(new Request(input, init));
         return Response.json({
           username: "@agent",
-          bio: "",
           cryptoId: signer.agentId,
           publicKey: signer.publicKeyBase64,
           registeredAt: "2026-06-13T00:00:00Z",
@@ -132,31 +129,29 @@ describe("RegistryApi", () => {
       },
     });
 
-    // No bio supplied; request primary.
     await client.registry.register({
       username: "@agent",
       cryptoId: signer.agentId,
       publicKey: signer.publicKeyBase64,
+      actorType: "human",
       primary: true,
     });
 
     const body = (await requests[0]!.json()) as {
-      bio?: string;
+      actorType?: string;
       primary?: boolean;
       signature: string;
     };
-    // primary is forwarded in the body for the backend to act on.
+    // actorType and primary are forwarded in the body for the backend to act on,
+    // but neither is part of the signed payload (both are trust-based).
     expect(body.primary).toBe(true);
+    expect(body.actorType).toBe("human");
 
-    // The signature covers bio:"" (matching the backend's empty-bio default) and
-    // does NOT include primary.
     const ok = await verifyFreshSignature(
       signer,
       body.signature,
       canonicalPayload("identity.register", {
-        bio: "",
         cryptoId: signer.agentId,
-        metadata: {},
         paymentMethods: null,
         publicKey: signer.publicKeyBase64,
         username: "@agent",
@@ -240,7 +235,6 @@ describe("RegistryApi", () => {
 
     await client.registry.register({
       username: "agent",
-      bio: "Agent",
       cryptoId: signer.agentId,
       publicKey: signer.publicKeyBase64,
     });
@@ -255,9 +249,7 @@ describe("RegistryApi", () => {
       signer,
       body.signature,
       canonicalPayload("identity.register", {
-        bio: "Agent",
         cryptoId: signer.agentId,
-        metadata: {},
         paymentMethods: null,
         publicKey: signer.publicKeyBase64,
         username: "@agent",
@@ -980,7 +972,6 @@ describe("RegistryApi", () => {
 
     await client.registry.register({
       username: "@agent",
-      bio: "Agent",
       cryptoId: signer.agentId,
       publicKey: signer.publicKeyBase64,
       paymentMethods: [
@@ -996,8 +987,8 @@ describe("RegistryApi", () => {
       signature: string;
     };
     const payload =
-      `{"action":"identity.register","fields":{"bio":"Agent","cryptoId":"${signer.agentId}",` +
-      `"metadata":{},"paymentMethods":[{"network":"solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",` +
+      `{"action":"identity.register","fields":{"cryptoId":"${signer.agentId}",` +
+      `"paymentMethods":[{"network":"solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",` +
       `"address":"${signer.agentId}","assets":["USDC"]}],"publicKey":"${signer.publicKeyBase64}",` +
       `"username":"@agent"}}`;
 

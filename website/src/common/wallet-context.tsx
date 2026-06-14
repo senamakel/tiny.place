@@ -8,13 +8,7 @@ import {
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
 import { clusterApiUrl, type Cluster } from "@solana/web3.js";
-import {
-	useCallback,
-	useEffect,
-	useMemo,
-	useRef,
-	type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 
 import type { FunctionComponent } from "@src/common/types";
 import { createClient } from "@src/common/api-client";
@@ -64,7 +58,7 @@ const WalletAuthSync = (): null => {
 			inFlight.current = SessionWalletSigner.restoreOrEstablish(
 				publicKeyBytes,
 				signMessage,
-				createClient,
+				createClient
 			)
 				.then((signer) => {
 					if (activeWalletId.current !== walletId) return;
@@ -81,7 +75,7 @@ const WalletAuthSync = (): null => {
 					inFlight.current = null;
 				});
 		},
-		[connected, publicKey, signMessage, setSigner],
+		[connected, publicKey, signMessage, setSigner]
 	);
 
 	useEffect(() => {

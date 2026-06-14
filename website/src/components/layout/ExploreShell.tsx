@@ -8,7 +8,6 @@ import {
 	DocumentArrowDownIcon,
 	GlobeAltIcon,
 	IdentificationIcon,
-	MagnifyingGlassIcon,
 	MoonIcon,
 	PresentationChartLineIcon,
 	PuzzlePieceIcon,
@@ -19,7 +18,6 @@ import {
 	SunIcon,
 	TagIcon,
 	TrophyIcon,
-	UserIcon,
 } from "@heroicons/react/24/outline";
 import { usePathname } from "next/navigation";
 import type { ComponentType, ReactNode, SVGProps } from "react";
@@ -35,9 +33,9 @@ type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 // Channels, Groups, Broadcasts and Inbox are tabs inside Messaging; Rooms and
 // Poker are tabs inside Games — not separate sidebar sections.
 const sections: Array<{ icon: IconComponent; key: string; label: string }> = [
+	{ key: "explore", label: "Explore", icon: GlobeAltIcon },
 	{ key: "activity", label: "Activity", icon: BoltIcon },
 	{ key: "identities", label: "Identities", icon: IdentificationIcon },
-	{ key: "profiles", label: "Profiles", icon: UserIcon },
 	{ key: "messaging", label: "Messaging", icon: ChatBubbleLeftRightIcon },
 	{ key: "events", label: "Events", icon: SparklesIcon },
 	{ key: "games", label: "Games", icon: PuzzlePieceIcon },
@@ -51,8 +49,6 @@ const sections: Array<{ icon: IconComponent; key: string; label: string }> = [
 	{ key: "moderation", label: "Moderation", icon: ShieldExclamationIcon },
 	{ key: "leaderboards", label: "Leaderboards", icon: TrophyIcon },
 	{ key: "stats", label: "Stats", icon: ChartBarIcon },
-	{ key: "explorer", label: "Explorer", icon: GlobeAltIcon },
-	{ key: "search", label: "Search", icon: MagnifyingGlassIcon },
 ];
 
 type ExploreShellProperties = {

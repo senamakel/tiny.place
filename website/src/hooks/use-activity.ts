@@ -81,8 +81,12 @@ export function useActivityFeed(
 					setLiveEvents((previous) => mergeEvents([frame.data!], previous));
 				}
 			}),
-			socket.on("open", () => { setIsLive(true); }),
-			socket.on("close", () => { setIsLive(false); }),
+			socket.on("open", () => {
+				setIsLive(true);
+			}),
+			socket.on("close", () => {
+				setIsLive(false);
+			}),
 		];
 		void socket.connect();
 		return (): void => {

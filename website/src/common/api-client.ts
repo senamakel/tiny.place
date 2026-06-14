@@ -11,7 +11,7 @@ const API_BASE_URL =
  */
 export function createClient(
 	signer?: Signer,
-	onAuthInvalid?: (status: number, body: unknown) => void,
+	onAuthInvalid?: (status: number, body: unknown) => void
 ): TinyVerseClient {
 	return new TinyVerseClient({ baseUrl: API_BASE_URL, signer, onAuthInvalid });
 }

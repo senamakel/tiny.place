@@ -189,11 +189,17 @@ export class MarketplaceApi {
     productId: string,
     request: ProductBuyRequest,
   ): Promise<ProductPurchase> {
-    return this.http.postDirectoryAuthAs<ProductPurchase>(
-      `/marketplace/products/${encodeURIComponent(productId)}/buy`,
-      request.buyer,
-      request,
-    );
+    const path = `/marketplace/products/${encodeURIComponent(productId)}/buy`;
+    // The buyer @handle is a resolution hint only. When absent, the buyer is a
+    // handle-free wallet and the actor defaults to the connected signing key.
+    if (request.buyer) {
+      return this.http.postDirectoryAuthAs<ProductPurchase>(
+        path,
+        request.buyer,
+        request,
+      );
+    }
+    return this.http.postDirectoryAuth<ProductPurchase>(path, request);
   }
 
   async buyProductWithSolanaPayment(

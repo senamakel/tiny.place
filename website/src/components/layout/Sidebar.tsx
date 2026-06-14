@@ -43,7 +43,7 @@ export const Sidebar = ({
 					return (
 						<Link
 							key={section.key}
-							href={`/explore/${section.key}`}
+							href={`/${section.key}`}
 							className={`flex items-center gap-2 text-left text-xs px-2 py-1.5 rounded transition-colors ${
 								isActive
 									? isDark

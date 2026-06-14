@@ -51,12 +51,7 @@ export const ConnectWalletButton = (): FunctionComponent => {
 			: undefined;
 
 	return (
-		<button
-			className={className}
-			title={title}
-			type="button"
-			onClick={onClick}
-		>
+		<button className={className} title={title} type="button" onClick={onClick}>
 			{label}
 		</button>
 	);

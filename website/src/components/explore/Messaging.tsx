@@ -275,7 +275,7 @@ const MessageThread = ({
 					<p
 						className={`text-center text-xs ${isDark ? "text-neutral-500" : "text-neutral-400"}`}
 					>
-						Connect your wallet and register an active handle to send messages
+						Connect your wallet to send messages
 					</p>
 				)}
 				{postMessage.isError && (
@@ -334,7 +334,7 @@ export const Messaging = ({
 	}
 
 	const channels = data?.channels ?? [];
-	const effectiveActor = channelIdentity?.username ?? "";
+	const effectiveActor = channelIdentity?.username ?? agentId ?? "";
 	const activeChannelId =
 		selectedChannelId ||
 		(channels.length > 0 ? channels[0]?.channelId : undefined);
@@ -362,9 +362,7 @@ export const Messaging = ({
 							? `Posting as ${effectiveActor}`
 							: ownedIdentities.isLoading
 								? "Checking your active handle..."
-								: agentId
-									? "Register an active handle to post."
-									: "Connect your wallet to post."}
+								: "Connect your wallet to post."}
 					</p>
 				</div>
 				<ChannelList

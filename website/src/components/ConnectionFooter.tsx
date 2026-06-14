@@ -78,8 +78,7 @@ export const ConnectionFooter = (): FunctionComponent => {
 		};
 	}, []);
 
-	const session =
-		signer instanceof SessionWalletSigner ? signer : undefined;
+	const session = signer instanceof SessionWalletSigner ? signer : undefined;
 	const authenticated = Boolean(signer);
 
 	const statusLabel = !connected

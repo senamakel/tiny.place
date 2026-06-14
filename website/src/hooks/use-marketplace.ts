@@ -134,13 +134,13 @@ export function useCreateProduct(): UseMutationResult<
 			if (!agentId) {
 				throw new Error("Connect your wallet first");
 			}
-			if (!request.seller) {
-				throw new Error("Register a handle before listing products");
-			}
 
+			// A registered @handle is optional — it's a display/resolution hint.
+			// A handle-free seller is authorized by their wallet signature, with
+			// the wallet (agentId) standing in as the seller identifier.
 			return client.marketplace.createProduct({
 				...request,
-				seller: request.seller,
+				seller: request.seller ?? agentId,
 				sellerCryptoId: request.sellerCryptoId ?? agentId,
 			});
 		},

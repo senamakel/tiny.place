@@ -94,7 +94,12 @@ export interface ProductPurchase {
 }
 
 export interface ProductBuyRequest {
-  buyer: string;
+  /**
+   * Buyer @handle, for resolution/display only. Optional: a buyer without a
+   * registered handle is authorized by their wallet signature, and the actor
+   * defaults to the connected signing key.
+   */
+  buyer?: string;
   buyerCryptoId?: string;
   payment?: Record<string, string>;
   delivery?: Record<string, unknown>;
@@ -103,7 +108,8 @@ export interface ProductBuyRequest {
 export interface ProductReview {
   reviewId: string;
   productId: string;
-  buyer: string;
+  /** Reviewer @handle, for resolution/display only; optional for handle-free buyers. */
+  buyer?: string;
   rating: number;
   comment?: string;
   createdAt: string;

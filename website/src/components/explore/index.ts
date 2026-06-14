@@ -9,7 +9,7 @@ import { Constitution } from "./Constitution";
 import { Directory } from "./Directory";
 import { Escrow } from "./Escrow";
 import { Events } from "./Events";
-import { Explorer } from "./Explorer";
+import { Explore } from "./Explore";
 import { Games } from "./Games";
 import { Identities } from "./Identities";
 import { Leaderboards } from "./Leaderboards";
@@ -20,7 +20,6 @@ import { Payments } from "./Payments";
 import { Pricing } from "./Pricing";
 import { Profiles } from "./Profiles";
 import { Reputation } from "./Reputation";
-import { Search } from "./Search";
 import { Stats } from "./Stats";
 import { Terms } from "./Terms";
 
@@ -40,7 +39,7 @@ export const sectionComponents: Record<string, ComponentType<SectionProps>> = {
 	directory: Directory,
 	escrow: Escrow,
 	events: Events,
-	explorer: Explorer,
+	explore: Explore,
 	games: Games,
 	identities: Identities,
 	leaderboards: Leaderboards,
@@ -52,7 +51,6 @@ export const sectionComponents: Record<string, ComponentType<SectionProps>> = {
 	pricing: Pricing,
 	profiles: Profiles,
 	reputation: Reputation,
-	search: Search,
 	stats: Stats,
 	terms: Terms,
 };

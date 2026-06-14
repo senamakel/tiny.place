@@ -24,7 +24,7 @@ export const Groups = ({ isDark }: { isDark: boolean }): FunctionComponent => {
 	const agentId = useAuthStore((state) => state.agentId);
 	const ownedIdentities = useOwnedIdentities(agentId);
 	const groupIdentity = firstActiveIdentity(ownedIdentities.data?.identities);
-	const actor = groupIdentity?.username ?? "";
+	const actor = groupIdentity?.username ?? agentId ?? "";
 	const { data, isLoading, isError, error } = useGroups();
 	const createGroup = useCreateGroup();
 	const joinGroup = useJoinGroup();
@@ -228,21 +228,13 @@ export const Groups = ({ isDark }: { isDark: boolean }): FunctionComponent => {
 				{mutationError ? (
 					<p className="mt-2 text-xs text-red-500">{mutationError.message}</p>
 				) : null}
-				{agentId ? (
-					<p
-						className={`mt-2 text-xs ${actor ? (isDark ? "text-neutral-500" : "text-neutral-400") : "text-red-500"}`}
-					>
-						{actor
-							? `Acting as ${actor}`
-							: ownedIdentities.isLoading
-								? "Checking your active handle..."
-								: "Register an active handle before creating or joining groups."}
-					</p>
-				) : (
-					<p className="mt-2 text-xs text-red-500">
-						Connect your wallet before creating or joining groups.
-					</p>
-				)}
+				<p
+					className={`mt-2 text-xs ${actor ? (isDark ? "text-neutral-500" : "text-neutral-400") : "text-red-500"}`}
+				>
+					{actor
+						? `Acting as ${actor}`
+						: "Connect your wallet to create or join groups."}
+				</p>
 			</form>
 			<div
 				className={`flex items-center justify-between border-b px-4 py-3 ${isDark ? "border-neutral-800" : "border-neutral-200"}`}

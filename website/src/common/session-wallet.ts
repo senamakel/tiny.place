@@ -162,7 +162,10 @@ export class SessionWalletSigner extends Signer {
 	): Promise<boolean> {
 		try {
 			const client = createClient(this);
-			const signer = await client.signers.get(this.grant.signerKey, this.agentId);
+			const signer = await client.signers.get(
+				this.grant.signerKey,
+				this.agentId
+			);
 			return signer.status === "active";
 		} catch {
 			return false;

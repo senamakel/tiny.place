@@ -4,10 +4,7 @@ import { useState, type ReactElement } from "react";
 
 import type { FunctionComponent } from "@src/common/types";
 import { useActivityFeed } from "@src/hooks/use-activity";
-import type {
-	ActivityCategory,
-	ActivityEvent,
-} from "@tinyhumansai/tinyplace";
+import type { ActivityCategory, ActivityEvent } from "@tinyhumansai/tinyplace";
 
 type ActivityProperties = {
 	isDark: boolean;
@@ -152,7 +149,9 @@ export const Activity = ({ isDark }: ActivityProperties): FunctionComponent => {
 										? "bg-neutral-900 text-neutral-400 hover:bg-neutral-800"
 										: "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
 							}`}
-							onClick={() => { setCategory(filter.value); }}
+							onClick={() => {
+								setCategory(filter.value);
+							}}
 						>
 							{filter.label}
 						</button>

@@ -25,7 +25,7 @@ export const ApiProvider = ({
 			createClient(signer, () => {
 				notifySessionInvalid();
 			}),
-		[signer],
+		[signer]
 	);
 
 	return <ApiContext.Provider value={client}>{children}</ApiContext.Provider>;

@@ -11,7 +11,7 @@ let handler: SessionInvalidHandler | undefined;
 
 /** Registers (or clears, with undefined) the session-recovery handler. */
 export function setSessionInvalidHandler(
-	next: SessionInvalidHandler | undefined,
+	next: SessionInvalidHandler | undefined
 ): void {
 	handler = next;
 }
