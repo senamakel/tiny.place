@@ -28,6 +28,7 @@ pub mod crypto;
 pub mod error;
 pub mod http;
 pub mod signer;
+pub mod util;
 pub mod x402;
 
 pub mod api;

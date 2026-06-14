@@ -88,6 +88,12 @@ impl HttpClient {
         self.inner.public_key_base64.clone()
     }
 
+    /// The configured agent signer, if any. API modules use this to produce
+    /// canonical-payload signatures bound into request bodies.
+    pub fn signer(&self) -> Option<Arc<dyn Signer>> {
+        self.inner.signer.clone()
+    }
+
     // --- core request pipeline -------------------------------------------------
 
     async fn execute(
