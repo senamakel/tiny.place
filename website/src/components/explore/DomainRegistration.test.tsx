@@ -32,7 +32,12 @@ type ConfirmRequest = {
 };
 
 const register = vi.hoisted(() => vi.fn());
-const createClient = vi.hoisted(() => vi.fn(() => ({ registry: { register } })));
+const createClient = vi.hoisted(() =>
+	vi.fn((signer: Signer | undefined) => {
+		void signer;
+		return { registry: { register } };
+	})
+);
 const confirmX402 = vi.hoisted(() => vi.fn());
 
 vi.mock("@src/common/api-client", () => ({
