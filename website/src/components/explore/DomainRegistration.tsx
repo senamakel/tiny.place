@@ -30,15 +30,6 @@ function normalizedHandle(value: string): string {
 	return normalized ? `@${normalized}` : "";
 }
 
-// Parse a free-text links field (one URL per line or comma-separated) into a
-// clean list of non-empty URLs.
-function parseLinks(value: string): Array<string> {
-	return value
-		.split(/[\n,]/)
-		.map((link) => link.trim())
-		.filter((link) => link.length > 0);
-}
-
 type RegistryPaymentChallenge = {
 	error: string;
 	payment: Omit<X402AuthorizationFields, "expiresAt" | "nonce"> &
@@ -83,8 +74,6 @@ export const DomainRegistration = ({
 
 	const [searchInput, setSearchInput] = useState("");
 	const [selectedName, setSelectedName] = useState<string | null>(null);
-	const [bio, setBio] = useState("");
-	const [links, setLinks] = useState("");
 	// null = follow the auto-primary default; true/false = explicit user choice.
 	const [primaryChoice, setPrimaryChoice] = useState<boolean | null>(null);
 	const [registrationComplete, setRegistrationComplete] = useState(false);
@@ -108,9 +97,8 @@ export const DomainRegistration = ({
 				throw new Error("Connect your wallet first");
 			}
 
-			const parsedLinks = parseLinks(links);
-			// A handle is just a pointer now. We register it as "human" (this is the
-			// web app) and seed the wallet's User profile (bio/links) separately.
+			// A handle is just a pointer now. Profile details live on the wallet's
+			// User profile and are edited from the profile page.
 			const request = {
 				username: selectedName,
 				cryptoId: agentId,
@@ -119,7 +107,7 @@ export const DomainRegistration = ({
 				actorType: "human" as const,
 			};
 
-			const identity = await (async (): Promise<unknown> => {
+			return (async (): Promise<unknown> => {
 				try {
 					return await client.registry.register(request);
 				} catch (error) {
@@ -175,22 +163,6 @@ export const DomainRegistration = ({
 					});
 				}
 			})();
-
-			// Seed the wallet's profile fields (bio/links) on the User record. The
-			// handle itself carries none of this. Best-effort: a failure here does
-			// not undo the successful registration.
-			if (bio.trim() || parsedLinks.length > 0) {
-				try {
-					await client.users.updateProfile(agentId, {
-						...(bio.trim() ? { bio: bio.trim() } : {}),
-						...(parsedLinks.length > 0 ? { links: parsedLinks } : {}),
-					});
-				} catch {
-					// ignore — profile can be edited later from the profile page
-				}
-			}
-
-			return identity;
 		},
 		onSuccess: () => {
 			setPaymentChallenge(null);
@@ -238,8 +210,6 @@ export const DomainRegistration = ({
 						setRegistrationComplete(false);
 						setSelectedName(null);
 						setSearchInput("");
-						setBio("");
-						setLinks("");
 						setPrimaryChoice(null);
 						setPaymentChallenge(null);
 					}}
@@ -276,32 +246,7 @@ export const DomainRegistration = ({
 					</div>
 				</div>
 
-				<div className={`space-y-3 rounded-lg border p-4 ${cardClass}`}>
-					<label className={`block text-xs font-medium ${headingClass}`}>
-						Bio <span className={secondaryClass}>(optional)</span>
-						<textarea
-							className={`mt-1 w-full rounded-md border px-3 py-2 text-sm ${inputClass}`}
-							placeholder="Describe your agent's purpose and capabilities..."
-							rows={3}
-							value={bio}
-							onChange={(event): void => {
-								setBio(event.target.value);
-							}}
-						/>
-					</label>
-					<label className={`block text-xs font-medium ${headingClass}`}>
-						Links{" "}
-						<span className={secondaryClass}>(optional, one per line)</span>
-						<textarea
-							className={`mt-1 w-full rounded-md border px-3 py-2 text-sm ${inputClass}`}
-							placeholder="https://github.com/your-agent"
-							rows={2}
-							value={links}
-							onChange={(event): void => {
-								setLinks(event.target.value);
-							}}
-						/>
-					</label>
+				<div className={`rounded-lg border p-4 ${cardClass}`}>
 					<label
 						className={`flex items-center gap-2 text-xs font-medium ${headingClass}`}
 					>
