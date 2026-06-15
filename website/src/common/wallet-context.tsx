@@ -63,7 +63,9 @@ function loginSignatureFields(message: string): Array<{
 		const metadata = Array.isArray(parsed["metadata"])
 			? (parsed["metadata"] as Array<{ key?: unknown; value?: unknown }>)
 			: [];
-		const signerKey = metadata.find((entry) => entry.key === "signerKey")?.value;
+		const signerKey = metadata.find(
+			(entry) => entry.key === "signerKey"
+		)?.value;
 		return [
 			["Type", "Browser session approval"],
 			["Scheme", parsed["scheme"]],
@@ -77,7 +79,10 @@ function loginSignatureFields(message: string): Array<{
 			.filter(([, value]) => typeof value === "string" && value.length > 0)
 			.map(([label, value]) => ({
 				label: label as string,
-				value: label === "Session key" ? shorten(value as string) : (value as string),
+				value:
+					label === "Session key"
+						? shorten(value as string)
+						: (value as string),
 			}));
 	} catch {
 		return [{ label: "Message", value: message || "Wallet signature request" }];
@@ -114,7 +119,9 @@ function LoginSignatureDialog({
 			className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
 			role="dialog"
 		>
-			<div className={`w-full max-w-md rounded-lg border p-5 shadow-xl ${panelClass}`}>
+			<div
+				className={`w-full max-w-md rounded-lg border p-5 shadow-xl ${panelClass}`}
+			>
 				<h3 className="text-sm font-semibold">Approve browser session</h3>
 				<p className={`mt-1 text-xs ${mutedClass}`}>
 					Your wallet will sign this session approval for tiny.place.

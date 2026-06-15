@@ -24,7 +24,12 @@ function clampWinnerSlots(round: LotteryRound, totalTickets: number): number {
 	const configuredSlots = Math.ceil(estimatedParticipants * fraction);
 	return Math.max(
 		1,
-		Math.min(round.maxWinners, estimatedParticipants, totalTickets, configuredSlots)
+		Math.min(
+			round.maxWinners,
+			estimatedParticipants,
+			totalTickets,
+			configuredSlots
+		)
 	);
 }
 
