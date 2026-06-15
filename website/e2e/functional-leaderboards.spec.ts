@@ -44,6 +44,8 @@ function leaderboardLabel(entry: JSONRecord): string {
 }
 
 test.describe("live reputation, leaderboards, and stats", () => {
+	test.skip(!process.env.API_URL, "requires an explicit functional backend");
+
 	test("renders live reputation leaderboard rows from the backend", async ({
 		page,
 	}) => {
