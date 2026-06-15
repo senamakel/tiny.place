@@ -996,6 +996,32 @@ describe("RegistryApi", () => {
     expect(ok).toBe(true);
   });
 
+  it("exports identity records through the harness-facing alias", async () => {
+    const requests: Array<Request> = [];
+    const client = new TinyPlaceClient({
+      baseUrl: "https://example.test",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json({
+          identity: { username: "@agent" },
+          ledger: [],
+        });
+      },
+    });
+
+    const exported = await client.registry.exportIdentity("@agent");
+
+    expect(exported).toEqual({
+      identity: { username: "@agent" },
+      ledger: [],
+    });
+    expect(requests).toHaveLength(1);
+    expect(requests[0]!.method).toBe("GET");
+    expect(requests[0]!.url).toBe(
+      "https://example.test/registry/names/%40agent/export",
+    );
+  });
+
   it("signs profile visibility updates with null omitted fields", async () => {
     const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(16));
     const requests: Array<Request> = [];
