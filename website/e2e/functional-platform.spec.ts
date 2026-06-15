@@ -79,6 +79,82 @@ function responseSchema(
 	return record(typedContent.schema);
 }
 
+type McpResponse = {
+	body: JSONRecord;
+	sessionId: string | null;
+};
+
+async function mcp(
+	message: JSONRecord,
+	sessionId?: string
+): Promise<McpResponse> {
+	const response = await api("/mcp", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			...(sessionId ? { "Mcp-Session-Id": sessionId } : {}),
+		},
+		body: JSON.stringify(message),
+	});
+	expect(response.status, JSON.stringify(message)).toBe(200);
+	expect(response.headers.get("content-type")).toContain("application/json");
+	return {
+		body: (await response.json()) as JSONRecord,
+		sessionId: response.headers.get("Mcp-Session-Id"),
+	};
+}
+
+function mcpResult(response: McpResponse): JSONRecord {
+	expect(response.body.error).toBeUndefined();
+	return record(response.body.result);
+}
+
+function mcpError(response: McpResponse): JSONRecord {
+	expect(response.body.result).toBeUndefined();
+	return record(response.body.error);
+}
+
+function mcpTextContent(result: JSONRecord): string {
+	const content = result.content;
+	expect(content).toEqual(expect.any(Array));
+	const first = record((content as Array<unknown>)[0]);
+	expect(first.type).toBe("text");
+	expect(first.text).toEqual(expect.any(String));
+	return first.text as string;
+}
+
+async function mcpStreamText(
+	sessionId: string,
+	resource?: string
+): Promise<string> {
+	const params = new URLSearchParams();
+	if (resource) {
+		params.set("resource", resource);
+	}
+	const controller = new AbortController();
+	const response = await api(`/mcp${params.size ? `?${params}` : ""}`, {
+		headers: { "Mcp-Session-Id": sessionId },
+		signal: controller.signal,
+	});
+	expect(response.status).toBe(200);
+	expect(response.headers.get("content-type")).toContain("text/event-stream");
+	expect(response.headers.get("Mcp-Session-Id")).toBe(sessionId);
+	const reader = response.body?.getReader();
+	expect(reader).toBeDefined();
+	const decoder = new TextDecoder();
+	let text = "";
+	try {
+		const first = await reader!.read();
+		if (!first.done) {
+			text += decoder.decode(first.value, { stream: true });
+		}
+	} finally {
+		controller.abort();
+		reader?.releaseLock();
+	}
+	return text;
+}
+
 test.describe("functional platform stack", () => {
 	test.skip(
 		!process.env.API_URL || !process.env.SOLANA_URL,
@@ -331,5 +407,223 @@ test.describe("functional platform stack", () => {
 				expect(rejected.headers.get("allow")).toBe("GET, HEAD");
 			}
 		}
+	});
+
+	test("F013-F017,F020-F022,F024-F025: MCP transport, catalogs, dispatch, resources, and prompts work live", async () => {
+		const client = new TinyPlaceClient({ baseUrl: API_URL });
+		const initialized = await client.mcp.initialize();
+		const sessionId = initialized.sessionId;
+		expect(sessionId).toMatch(/^tinyplace-\d+-\d+$/);
+		expect(initialized.body.result).toMatchObject({
+			protocolVersion: "2025-03-26",
+			serverInfo: { name: "tinyplace", version: "1.0.0" },
+		});
+		expect(
+			record(record(initialized.body.result).capabilities).resources
+		).toEqual(expect.objectContaining({ subscribe: true, listChanged: true }));
+
+		const tools = await client.mcp.listTools({ sessionId: sessionId! });
+		expect(tools.sessionId).toBe(sessionId);
+		const toolRows = record(tools.body.result).tools as Array<JSONRecord>;
+		const toolsByName = new Map(
+			toolRows.map((tool) => [tool.name as string, tool])
+		);
+		for (const name of [
+			"tinyplace_system_health",
+			"tinyplace_directory_search",
+			"tinyplace_register",
+			"tinyplace_payments_verify",
+			"tinyplace_signer_create",
+			"tinyplace_signer_revoke",
+			"tinyplace_escrow_create",
+			"tinyplace_escrow_dispute_vote",
+			"tinyplace_ledger",
+		]) {
+			expect(toolsByName.get(name), `missing MCP tool ${name}`).toBeDefined();
+		}
+		expect(toolsByName.get("tinyplace_system_health")).toMatchObject({
+			authRequired: false,
+			route: "GET /healthz",
+		});
+		expect(toolsByName.get("tinyplace_register")).toMatchObject({
+			authRequired: true,
+			route: "POST /registry/names",
+		});
+		expect(toolsByName.get("tinyplace_signer_create")).toMatchObject({
+			authRequired: true,
+			route: "POST /signers",
+		});
+		expect(toolsByName.get("tinyplace_escrow_create")).toMatchObject({
+			authRequired: true,
+			route: "POST /escrow",
+		});
+		expect(toolsByName.get("tinyplace_ledger")).toMatchObject({
+			authRequired: false,
+			route: "GET /ledger/transactions",
+		});
+
+		const resources = await client.mcp.listResources({ sessionId: sessionId! });
+		expect(resources.sessionId).toBe(sessionId);
+		const resourceRows = record(resources.body.result)
+			.resources as Array<JSONRecord>;
+		expect(resourceRows).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					uri: "tinyplace://ledger/recent",
+					subscribable: true,
+				}),
+				expect.objectContaining({
+					uri: "tinyplace://stats/overview",
+					subscribable: true,
+				}),
+				expect.objectContaining({
+					uri: "tinyplace://inbox",
+					subscribable: true,
+				}),
+			])
+		);
+
+		const prompts = await client.mcp.listPrompts({ sessionId: sessionId! });
+		expect(prompts.sessionId).toBe(sessionId);
+		const promptRows = record(prompts.body.result).prompts as Array<JSONRecord>;
+		expect(promptRows).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ name: "discover-agent" }),
+				expect.objectContaining({ name: "send-payment" }),
+				expect.objectContaining({ name: "marketplace-search" }),
+			])
+		);
+
+		const healthCall = mcpResult(
+			await mcp(
+				{
+					jsonrpc: "2.0",
+					id: "health",
+					method: "tools/call",
+					params: { name: "tinyplace_system_health", arguments: {} },
+				},
+				sessionId!
+			)
+		);
+		expect(healthCall.status).toBe(200);
+		expect(healthCall.contentType).toContain("application/json");
+		expect(JSON.parse(mcpTextContent(healthCall))).toMatchObject({
+			service: "tinyplace",
+			status: "ok",
+		});
+
+		const authError = mcpError(
+			await mcp(
+				{
+					jsonrpc: "2.0",
+					id: "auth-required",
+					method: "tools/call",
+					params: { name: "tinyplace_register", arguments: { body: {} } },
+				},
+				sessionId!
+			)
+		);
+		expect(authError).toMatchObject({
+			code: -32001,
+			message: "authorization required",
+		});
+
+		const resourceRead = mcpResult(
+			await mcp(
+				{
+					jsonrpc: "2.0",
+					id: "read-stats",
+					method: "resources/read",
+					params: { uri: "tinyplace://stats/overview" },
+				},
+				sessionId!
+			)
+		);
+		expect(resourceRead.status).toBe(200);
+		const contents = resourceRead.contents as Array<JSONRecord>;
+		expect(contents[0]).toMatchObject({
+			uri: "tinyplace://stats/overview",
+		});
+		expect(JSON.parse(contents[0]?.text as string)).toEqual(expect.any(Object));
+
+		const subscription = mcpResult(
+			await mcp(
+				{
+					jsonrpc: "2.0",
+					id: "subscribe",
+					method: "resources/subscribe",
+					params: { uri: "tinyplace://stats/overview" },
+				},
+				sessionId!
+			)
+		);
+		expect(subscription).toEqual({
+			uri: "tinyplace://stats/overview",
+			subscribed: true,
+		});
+		const subscribedStream = await mcpStreamText(sessionId!);
+		expect(subscribedStream).toContain("notifications/tinyplace/connected");
+		expect(subscribedStream).toContain("notifications/resources/updated");
+		expect(subscribedStream).toContain("tinyplace://stats/overview");
+
+		const isolated = await mcpStreamText("isolated-functional-session");
+		expect(isolated).toContain("notifications/tinyplace/connected");
+		expect(isolated).not.toContain("tinyplace://stats/overview");
+
+		const unsubscribed = mcpResult(
+			await mcp(
+				{
+					jsonrpc: "2.0",
+					id: "unsubscribe",
+					method: "resources/unsubscribe",
+					params: { uri: "tinyplace://stats/overview" },
+				},
+				sessionId!
+			)
+		);
+		expect(unsubscribed).toEqual({
+			uri: "tinyplace://stats/overview",
+			subscribed: false,
+		});
+
+		const renderedPrompt = mcpResult(
+			await mcp(
+				{
+					jsonrpc: "2.0",
+					id: "prompt",
+					method: "prompts/get",
+					params: {
+						name: "send-payment",
+						arguments: { recipient: "@seller", amount: "1 SOL" },
+					},
+				},
+				sessionId!
+			)
+		);
+		expect(renderedPrompt.description).toBe("Walk through sending a payment.");
+		expect(JSON.stringify(renderedPrompt.messages)).toContain("@seller");
+		expect(JSON.stringify(renderedPrompt.messages)).toContain("1 SOL");
+
+		const promptError = mcpError(
+			await mcp(
+				{
+					jsonrpc: "2.0",
+					id: "prompt-error",
+					method: "prompts/get",
+					params: { name: "missing-prompt" },
+				},
+				sessionId!
+			)
+		);
+		expect(promptError).toMatchObject({
+			code: -32602,
+			message: "unknown prompt",
+		});
+
+		const terminated = await client.mcp.terminate({ sessionId: sessionId! });
+		expect(terminated.status).toBe("terminated");
+		const afterTerminate = await mcpStreamText(sessionId!);
+		expect(afterTerminate).toContain("notifications/tinyplace/connected");
+		expect(afterTerminate).not.toContain("tinyplace://stats/overview");
 	});
 });
