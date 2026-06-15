@@ -140,6 +140,16 @@ export { SignersApi } from "./api/signers.js";
 export { ProfilesApi } from "./api/profiles.js";
 export { ExplorerApi } from "./api/explorer.js";
 export { PricingApi } from "./api/pricing.js";
+export { SolanaApi } from "./api/solana.js";
+export type {
+  SolanaChainInfo,
+  SolanaRPCBatchResponse,
+  SolanaRPCError,
+  SolanaRPCID,
+  SolanaRPCInfo,
+  SolanaRPCRequest,
+  SolanaRPCResponse,
+} from "./api/solana.js";
 export { SwapApi } from "./api/swap.js";
 export type { SwapHistoryParams, SwapQuoteParams } from "./api/swap.js";
 export { BridgeApi } from "./api/bridge.js";
