@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test";
-import { TinyPlaceClient } from "@tinyhumansai/tinyplace";
+import {
+	LocalSigner,
+	TinyPlaceClient,
+	TinyPlaceError,
+} from "@tinyhumansai/tinyplace";
 
 const API_URL = process.env.API_URL ?? "http://localhost:8080";
 const SOLANA_URL = process.env.SOLANA_URL ?? "http://localhost:8899";
@@ -11,6 +15,7 @@ const PROGRAM_IDS = [
 ];
 
 type JSONRecord = Record<string, unknown>;
+type StreamFrame = { type?: string; data?: unknown };
 
 async function api(path: string, init?: RequestInit): Promise<Response> {
 	return fetch(`${API_URL}${path}`, init);
@@ -49,6 +54,21 @@ async function solanaRpc<T>(
 function record(value: unknown): JSONRecord {
 	expect(value).toEqual(expect.any(Object));
 	return value as JSONRecord;
+}
+
+function uniq(prefix: string): string {
+	return `${prefix}-${Date.now().toString(36)}-${Math.random()
+		.toString(36)
+		.slice(2, 8)}`;
+}
+
+function isTinyPlaceStatus(error: unknown, status: number): boolean {
+	return error instanceof TinyPlaceError && error.status === status;
+}
+
+function tinyPlaceBody(error: unknown): JSONRecord {
+	expect(error).toBeInstanceOf(TinyPlaceError);
+	return record((error as TinyPlaceError).body);
 }
 
 function pathOperation(
@@ -153,6 +173,30 @@ async function mcpStreamText(
 		reader?.releaseLock();
 	}
 	return text;
+}
+
+function waitForStreamMessage(
+	socket: NonNullable<ReturnType<TinyPlaceClient["a2a"]["stream"]>>
+): Promise<StreamFrame> {
+	return new Promise((resolve, reject) => {
+		const timer = setTimeout(() => {
+			cleanup();
+			reject(new Error("timed out waiting for A2A stream message"));
+		}, 5000);
+		const offMessage = socket.on<StreamFrame>("message", (message) => {
+			cleanup();
+			resolve(message);
+		});
+		const offError = socket.on("error", (error) => {
+			cleanup();
+			reject(error instanceof Error ? error : new Error(String(error)));
+		});
+		function cleanup(): void {
+			clearTimeout(timer);
+			offMessage();
+			offError();
+		}
+	});
 }
 
 test.describe("functional platform stack", () => {
@@ -625,5 +669,163 @@ test.describe("functional platform stack", () => {
 		const afterTerminate = await mcpStreamText(sessionId!);
 		expect(afterTerminate).toContain("notifications/tinyplace/connected");
 		expect(afterTerminate).not.toContain("tinyplace://stats/overview");
+	});
+
+	test("F026-F028: A2A docs, signed JSON-RPC relay, stream auth, and wire errors work live", async () => {
+		const signer = await LocalSigner.generate();
+		const client = new TinyPlaceClient({ baseUrl: API_URL, signer });
+		const agentName = uniq("functional-a2a-agent");
+		const skillDoc = `# ${agentName}\n\n## Skill\n\nEcho signed JSON-RPC tasks.`;
+		const swaggerMarkdown = `# ${agentName} API\n\nPOST /task`;
+		const swaggerJson = {
+			openapi: "3.1.0",
+			info: { title: agentName, version: "1.0.0" },
+			paths: { "/task": { post: { summary: "Run task" } } },
+		};
+		const now = new Date().toISOString();
+
+		await client.directory.upsertAgent(signer.agentId, {
+			agentId: signer.agentId,
+			cryptoId: signer.agentId,
+			name: agentName,
+			description: "Functional A2A agent with inline docs",
+			publicKey: signer.publicKeyBase64,
+			url: `${API_URL}/a2a/${encodeURIComponent(signer.agentId)}`,
+			skills: ["echo"],
+			capabilities: ["streaming", "json-rpc"],
+			tags: ["functional", "a2a"],
+			docs: {
+				skillMd: skillDoc,
+				swaggerMd: swaggerMarkdown,
+				swaggerJson: JSON.stringify(swaggerJson),
+			},
+			createdAt: now,
+			updatedAt: now,
+		});
+
+		try {
+			const fetched = await client.directory.getAgent(signer.agentId);
+			expect(fetched).toMatchObject({
+				agentId: signer.agentId,
+				name: agentName,
+				cryptoId: signer.agentId,
+				publicKey: signer.publicKeyBase64,
+			});
+			expect(fetched.docs?.skillMdUrl).toBe(
+				`/a2a/${signer.agentId}/skill.md`
+			);
+			expect(fetched.docs?.swaggerJsonUrl).toBe(
+				`/a2a/${signer.agentId}/swagger.json`
+			);
+			expect(fetched.docs?.swaggerMdUrl).toBe(
+				`/a2a/${signer.agentId}/swagger.md`
+			);
+
+			await expect(client.a2a.skillDescription(signer.agentId)).resolves.toBe(
+				skillDoc
+			);
+			await expect(client.a2a.swaggerMarkdown(signer.agentId)).resolves.toBe(
+				swaggerMarkdown
+			);
+			await expect(client.a2a.swagger(signer.agentId)).resolves.toEqual(
+				swaggerJson
+			);
+
+			let unsupported: JSONRecord | undefined;
+			try {
+				await client.a2a.sendTask(
+					signer.agentId,
+					{
+						jsonrpc: "2.0",
+						id: "unsupported",
+						method: "tasks/unknown",
+						params: { message: "hello" },
+					},
+					signer.publicKeyBase64
+				);
+			} catch (error) {
+				expect(isTinyPlaceStatus(error, 404)).toBe(true);
+				unsupported = tinyPlaceBody(error);
+			}
+			expect(unsupported).toMatchObject({
+				jsonrpc: "2.0",
+				id: "unsupported",
+				error: {
+					code: -32601,
+					message: "method not found",
+					data: { method: "tasks/unknown" },
+				},
+			});
+
+			let taskRelay: JSONRecord | undefined;
+			try {
+				await client.a2a.sendTask(
+					signer.agentId,
+					{
+						jsonrpc: "2.0",
+						id: "task-required-envelope",
+						method: "tasks/send",
+						params: { message: { role: "user", parts: [] } },
+					},
+					signer.publicKeyBase64
+				);
+			} catch (error) {
+				expect(isTinyPlaceStatus(error, 400)).toBe(true);
+				taskRelay = tinyPlaceBody(error);
+			}
+			expect(taskRelay).toMatchObject({
+				jsonrpc: "2.0",
+				id: "task-required-envelope",
+				error: {
+					code: -32600,
+					message: "encrypted MessageEnvelope required",
+					data: { to: signer.agentId },
+				},
+			});
+
+			const unsigned = new TinyPlaceClient({ baseUrl: API_URL });
+			let unsignedRelay: JSONRecord | undefined;
+			try {
+				await unsigned.a2a.sendTask(signer.agentId, {
+					jsonrpc: "2.0",
+					id: "missing-sender",
+					method: "tasks/send",
+					params: {},
+				});
+			} catch (error) {
+				expect(isTinyPlaceStatus(error, 400)).toBe(true);
+				unsignedRelay = tinyPlaceBody(error);
+			}
+			expect(unsignedRelay).toMatchObject({
+				jsonrpc: "2.0",
+				id: "missing-sender",
+				error: {
+					code: -32600,
+					message: "sender is required",
+				},
+			});
+
+			const stream = client.a2a.stream(signer.agentId);
+			expect(stream).toBeDefined();
+			const firstMessage = waitForStreamMessage(stream!);
+			await stream!.connect();
+			const snapshot = await firstMessage;
+			expect(snapshot.type).toBe("snapshot");
+			expect(snapshot.data === null || Array.isArray(snapshot.data)).toBe(true);
+			stream!.close();
+
+			const unsignedStream = unsigned.a2a.stream(signer.agentId);
+			expect(unsignedStream).toBeDefined();
+			await expect(unsignedStream!.connect()).rejects.toBeTruthy();
+			unsignedStream!.close();
+		} finally {
+			try {
+				await client.directory.deleteAgent(signer.agentId);
+			} catch (error) {
+				if (!isTinyPlaceStatus(error, 404)) {
+					throw error;
+				}
+			}
+		}
 	});
 });
