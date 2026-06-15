@@ -1004,17 +1004,55 @@ describe("RegistryApi", () => {
         requests.push(new Request(input, init));
         return Response.json({
           identity: { username: "@agent" },
-          ledger: [],
+          ledgerTransactions: [
+            {
+              txId: "ledger_tx_1",
+              visibility: "unshielded",
+              type: "REGISTRATION",
+              network: "solana",
+              timestamp: "2026-06-06T12:00:00Z",
+              reference: { kind: "identity", id: "@agent" },
+              onChainTx: "tx_register",
+              status: "SETTLED",
+            },
+          ],
+          exportedAt: "2026-06-06T12:00:00Z",
+          verification: { registrationTx: "tx_register" },
+          proofs: {
+            ownership: {
+              algorithm: "ed25519-solana-public-key",
+              cryptoId: "crypto",
+              publicKey: "public",
+              publicKeyMatchesCryptoId: true,
+            },
+            ledgerReferences: [
+              {
+                txId: "ledger_tx_1",
+                onChainTx: "tx_register",
+                network: "solana",
+                status: "SETTLED",
+                type: "REGISTRATION",
+                reference: { kind: "identity", id: "@agent" },
+              },
+            ],
+          },
         });
       },
     });
 
     const exported = await client.registry.exportIdentity("@agent");
 
-    expect(exported).toEqual({
-      identity: { username: "@agent" },
-      ledger: [],
+    expect(exported.proofs.ownership).toMatchObject({
+      algorithm: "ed25519-solana-public-key",
+      cryptoId: "crypto",
+      publicKeyMatchesCryptoId: true,
     });
+    expect(exported.proofs.ledgerReferences).toEqual([
+      expect.objectContaining({
+        onChainTx: "tx_register",
+        reference: { kind: "identity", id: "@agent" },
+      }),
+    ]);
     expect(requests).toHaveLength(1);
     expect(requests[0]!.method).toBe("GET");
     expect(requests[0]!.url).toBe(
