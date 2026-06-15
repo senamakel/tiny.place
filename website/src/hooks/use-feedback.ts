@@ -31,7 +31,8 @@ export function useFeedback(
 }
 
 export function useAdminFeedback(
-	parameters?: FeedbackListParams
+	parameters?: FeedbackListParams,
+	options?: { enabled?: boolean }
 ): UseQueryResult<{ feedback: Array<FeedbackItem> }> {
 	const client = useApiClient();
 	return useQuery({
@@ -40,6 +41,7 @@ export function useAdminFeedback(
 			const result = await client.feedback.listAdmin(parameters);
 			return { feedback: result.feedback ?? [] };
 		},
+		enabled: options?.enabled ?? true,
 		retry: false,
 	});
 }

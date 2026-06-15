@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import type { FeedbackItem, FeedbackStatus } from "@tinyhumansai/tinyplace";
+import {
+	ArrowDownIcon,
+	ArrowUpIcon,
+} from "@heroicons/react/24/outline";
 
 import type { FunctionComponent } from "@src/common/types";
 import {
@@ -74,6 +78,9 @@ function FeedbackCard({
 	onVote: (feedbackId: string, vote: "up" | "down") => void;
 	voting: boolean;
 }): React.ReactElement {
+	const agentId = useAuthStore((state) => state.agentId);
+	const canVote = Boolean(agentId) && feedback.status === "approved";
+
 	return (
 		<article
 			className={`rounded-md border p-4 ${
@@ -98,8 +105,10 @@ function FeedbackCard({
 						{feedback.author} {formatDate(feedback.createdAt)}
 					</p>
 				</div>
-				<div className="text-right">
-					<div className={isDark ? "text-white" : "text-black"}>
+				<div className="shrink-0 text-right">
+					<div
+						className={`text-sm font-medium ${isDark ? "text-white" : "text-black"}`}
+					>
 						{feedback.score}
 					</div>
 					<div className={`text-xs ${mutedClass(isDark)}`}>votes</div>
@@ -113,21 +122,22 @@ function FeedbackCard({
 					{feedback.category}
 				</p>
 			) : null}
-			<div className="mt-4 flex flex-wrap gap-2">
+			<div className="mt-4 grid grid-cols-2 gap-2 sm:flex">
 				<button
-					className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
-					disabled={voting || feedback.status !== "approved"}
+					className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
+					disabled={voting || !canVote}
 					type="button"
 					onClick={(): void => {
 						onVote(feedback.feedbackId, "up");
 					}}
 				>
-					Upvote {feedback.votesUp}
+					<ArrowUpIcon className="h-3.5 w-3.5" />
+					Up {feedback.votesUp}
 				</button>
 				<button
-					disabled={voting || feedback.status !== "approved"}
+					disabled={voting || !canVote}
 					type="button"
-					className={`rounded-md border px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50 ${
+					className={`inline-flex items-center justify-center gap-1.5 rounded-md border px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50 ${
 						isDark
 							? "border-neutral-700 text-neutral-200"
 							: "border-neutral-300 text-neutral-700"
@@ -136,7 +146,8 @@ function FeedbackCard({
 						onVote(feedback.feedbackId, "down");
 					}}
 				>
-					Downvote {feedback.votesDown}
+					<ArrowDownIcon className="h-3.5 w-3.5" />
+					Down {feedback.votesDown}
 				</button>
 			</div>
 		</article>
@@ -154,7 +165,11 @@ export const Feedback = ({ isDark }: FeedbackProperties): FunctionComponent => {
 	const [adminNote, setAdminNote] = useState("");
 	const [mergedReference, setMergedReference] = useState("");
 	const feedbackQuery = useFeedback({ limit: 50 });
-	const adminQuery = useAdminFeedback({ limit: 50, status: adminStatus });
+	const adminQuery = useAdminFeedback(
+		{ limit: 50, status: adminStatus },
+		{ enabled: Boolean(agentId) }
+	);
+	const isAdmin = adminQuery.isSuccess;
 	const createFeedback = useCreateFeedback();
 	const voteFeedback = useVoteFeedback();
 	const updateStatus = useUpdateFeedbackStatus();
@@ -276,97 +291,94 @@ export const Feedback = ({ isDark }: FeedbackProperties): FunctionComponent => {
 				))}
 			</section>
 
-			<section className={panelClass(isDark)}>
-				<div className="mb-3 flex flex-wrap items-center gap-2">
-					<h2
-						className={`mr-auto text-sm font-medium ${isDark ? "text-white" : "text-black"}`}
-					>
-						Admin Queue
-					</h2>
-					<select
-						className={inputClass(isDark)}
-						value={adminStatus}
-						onChange={(event): void => {
-							setAdminStatus(event.target.value as FeedbackStatus);
-						}}
-					>
-						{statuses.map((status) => (
-							<option key={status} value={status}>
-								{status}
-							</option>
-						))}
-					</select>
-					<select
-						className={inputClass(isDark)}
-						value={selectedStatus}
-						onChange={(event): void => {
-							setSelectedStatus(event.target.value as FeedbackStatus);
-						}}
-					>
-						{statuses.map((status) => (
-							<option key={status} value={status}>
-								{status}
-							</option>
-						))}
-					</select>
-				</div>
-				<div className="mb-3 grid gap-3 md:grid-cols-2">
-					<input
-						className={`${inputClass(isDark)} w-full`}
-						placeholder="Admin note"
-						type="text"
-						value={adminNote}
-						onChange={(event): void => {
-							setAdminNote(event.target.value);
-						}}
-					/>
-					<input
-						className={`${inputClass(isDark)} w-full`}
-						placeholder="Merged reference"
-						type="text"
-						value={mergedReference}
-						onChange={(event): void => {
-							setMergedReference(event.target.value);
-						}}
-					/>
-				</div>
-				{adminQuery.isError ? (
-					<p className="mb-3 text-xs text-neutral-500">
-						Admin auth unavailable.
-					</p>
-				) : null}
-				<div className="space-y-2">
-					{(adminQuery.data?.feedback ?? []).map((feedback) => (
-						<div
-							key={feedback.feedbackId}
-							className={`flex flex-wrap items-center gap-3 rounded-md border p-3 ${
-								isDark
-									? "border-neutral-800 bg-neutral-900"
-									: "border-neutral-200 bg-white"
-							}`}
+			{isAdmin ? (
+				<section className={panelClass(isDark)}>
+					<div className="mb-3 flex flex-wrap items-center gap-2">
+						<h2
+							className={`mr-auto text-sm font-medium ${isDark ? "text-white" : "text-black"}`}
 						>
-							<div className="min-w-0 flex-1">
-								<p className={isDark ? "text-white" : "text-black"}>
-									{feedback.title}
-								</p>
-								<p className={`text-xs ${mutedClass(isDark)}`}>
-									{feedback.author} - {feedback.status}
-								</p>
-							</div>
-							<button
-								className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
-								disabled={updateStatus.isPending}
-								type="button"
-								onClick={(): void => {
-									handleStatus(feedback.feedbackId);
-								}}
+							Admin Queue
+						</h2>
+						<select
+							className={inputClass(isDark)}
+							value={adminStatus}
+							onChange={(event): void => {
+								setAdminStatus(event.target.value as FeedbackStatus);
+							}}
+						>
+							{statuses.map((status) => (
+								<option key={status} value={status}>
+									{status}
+								</option>
+							))}
+						</select>
+						<select
+							className={inputClass(isDark)}
+							value={selectedStatus}
+							onChange={(event): void => {
+								setSelectedStatus(event.target.value as FeedbackStatus);
+							}}
+						>
+							{statuses.map((status) => (
+								<option key={status} value={status}>
+									{status}
+								</option>
+							))}
+						</select>
+					</div>
+					<div className="mb-3 grid gap-3 md:grid-cols-2">
+						<input
+							className={`${inputClass(isDark)} w-full`}
+							placeholder="Admin note"
+							type="text"
+							value={adminNote}
+							onChange={(event): void => {
+								setAdminNote(event.target.value);
+							}}
+						/>
+						<input
+							className={`${inputClass(isDark)} w-full`}
+							placeholder="Merged reference"
+							type="text"
+							value={mergedReference}
+							onChange={(event): void => {
+								setMergedReference(event.target.value);
+							}}
+						/>
+					</div>
+					<div className="space-y-2">
+						{(adminQuery.data?.feedback ?? []).map((feedback) => (
+							<div
+								key={feedback.feedbackId}
+								className={`flex flex-wrap items-center gap-3 rounded-md border p-3 ${
+									isDark
+										? "border-neutral-800 bg-neutral-900"
+										: "border-neutral-200 bg-white"
+								}`}
 							>
-								Update
-							</button>
-						</div>
-					))}
-				</div>
-			</section>
+								<div className="min-w-0 flex-1">
+									<p className={isDark ? "text-white" : "text-black"}>
+										{feedback.title}
+									</p>
+									<p className={`text-xs ${mutedClass(isDark)}`}>
+										{feedback.author} - {feedback.status}
+									</p>
+								</div>
+								<button
+									className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
+									disabled={updateStatus.isPending}
+									type="button"
+									onClick={(): void => {
+										handleStatus(feedback.feedbackId);
+									}}
+								>
+									Update
+								</button>
+							</div>
+						))}
+					</div>
+				</section>
+			) : null}
 		</div>
 	);
 };
