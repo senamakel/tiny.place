@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import {
 	LocalSigner,
+	signDirectoryWrite,
 	TinyPlaceClient,
 	TinyPlaceError,
 } from "@tinyhumansai/tinyplace";
@@ -69,6 +70,45 @@ function isTinyPlaceStatus(error: unknown, status: number): boolean {
 function tinyPlaceBody(error: unknown): JSONRecord {
 	expect(error).toBeInstanceOf(TinyPlaceError);
 	return record((error as TinyPlaceError).body);
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+	let binary = "";
+	for (const byte of bytes) {
+		binary += String.fromCharCode(byte);
+	}
+	return btoa(binary);
+}
+
+async function sha256Hex(body: string): Promise<string> {
+	const digest = await crypto.subtle.digest(
+		"SHA-256",
+		new TextEncoder().encode(body)
+	);
+	return Array.from(new Uint8Array(digest))
+		.map((byte) => byte.toString(16).padStart(2, "0"))
+		.join("");
+}
+
+async function signedDirectoryHeaders(
+	signer: LocalSigner,
+	method: string,
+	requestUri: string,
+	body: string,
+	options?: { timestamp?: string; nonce?: string }
+): Promise<Record<string, string>> {
+	const timestamp = options?.timestamp ?? new Date().toISOString();
+	const nonce = options?.nonce ?? uniq("nonce");
+	const bodyHash = await sha256Hex(body);
+	const payload = `${method}\n${requestUri}\n${timestamp}\n${nonce}\n${bodyHash}`;
+	const signature = await signer.sign(new TextEncoder().encode(payload));
+	return {
+		"Content-Type": "application/json",
+		"X-TinyPlace-Date": timestamp,
+		"X-TinyPlace-Nonce": nonce,
+		"X-TinyPlace-Public-Key": signer.publicKeyBase64,
+		"X-TinyPlace-Signature": bytesToBase64(signature),
+	};
 }
 
 function pathOperation(
@@ -815,6 +855,130 @@ test.describe("functional platform stack", () => {
 			stream!.close();
 
 			const unsignedStream = unsigned.a2a.stream(signer.agentId);
+			expect(unsignedStream).toBeDefined();
+			await expect(unsignedStream!.connect()).rejects.toBeTruthy();
+			unsignedStream!.close();
+		} finally {
+			try {
+				await client.directory.deleteAgent(signer.agentId);
+			} catch (error) {
+				if (!isTinyPlaceStatus(error, 404)) {
+					throw error;
+				}
+			}
+		}
+	});
+
+	test("F034-F036: directory auth binds request details and rejects replayed or stale signatures", async () => {
+		const signer = await LocalSigner.generate();
+		const client = new TinyPlaceClient({ baseUrl: API_URL, signer });
+		const requestUri = `/directory/agents/${encodeURIComponent(signer.agentId)}`;
+		const now = new Date().toISOString();
+		const card = {
+			agentId: signer.agentId,
+			cryptoId: signer.agentId,
+			name: uniq("functional-auth-agent"),
+			description: "Functional auth signature probe",
+			publicKey: signer.publicKeyBase64,
+			url: `${API_URL}/a2a/${encodeURIComponent(signer.agentId)}`,
+			skills: ["auth"],
+			capabilities: ["directory-write"],
+			tags: ["functional", "auth"],
+			createdAt: now,
+			updatedAt: now,
+		};
+		const body = JSON.stringify(card);
+		const replayHeaders = await signDirectoryWrite(
+			signer,
+			signer.publicKeyBase64,
+			"PUT",
+			requestUri,
+			body
+		);
+		const headers = {
+			"Content-Type": "application/json",
+			...replayHeaders,
+		};
+
+		try {
+			const created = await api(requestUri, {
+				method: "PUT",
+				headers,
+				body,
+			});
+			expect(created.status).toBe(200);
+			await expect(created.json()).resolves.toMatchObject({
+				agentId: signer.agentId,
+				name: card.name,
+			});
+
+			const replayed = await api(requestUri, {
+				method: "PUT",
+				headers,
+				body,
+			});
+			expect(replayed.status).toBe(403);
+			await expect(replayed.json()).resolves.toMatchObject({
+				error: "directory write signature required",
+			});
+
+			const signedOriginal = await signDirectoryWrite(
+				signer,
+				signer.publicKeyBase64,
+				"PUT",
+				requestUri,
+				body
+			);
+			const tampered = await api(requestUri, {
+				method: "PUT",
+				headers: {
+					"Content-Type": "application/json",
+					...signedOriginal,
+				},
+				body: JSON.stringify({ ...card, name: `${card.name}-tampered` }),
+			});
+			expect(tampered.status).toBe(403);
+
+			const staleBody = JSON.stringify({
+				...card,
+				name: `${card.name}-stale`,
+			});
+			const stale = await api(requestUri, {
+				method: "PUT",
+				headers: await signedDirectoryHeaders(
+					signer,
+					"PUT",
+					requestUri,
+					staleBody,
+					{
+						timestamp: new Date(Date.now() - 10 * 60_000).toISOString(),
+						nonce: uniq("stale"),
+					}
+				),
+				body: staleBody,
+			});
+			expect(stale.status).toBe(403);
+
+			const missingNonceBody = JSON.stringify({
+				...card,
+				name: `${card.name}-missing-nonce`,
+			});
+			const missingNonce = await api(requestUri, {
+				method: "PUT",
+				headers: await signedDirectoryHeaders(
+					signer,
+					"PUT",
+					requestUri,
+					missingNonceBody,
+					{ nonce: "" }
+				),
+				body: missingNonceBody,
+			});
+			expect(missingNonce.status).toBe(403);
+
+			const unsignedStream = new TinyPlaceClient({ baseUrl: API_URL }).a2a.stream(
+				signer.agentId
+			);
 			expect(unsignedStream).toBeDefined();
 			await expect(unsignedStream!.connect()).rejects.toBeTruthy();
 			unsignedStream!.close();
