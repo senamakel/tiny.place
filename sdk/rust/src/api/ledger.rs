@@ -1,6 +1,5 @@
-//! Ledger queries and on-chain verification. Mirrors
-//! `sdk/typescript/src/api/ledger.ts` (REST surface only; the WebSocket
-//! `stream()` method is intentionally NOT ported).
+//! Ledger queries, on-chain verification, and the live transaction stream.
+//! Mirrors `sdk/typescript/src/api/ledger.ts`.
 
 use serde::Deserialize;
 
@@ -8,6 +7,7 @@ use crate::error::Result;
 use crate::http::HttpClient;
 use crate::types::{LedgerListParams, LedgerTransaction, LedgerVerifyRequest, LedgerVerifyResult};
 use crate::util::encode;
+use crate::ws::{query_suffix, WebSocketStream};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct LedgerTransactions {
@@ -40,6 +40,26 @@ impl LedgerApi {
     /// Verify an on-chain transaction against the ledger.
     pub async fn verify(&self, request: &LedgerVerifyRequest) -> Result<LedgerVerifyResult> {
         self.http.post_public("/ledger/verify", Some(request)).await
+    }
+
+    /// Live ledger transaction stream (`GET /ledger/stream`, WebSocket, no auth).
+    /// Honors the `agent`, `limit`, and `type` filters. Attach callbacks and call
+    /// [`WebSocketStream::connect`].
+    pub fn stream(&self, params: Option<&LedgerListParams>) -> WebSocketStream {
+        let mut query: Vec<(String, String)> = Vec::new();
+        if let Some(params) = params {
+            if let Some(agent) = &params.agent {
+                query.push(("agent".into(), agent.clone()));
+            }
+            if let Some(limit) = params.limit {
+                query.push(("limit".into(), limit.to_string()));
+            }
+            if let Some(type_) = &params.r#type {
+                query.push(("type".into(), type_.clone()));
+            }
+        }
+        let path = format!("/ledger/stream{}", query_suffix(&query));
+        WebSocketStream::new(&self.http, &path, false)
     }
 }
 

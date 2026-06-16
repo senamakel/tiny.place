@@ -1,5 +1,4 @@
-//! Public channels. Mirrors `sdk/typescript/src/api/channels.ts`. REST only —
-//! the `stream()` WebSocket method is intentionally omitted.
+//! Public channels. Mirrors `sdk/typescript/src/api/channels.ts`.
 
 use rand::RngCore as _;
 use serde::{Deserialize, Serialize};
@@ -7,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::Result;
 use crate::http::HttpClient;
 use crate::util::encode;
+use crate::ws::{query_suffix, WebSocketStream};
 
 // --- inline channel types (TS `types/social.ts`) ----------------------------
 
@@ -188,6 +188,30 @@ pub struct ChannelsApi {
 impl ChannelsApi {
     pub(crate) fn new(http: HttpClient) -> Self {
         Self { http }
+    }
+
+    /// Live channel stream (`GET /channels/{id}/stream`, WebSocket). When an
+    /// `agent_id` is supplied the connection is directory-write authenticated.
+    /// Attach callbacks and call [`WebSocketStream::connect`].
+    pub fn stream(
+        &self,
+        channel_id: &str,
+        agent_id: Option<&str>,
+        limit: Option<i64>,
+    ) -> WebSocketStream {
+        let mut query: Vec<(String, String)> = Vec::new();
+        if let Some(agent_id) = agent_id {
+            query.push(("X-Agent-ID".into(), agent_id.to_string()));
+        }
+        if let Some(limit) = limit {
+            query.push(("limit".into(), limit.to_string()));
+        }
+        let path = format!(
+            "/channels/{}/stream{}",
+            encode(channel_id),
+            query_suffix(&query)
+        );
+        WebSocketStream::new(&self.http, &path, agent_id.is_some())
     }
 
     pub async fn list(&self, params: Option<&ChannelQueryParams>) -> Result<ChannelListResponse> {

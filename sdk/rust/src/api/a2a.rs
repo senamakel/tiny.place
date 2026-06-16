@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::Result;
 use crate::http::HttpClient;
 use crate::util::encode;
+use crate::ws::WebSocketStream;
 
 /// A JSON-RPC 2.0 task request sent to a target agent.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -49,6 +50,14 @@ pub struct A2AApi {
 impl A2AApi {
     pub(crate) fn new(http: HttpClient) -> Self {
         Self { http }
+    }
+
+    /// Live A2A message stream for an agent (`GET /a2a/{id}/stream`, WebSocket).
+    /// Always directory-write authenticated (requires a signing key). Attach
+    /// callbacks and call [`WebSocketStream::connect`].
+    pub fn stream(&self, agent_id: &str) -> WebSocketStream {
+        let path = format!("/a2a/{}/stream", encode(agent_id));
+        WebSocketStream::new(&self.http, &path, true)
     }
 
     /// Send a JSON-RPC task to `agent_id`. When `sender_id` is set, the request

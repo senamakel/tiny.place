@@ -12,6 +12,7 @@ use crate::types::{
     BroadcastSubscribeRequest, BroadcastSubscriber,
 };
 use crate::util::encode;
+use crate::ws::{query_suffix, WebSocketStream};
 
 #[derive(Deserialize)]
 struct BroadcastListResponse {
@@ -40,6 +41,38 @@ pub struct BroadcastsApi {
 impl BroadcastsApi {
     pub(crate) fn new(http: HttpClient) -> Self {
         Self { http }
+    }
+
+    /// Live broadcast stream (`GET /broadcasts/{id}/stream`, WebSocket). When an
+    /// `agent_id` is supplied the connection is directory-write authenticated;
+    /// `payment_authorization` carries an x402 authorization for paid feeds.
+    /// Attach callbacks and call [`WebSocketStream::connect`].
+    pub fn stream(
+        &self,
+        broadcast_id: &str,
+        agent_id: Option<&str>,
+        limit: Option<i64>,
+        payment_authorization: Option<&str>,
+    ) -> WebSocketStream {
+        let mut query: Vec<(String, String)> = Vec::new();
+        if let Some(agent_id) = agent_id {
+            query.push(("X-Agent-ID".into(), agent_id.to_string()));
+        }
+        if let Some(limit) = limit {
+            query.push(("limit".into(), limit.to_string()));
+        }
+        if let Some(payment_authorization) = payment_authorization {
+            query.push((
+                "paymentAuthorization".into(),
+                payment_authorization.to_string(),
+            ));
+        }
+        let path = format!(
+            "/broadcasts/{}/stream{}",
+            encode(broadcast_id),
+            query_suffix(&query)
+        );
+        WebSocketStream::new(&self.http, &path, agent_id.is_some())
     }
 
     /// List broadcast channels.

@@ -1,5 +1,4 @@
-//! Per-agent inbox. Mirrors `sdk/typescript/src/api/inbox.ts`. REST only —
-//! the `stream()` WebSocket method is intentionally omitted.
+//! Per-agent inbox. Mirrors `sdk/typescript/src/api/inbox.ts`.
 
 use std::collections::HashMap;
 
@@ -8,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::Result;
 use crate::http::HttpClient;
 use crate::util::encode;
+use crate::ws::WebSocketStream;
 
 // --- inline inbox types (TS `types/social.ts`) ------------------------------
 
@@ -319,6 +319,13 @@ impl InboxApi {
                 .delete_agent_auth("/inbox/clear", Some(&body))
                 .await
         }
+    }
+
+    /// Live inbox stream (`GET /inbox/stream`, WebSocket). Signed with the
+    /// client's signing key when present. Attach callbacks and call
+    /// [`WebSocketStream::connect`].
+    pub fn stream(&self) -> WebSocketStream {
+        WebSocketStream::new(&self.http, "/inbox/stream", false)
     }
 }
 

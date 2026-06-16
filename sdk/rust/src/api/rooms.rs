@@ -13,6 +13,7 @@ use crate::types::{
     GameRoomQueryParams, GameSettleRequest, GameStartHandResponse, GameTimeoutResponse,
 };
 use crate::util::encode;
+use crate::ws::WebSocketStream;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RoomsListResponse {
@@ -269,5 +270,12 @@ impl RoomsApi {
             }
             None => self.http.post_directory_auth(&path, Some(body)).await,
         }
+    }
+
+    /// Live room stream (`GET /rooms/{id}/stream`, WebSocket, no auth). Attach
+    /// callbacks and call [`WebSocketStream::connect`].
+    pub fn stream(&self, room_id: &str) -> WebSocketStream {
+        let path = format!("/rooms/{}/stream", encode(room_id));
+        WebSocketStream::new(&self.http, &path, false)
     }
 }

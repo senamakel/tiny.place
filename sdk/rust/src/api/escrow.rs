@@ -10,6 +10,7 @@ use crate::types::{
     Escrow, EscrowCreateRequest, EscrowDispute, EscrowMilestone, EscrowQueryParams,
 };
 use crate::util::encode;
+use crate::ws::{query_suffix, WebSocketStream};
 
 /// Response wrapper for [`EscrowApi::list`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,6 +66,22 @@ pub struct EscrowApi {
 impl EscrowApi {
     pub(crate) fn new(http: HttpClient) -> Self {
         Self { http }
+    }
+
+    /// Live escrow stream (`GET /escrow/{id}/stream`, WebSocket). When an
+    /// `agent_id` is supplied the connection is directory-write authenticated.
+    /// Attach callbacks and call [`WebSocketStream::connect`].
+    pub fn stream(&self, escrow_id: &str, agent_id: Option<&str>) -> WebSocketStream {
+        let mut query: Vec<(String, String)> = Vec::new();
+        if let Some(agent_id) = agent_id {
+            query.push(("X-Agent-ID".into(), agent_id.to_string()));
+        }
+        let path = format!(
+            "/escrow/{}/stream{}",
+            encode(escrow_id),
+            query_suffix(&query)
+        );
+        WebSocketStream::new(&self.http, &path, agent_id.is_some())
     }
 
     pub async fn list(&self, params: Option<&EscrowQueryParams>) -> Result<EscrowListResponse> {

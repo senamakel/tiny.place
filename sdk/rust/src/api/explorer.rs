@@ -75,4 +75,10 @@ impl ExplorerApi {
         let path = format!("/explorer/agents/{}", encode(agent_id));
         self.http.get(&path, &[]).await
     }
+
+    /// Live transaction stream (`GET /explorer/live`, WebSocket, no auth). Attach
+    /// callbacks and call [`crate::ws::WebSocketStream::connect`].
+    pub fn live(&self) -> crate::ws::WebSocketStream {
+        crate::ws::WebSocketStream::new(&self.http, "/explorer/live", false)
+    }
 }

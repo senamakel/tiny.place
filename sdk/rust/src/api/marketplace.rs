@@ -17,6 +17,7 @@ use crate::types::{
     MarketplacePrice, Product, ProductBuyRequest, ProductCreateRequest, ProductPurchase,
     ProductQueryParams, ProductReview,
 };
+use crate::ws::{query_suffix, WebSocketStream};
 use crate::x402::{build_x402_payment_map, X402PaymentAuthorizationOptions, X402PaymentMap};
 
 /// Options for building an x402 payment map alongside an identity offer.
@@ -62,6 +63,18 @@ pub struct MarketplaceApi {
 impl MarketplaceApi {
     pub(crate) fn new(http: HttpClient) -> Self {
         Self { http }
+    }
+
+    /// Live marketplace stream (`GET /marketplace/stream`, WebSocket). Always
+    /// directory-write authenticated (requires a signing key). Attach callbacks
+    /// and call [`WebSocketStream::connect`].
+    pub fn stream(&self, agent_id: &str, limit: Option<i64>) -> WebSocketStream {
+        let mut query: Vec<(String, String)> = vec![("X-Agent-ID".into(), agent_id.to_string())];
+        if let Some(limit) = limit {
+            query.push(("limit".into(), limit.to_string()));
+        }
+        let path = format!("/marketplace/stream{}", query_suffix(&query));
+        WebSocketStream::new(&self.http, &path, true)
     }
 
     // --- Products ---
