@@ -83,13 +83,13 @@ describe("useConversationsStore ensureOwner scoping", () => {
 			.appendIncoming([
 				{ id: "m1", from: "alice", text: "hi", at: "2026-01-01T00:00:00.000Z" },
 			]);
-		expect(store.getState().threads.alice).toHaveLength(1);
+		expect(store.getState().threads["alice"]).toHaveLength(1);
 
 		// Re-binding the same owner (as enable() does on every load) must preserve
 		// the persisted history.
 		store.getState().ensureOwner("wallet-a");
 		expect(store.getState().owner).toBe("wallet-a");
-		expect(store.getState().threads.alice).toHaveLength(1);
+		expect(store.getState().threads["alice"]).toHaveLength(1);
 
 		store.getState().reset();
 	});
@@ -104,7 +104,7 @@ describe("useConversationsStore ensureOwner scoping", () => {
 			.appendIncoming([
 				{ id: "m1", from: "alice", text: "hi", at: "2026-01-01T00:00:00.000Z" },
 			]);
-		expect(store.getState().threads.alice).toHaveLength(1);
+		expect(store.getState().threads["alice"]).toHaveLength(1);
 
 		// A different identity must never inherit the previous wallet's history.
 		store.getState().ensureOwner("wallet-b");
