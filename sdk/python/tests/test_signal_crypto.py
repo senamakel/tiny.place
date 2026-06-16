@@ -341,3 +341,52 @@ def test_base64_roundtrip() -> None:
 def test_base64_known_answer() -> None:
     assert c.to_base64(b"hello") == "aGVsbG8="
     assert c.from_base64("aGVsbG8=") == b"hello"
+
+
+# --------------------------------------------------------------------------
+# Cross-SDK interop vectors
+# --------------------------------------------------------------------------
+# Fixed expected outputs for the ratchet KDFs and message AEAD, pinned against
+# an INDEPENDENT reference (Node's built-in `crypto` HKDF/HMAC + WebCrypto
+# AES-CBC) that reproduces the TypeScript SDK's `crypto.ts` derivations bit for
+# bit (same "WhisperRatchet"/"WhisperMessageKeys" HKDF labels, same 64/80-byte
+# expansions, same Encrypt-then-MAC with an 8-byte truncated tag). Because the
+# reference is not this Python code, a mirrored label/order/truncation bug would
+# break these even though the local round-trip tests still pass. Full
+# TS-runtime interop lands in issue #48.
+
+_VEC_ROOT = bytes([0x01]) * 32
+_VEC_DH = bytes([0x02]) * 32
+_VEC_MK = bytes([0x03]) * 32
+_VEC_PT = b"hello signal"
+_VEC_AD = bytes([0x04]) * 16
+
+
+def test_kdf_root_key_matches_interop_vector() -> None:
+    new_root, chain = c.kdf_root_key(_VEC_ROOT, _VEC_DH)
+    assert new_root == bytes.fromhex(
+        "5f8b3480a53acf984c4d253e8f836d3b3f17548503439e1688548a97ea31d236"
+    )
+    assert chain == bytes.fromhex(
+        "71034857a2226c213eac473a6391c7bf08457662dc051d4975cc24511e20fa03"
+    )
+
+
+def test_derive_message_keys_matches_interop_vector() -> None:
+    enc_key, mac_key, iv = c.derive_message_keys(_VEC_MK)
+    assert enc_key == bytes.fromhex(
+        "4e49c1c6fab89f20f8ca68d761485321627952418a1fa072d7545464644f32a8"
+    )
+    assert mac_key == bytes.fromhex(
+        "1363f039cd98e87d1a96b0be411c527546ef36292fc792e6a3db903f27e959d6"
+    )
+    assert iv == bytes.fromhex("20f19a8e812b19bae9240d4987597470")
+
+
+def test_encrypt_matches_interop_vector() -> None:
+    ciphertext = c.encrypt(_VEC_MK, _VEC_PT, _VEC_AD)
+    assert ciphertext == bytes.fromhex(
+        "eda6b810d4f11c8f2c9d33cb0565f315c223a08049b7f2a3"
+    )
+    # And it round-trips back through decrypt.
+    assert c.decrypt(_VEC_MK, ciphertext, _VEC_AD) == _VEC_PT
