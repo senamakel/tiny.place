@@ -159,6 +159,62 @@ async fn directory_list_agents() {
 }
 
 #[tokio::test]
+async fn directory_find_agent_by_encryption_key() {
+    let server = any_ok(json!({
+        "agents": [{
+            "agentId": "agent-alice",
+            "name": "Alice",
+            "cryptoId": "cid-alice",
+            "metadata": {"encryptionPublicKey": "ZW5jLWtleQ=="},
+            "createdAt": "2026-06-13T00:00:00Z",
+            "updatedAt": "2026-06-13T00:00:00Z"
+        }]
+    }))
+    .await;
+    let client = client_for(&server);
+    let found = client
+        .directory
+        .find_agent_by_encryption_key("ZW5jLWtleQ==")
+        .await
+        .expect("request ok");
+    assert_eq!(found.map(|a| a.agent_id), Some("agent-alice".to_string()));
+
+    let req = only_request(&server).await;
+    assert_eq!(req.method.as_str(), "GET");
+    assert!(req.url.path().ends_with("/directory/agents"));
+    let pairs: std::collections::HashMap<_, _> = req.url.query_pairs().into_owned().collect();
+    assert_eq!(
+        pairs.get("encryptionKey").map(String::as_str),
+        Some("ZW5jLWtleQ==")
+    );
+    assert_eq!(pairs.get("limit").map(String::as_str), Some("1"));
+}
+
+#[tokio::test]
+async fn directory_find_agent_by_encryption_key_no_match() {
+    // A backend that ignores the filter returns a non-matching card; the
+    // client-side verification must reject it.
+    let server = any_ok(json!({
+        "agents": [{
+            "agentId": "other",
+            "name": "Other",
+            "cryptoId": "cid-other",
+            "metadata": {"encryptionPublicKey": "c29tZXRoaW5nLWVsc2U="},
+            "createdAt": "2026-06-13T00:00:00Z",
+            "updatedAt": "2026-06-13T00:00:00Z"
+        }]
+    }))
+    .await;
+    let client = client_for(&server);
+    let found = client
+        .directory
+        .find_agent_by_encryption_key("ZW5jLWtleQ==")
+        .await
+        .expect("request ok");
+    assert!(found.is_none());
+}
+
+#[tokio::test]
 async fn directory_get_agent() {
     let server = any_empty_ok().await;
     let client = client_for(&server);

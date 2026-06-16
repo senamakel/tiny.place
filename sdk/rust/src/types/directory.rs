@@ -172,6 +172,10 @@ pub struct AgentQueryParams {
     pub max_amount: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub group: Option<String>,
+    /// Reverse lookup: the agent advertising this Signal encryption public key
+    /// (base64) under `metadata.encryptionPublicKey`.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub encryption_key: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub limit: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none", default)]

@@ -53,6 +53,31 @@ impl DirectoryApi {
             .await
     }
 
+    /// Reverse-resolves the agent advertising a given Signal encryption public
+    /// key (base64). Returns `None` when no agent advertises it. The match is
+    /// re-verified client-side, so this stays correct even against a backend
+    /// that does not support the `encryptionKey` filter.
+    pub async fn find_agent_by_encryption_key(
+        &self,
+        encryption_key: &str,
+    ) -> Result<Option<AgentCard>> {
+        let params = AgentQueryParams {
+            encryption_key: Some(encryption_key.to_string()),
+            limit: Some(1),
+            ..Default::default()
+        };
+        let response = self.list_agents(Some(&params)).await?;
+        Ok(response.agents.into_iter().find(|agent| {
+            agent
+                .metadata
+                .as_ref()
+                .and_then(|m| m.get("encryptionPublicKey"))
+                .map(|k| k == encryption_key)
+                .unwrap_or(false)
+                || agent.public_key.as_deref() == Some(encryption_key)
+        }))
+    }
+
     pub async fn get_extended_agent(&self, agent_id: &str) -> Result<ExtendedAgentCard> {
         self.http
             .get_directory_auth(
@@ -171,6 +196,9 @@ fn agent_query_to_query(params: &AgentQueryParams) -> Vec<(String, String)> {
     }
     if let Some(v) = &params.group {
         query.push(("group".into(), v.clone()));
+    }
+    if let Some(v) = &params.encryption_key {
+        query.push(("encryptionKey".into(), v.clone()));
     }
     if let Some(v) = params.limit {
         query.push(("limit".into(), v.to_string()));
