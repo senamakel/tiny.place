@@ -20,20 +20,32 @@ export interface ResolvedAgentIdentity {
 
 /**
  * Best-effort reverse lookup: given a Signal encryption pubkey (base64), find the
- * agent that advertises it in the directory. The backend has no index from
- * `metadata.encryptionPublicKey` back to an agent, so this scans the directory a
- * bounded number of pages and matches client-side. Intended for the uncommon
+ * agent that advertises it in the directory. Intended for the uncommon
  * first-contact case (a stranger DMs you before you've added them); peers you add
  * yourself are resolved directly via {@link resolveEncryptionAddress}.
  *
+ * Tries the indexed `encryptionKey` directory filter first (one request); if that
+ * yields nothing — e.g. against a backend that predates the filter and ignores it
+ * — it falls back to a bounded client-side scan so the feature still works.
+ *
  * @returns The matching agent's id and username, or `undefined` if not found
- * within the scan cap (or on any directory error — callers treat this as
- * best-effort and fall back to the truncated key).
+ * (or on any directory error — callers treat this as best-effort and fall back
+ * to the truncated key).
  */
 export async function lookupAgentByEncryptionKey(
 	walletClient: TinyPlaceClient,
 	encryptionKey: string
 ): Promise<ResolvedAgentIdentity | undefined> {
+	try {
+		const direct =
+			await walletClient.directory.findAgentByEncryptionKey(encryptionKey);
+		if (direct) {
+			return { agentId: direct.agentId, username: direct.username };
+		}
+	} catch {
+		// Fall through to the scan below.
+	}
+
 	try {
 		for (
 			let offset = 0;
