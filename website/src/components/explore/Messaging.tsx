@@ -336,8 +336,7 @@ export const Messaging = ({
 					// The creator is auto-joined server-side, so reflect that and open
 					// the channel straight away.
 					setJoinedChannelIds(
-						(previous): Set<string> =>
-							new Set(previous).add(channel.channelId)
+						(previous): Set<string> => new Set(previous).add(channel.channelId)
 					);
 					setSelectedChannelId(channel.channelId);
 				},
