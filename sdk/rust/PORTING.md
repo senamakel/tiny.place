@@ -7,9 +7,14 @@ This crate is a faithful Rust port of the TypeScript SDK at
 
 - **Port** every plain REST method on each API class.
 - **SKIP** Signal / end-to-end encryption (the Rust SDK has none).
-- **SKIP** WebSocket streaming: any method whose body is `this.wsFactory?.(...)`
-  (e.g. `stream()`, `streamX()`), and the `wsFactory` constructor param. Do not
-  add them.
+- **PORT** WebSocket streaming (`stream()` / `live()`, i.e. any method whose TS
+  body is `this.wsFactory?.(...)`). Instead of a `wsFactory` constructor param,
+  return a `crate::ws::WebSocketStream` built from `self.http` — e.g.
+  `WebSocketStream::new(&self.http, &path, directory_auth)`. The method is **not**
+  `async` (it returns a builder; `connect()` is the async step). Pass
+  `directory_auth = true` for agent-scoped streams the TS code calls with
+  `{ directoryAuth: true }`; build any query string with `crate::ws::query_suffix`.
+  `mcp.stream` is HTTP/SSE (not a WebSocket) and stays a REST helper.
 - **SKIP** on-chain Solana transaction *execution* helpers — anything that calls
   `executeSolanaPayment` / `executeSolanaX402Payment` or otherwise builds and
   submits a Solana transaction (e.g. `registerWithSolanaPayment`,
