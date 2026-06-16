@@ -29,7 +29,7 @@ export const SectionHero = ({
 	return (
 		<div
 			aria-hidden
-			className="relative mb-6 h-28 w-full overflow-hidden rounded-xl border border-border bg-surface bg-cover bg-center sm:h-32"
+			className="hero-pan relative mb-6 h-28 w-full overflow-hidden rounded-xl border border-border bg-surface bg-cover sm:h-32"
 			style={style}
 		>
 			<div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />

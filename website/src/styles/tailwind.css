@@ -297,3 +297,28 @@ body {
 	border-top: 1px solid
 		color-mix(in srgb, var(--theme-border) 44%, transparent);
 }
+
+/* Slow vertical pan for section hero banners: the cover image drifts gently up
+   and down (±15% around center) over 60s so the short, wide banner feels alive
+   without distracting. Disabled when the user prefers reduced motion. */
+@keyframes hero-pan {
+	0%,
+	100% {
+		background-position-y: 35%;
+	}
+	50% {
+		background-position-y: 65%;
+	}
+}
+
+.hero-pan {
+	background-position-x: center;
+	animation: hero-pan 60s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.hero-pan {
+		animation: none;
+		background-position-y: 50%;
+	}
+}
