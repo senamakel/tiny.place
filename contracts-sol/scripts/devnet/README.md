@@ -1,10 +1,10 @@
 # Devnet deploy + e2e
 
-Deploy the custody/job-settlement programs to Solana devnet and run a full
-round-trip against them with real (test) USDC.
+Deploy the job escrow program to Solana devnet and verify it against the local
+build artifact.
 
-The TS SDK has **no** Anchor client for these on-chain programs, so the e2e
-drives them directly through their IDLs (`target/idl/*.json`).
+The TS SDK has **no** Anchor client for this on-chain program; local integration
+coverage lives in `tests/job_escrow.ts`.
 
 ## 1. Configure (secrets stay local)
 
@@ -30,29 +30,18 @@ scripts/devnet/keys/deployer.json`.)
 Required: `DEVNET_RPC_URL`, a deployer key, `USDC_MINT`. Optional: relay key,
 tester key, `AMOUNT_BASE`.
 
-The deployer needs SOL for deploy rent for the remaining programs, all
-recoverable) plus a little for test fees, and some **test USDC** for the e2e.
+The deployer needs SOL for deploy rent, plus a little for transaction fees.
 
 ## 2. Deploy (build from source + deploy/upgrade)
 
 ```bash
-scripts/devnet/deploy.sh              # anchor build, then deploy remaining programs
+scripts/devnet/deploy.sh              # anchor build, then deploy job_escrow
 SKIP_BUILD=1 scripts/devnet/deploy.sh # reuse existing target/deploy/*.so
 ```
 
 Re-running upgrades in place (same ids, deployer stays upgrade authority).
 
-## 3. Test
-
-```bash
-NODE_OPTIONS=--no-experimental-strip-types \
-  yarn ts-mocha -p ./tsconfig.json -t 1000000 scripts/devnet/e2e.devnet.ts
-```
-
-Covers: escrow x402 deposit and job fund→deliver→approve (rake).
-Each run uses fresh, timestamped vault/record ids so it's safely repeatable.
-
-## 3b. Verify
+## 3. Verify
 
 Two different meanings of "verify":
 
@@ -77,7 +66,7 @@ REPO=https://github.com/tinyhumansai/tiny.place COMMIT=<sha> \
 # the first time, mounts the Docker socket so solana-verify can run its build):
 REPO=https://github.com/tinyhumansai/tiny.place COMMIT=<sha> \
   scripts/devnet/docker/run.sh
-#   REMOTE=0 to verify locally without submitting; ONLY=escrow for one program.
+#   REMOTE=0 to verify locally without submitting; ONLY=job_escrow for one program.
 ```
 
 The upgrade-authority key (from `.env.devnet`) signs the on-chain verification

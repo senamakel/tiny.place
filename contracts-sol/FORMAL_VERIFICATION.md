@@ -1,121 +1,52 @@
-# Formal Verification — tiny.place custody and job settlement contracts
+# Formal Verification - tiny.place job escrow contract
 
-This document defines the safety **invariants** the on-chain programs must
-uphold, and maps each to its enforcement point in code, its **Kani** proof
-harness, and its unit test. The custody program (`escrow`) is the focus: it is
-the only program that holds funds, so its solvency is the property that matters
-most.
+This document tracks the safety invariants for the active on-chain program:
+`programs/job_escrow`.
+
+`job_escrow` owns both custody and job settlement. It creates the job record,
+creates the job token vault, accepts replay-protected funding, and settles the
+job lifecycle without a separate game, lottery, escrow, or settlement program.
 
 ## Approach
 
-Money-handling arithmetic is extracted into pure, runtime-independent functions
-(`programs/*/src/math.rs`) that the instruction handlers call. This lets us:
-
-- **Unit-test** them on the host (`cargo test`) — fast, runs in CI today.
-- **Formally verify** them with [Kani](https://model-checking.github.io/kani/),
-  a bit-precise bounded model checker for Rust. Kani explores _all_ possible
-  `u64`/`u16` inputs symbolically and proves the assertions hold for every one,
-  rather than the handful a unit test samples.
-
-Because the handlers call the same functions, the verified logic is the
-deployed logic. Properties that depend on the Solana runtime (signer/PDA checks,
-state transitions) are enforced by Anchor account constraints + `require!` and
-are listed below as **constraint-enforced**; they are candidates for the
-TS integration suite (`tests/`) once a validator is available.
+Money-handling arithmetic is extracted into pure functions in
+`programs/job_escrow/src/math.rs` so it can be tested and fuzzed outside the
+Solana runtime. Runtime-only properties such as PDA ownership, signer checks,
+token account constraints, and state transitions are covered by the Anchor
+integration suite in `tests/job_escrow.ts`.
 
 ## Status
 
 Last verified on the Anchor 1.0.2 / Solana 3.1.10 toolchain:
 
-- **Kani:** escrow and settlement_job proof harnesses verified.
-- **cargo-fuzz (libFuzzer):** `disburse` and `rake` targets cover custody
-  solvency and job-fund conservation.
-- **`cargo test`:** host unit + fuzz tests cover the remaining programs.
-- **`anchor test`:** integration + e2e tests exercise escrow and settlement_job
-  against a local validator.
+- **cargo-fuzz:** `disburse` and `rake` targets cover custody solvency and job
+  settlement conservation.
+- **cargo test:** host unit tests cover the pure math helpers.
+- **anchor test:** integration tests exercise `create_job`, `fund`, `fund_for`,
+  `mark_delivered`, `approve`, `dispute`, `resolve`, `refund`, nonce replay,
+  expiry, payer matching, authority checks, and fee-account mint checks.
 
-## Running the proofs
-
-```bash
-cargo install --locked kani-verifier && cargo kani setup     # one-time
-cd contracts-sol
-cargo kani -p escrow                  # solvency, no-overspend, replay-safety
-cargo kani -p settlement_job          # conservation, no-fee-on-refund
-```
-
-Unit tests + randomized fuzz loops (no extra tooling — the `fuzz_*` tests run
-200k deterministic iterations each):
-
-```bash
-cargo test --manifest-path contracts-sol/Cargo.toml
-```
-
-Coverage-guided fuzzing (libFuzzer, needs nightly + `cargo install cargo-fuzz`):
+## Running
 
 ```bash
 cd contracts-sol
-cargo +nightly fuzz run disburse    # escrow solvency / no-overspend
-cargo +nightly fuzz run rake        # job fund conservation
+cargo test
+cargo +nightly fuzz run disburse
+cargo +nightly fuzz run rake
+anchor build --ignore-keys
+anchor test
 ```
 
-## Coverage
-
-```bash
-cargo llvm-cov --manifest-path contracts-sol/Cargo.toml --summary-only
-```
-
-The pure `math` modules — the funds-handling arithmetic — are at **100%**
-region/line coverage and are additionally proven by Kani. The instruction
-handlers in each `lib.rs` are not exercised by host `cargo test` (they require
-the Solana runtime: `Clock`, CPI, account constraints), so their line coverage
-is ~0% here. Covering them requires the Anchor integration suite in `tests/`
-(`escrow.ts`, `settlement_job.ts`) run against a
-local validator:
-
-```bash
-cd contracts-sol && npm install && anchor test
-```
-
-That suite exercises the happy paths plus the _constraint-enforced_ invariants
-below (authority/PDA checks, state-machine transitions, replay/expiry). It needs the Solana + Anchor
-toolchain installed, so it is not run in the host CI used for the math
-coverage above.
+`--ignore-keys` is required when building with the checked-in source id because
+`job_escrow` intentionally reuses the previous escrow program id.
 
 ## Invariants
 
-### Escrow (custody)
-
-| ID                         | Invariant                                                                                                                                                                                             | Enforcement                                                                                                                                     | Proof / test                                                                                                                                               |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **E1 Solvency**            | A vault's `disbursed` never exceeds `deposited`; `disbursed` is monotonically non-decreasing.                                                                                                         | `math::apply_disburse` is the sole writer of `disbursed`.                                                                                       | Kani `disburse_preserves_solvency`; test `disburse_never_exceeds_deposited`                                                                                |
-| **E2 No overspend**        | Each disburse releases `amount + fee ≤ deposited − disbursed` (the available balance).                                                                                                                | `math::apply_disburse` returns `None` otherwise → `InsufficientFunds`.                                                                          | Kani `disburse_never_overspends`; test `disburse_rejects_overspend`                                                                                        |
-| **E3 No overflow**         | Vault accounting never wraps. Input-dependent sums use `checked_*` (graceful reject); a sum proven safe by the surrounding guards (`disbursed + total`) is direct and verified overflow-free by Kani. | `math::apply_disburse`.                                                                                                                         | Kani `disburse_preserves_solvency` (checks overflow over full `u64` domain); tests `disburse_rejects_overflow`, `disburse_rejects_inconsistent_accounting` |
-| **E4 Replay safety**       | A deposit `nonce` is accepted only if strictly greater than the payer's last; replays/stale nonces are rejected.                                                                                      | `math::nonce_ok` gate in `deposit`.                                                                                                             | Kani `nonce_rejects_replay`; test `nonce_monotonic`                                                                                                        |
-| **E5 Authorized disburse** | `disburse` succeeds only when signed by the vault's bound settlement authority.                                                                                                                       | `require!(authority.key() == vault.authority)`; `vault.authority` is fixed at `create_vault` to `PDA(["vault_authority"], settlement_program)`. | constraint-enforced (TS integration)                                                                                                                       |
-| **E6 Fee routing**         | Fees can only be sent to the vault's registered `fee_account`.                                                                                                                                        | `require!(fee_token.key() == vault.fee_account)`.                                                                                               | constraint-enforced (TS integration)                                                                                                                       |
-| **E7 Vault isolation**     | Every deposit and disburse uses the one token account pinned at `create_vault`, so on-chain balances can't desync from `deposited`/`disbursed`.                                                       | `constraint = vault_token.key() == vault.token_account` on both `deposit` and `disburse`.                                                       | constraint-enforced (TS integration)                                                                                                                       |
-
-### settlement_job
-
-| ID                      | Invariant                                                                                                                                                                           | Enforcement                                                                                 | Proof / test                                             |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| **J1 Conservation**     | On any release, `amount_to_recipient + fee == available` — no funds created or destroyed.                                                                                           | `math::rake`.                                                                               | Kani `rake_conserves_value`; test `rake_conserves_funds` |
-| **J2 No fee on refund** | A refund (`take_fee = false`) withholds zero fee and returns the full balance to the client.                                                                                        | `math::rake` early return.                                                                  | Kani `refund_has_no_fee`; test `refund_takes_no_fee`     |
-| **J3 Fee bound**        | `fee ≤ available`.                                                                                                                                                                  | `math::rake` (`fee_bps < 10_000` checked at `create_job`).                                  | Kani `rake_conserves_value`                              |
-| **J4 State machine**    | Transitions follow `Open→Delivered→Resolved` / `Disputed`; only `provider` delivers, only `client` approves, only `controller` resolves disputes, only `client` refunds while Open. | per-handler `require!` on state + actor.                                                    | constraint-enforced (TS integration)                     |
-| **J5 Vault binding**    | A job only operates on its own vault, and that vault is bound to this program.                                                                                                      | `constraint = job.vault == vault.key()`; `require!(vault.settlement_program == crate::ID)`. | constraint-enforced (TS integration)                     |
-
-## Notes on the funds-conservation chain
-
-End-to-end solvency is the composition of two facts:
-
-1. **Job settlement never asks escrow for more than the funded balance.** J1/J3
-   prove that the `(amount, fee)` settlement_job passes to `escrow::disburse`
-   sums to at most the available balance it read.
-2. **Escrow never releases more than it holds.** E1/E2 prove `apply_disburse`
-   rejects any `amount + fee` exceeding `deposited − disbursed`, independent of
-   what the caller requests.
-
-So even a buggy or malicious settlement program cannot drain a vault beyond its
-deposits — escrow is the backstop. E5 additionally ensures _only_ the bound
-settlement program can trigger a disburse at all.
+| ID | Invariant | Enforcement | Test |
+| --- | --- | --- | --- |
+| J1 Solvency | `disbursed` never exceeds `deposited`; each release is bounded by `deposited - disbursed`. | `math::apply_disburse` and settlement handlers. | `disburse` fuzz target; approval/resolve/refund Anchor tests. |
+| J2 Replay safety | A funding nonce is accepted only if strictly greater than the payer's last nonce. | `math::nonce_ok` and the nonce tracker PDA. | `funds with x402 nonce protection...`. |
+| J3 Delegated funding scope | `fund_for` can fund only the intended job, payer, mint, vault, amount, and nonce window. | Instruction data plus account constraints. | `lets a session delegate fund the job...`. |
+| J4 Fee bound | `fee <= available` and refunds take no fee. | `math::rake`; `fee_bps < 10_000` at job creation. | `approve`, `resolve`, and `refund` Anchor tests. |
+| J5 State machine | Only the provider delivers, only the client approves/refunds, and only the controller resolves disputes. | Per-handler state and actor checks. | Unauthorized actor and lifecycle Anchor tests. |
+| J6 Vault isolation | The vault token account is derived from and pinned to the job account. | PDA seeds plus token account constraints. | Job creation and settlement Anchor tests. |

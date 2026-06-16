@@ -15,7 +15,7 @@
 #     scripts/devnet/docker/run.sh
 #
 #   REMOTE=0 ...   verify locally only (do not submit to the public registry)
-#   ONLY=escrow ... verify a single program
+#   ONLY=job_escrow ... verify a single program
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$HERE/../lib.sh"
