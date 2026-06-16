@@ -55,7 +55,11 @@ def test_skipped_key_id_matches_typescript_format() -> None:
 async def test_identity_round_trips() -> None:
     identity = _key_pair(0)
     store = MemorySessionStore(identity)
-    assert await store.get_identity_x25519_key_pair() is identity
+    fetched = await store.get_identity_x25519_key_pair()
+    assert fetched == identity
+    # The store returns a copy, not the caller's object, so external mutation
+    # cannot reach in-store state.
+    assert fetched is not identity
 
 
 async def test_signed_pre_key_round_trip_and_active() -> None:
@@ -128,17 +132,56 @@ async def test_sender_key_put_get_delete() -> None:
     store = _store()
     assert await store.get_sender_key("group-1") is None
 
-    sender_key = SenderKeyState(
+    # Own sending key: has the Ed25519 signing private key.
+    own = SenderKeyState(
         distribution_id="group-1",
         chain_key=bytes([0x11]) * 32,
-        message_number=5,
-        signing_key_pair=_key_pair(60),
+        iteration=5,
+        signing_public_key=bytes([0x22]) * 32,
+        signing_private_key=bytes([0x33]) * 32,
     )
-    await store.store_sender_key(sender_key)
-    assert await store.get_sender_key("group-1") == sender_key
+    await store.store_sender_key(own)
+    assert await store.get_sender_key("group-1") == own
 
     await store.remove_sender_key("group-1")
     assert await store.get_sender_key("group-1") is None
 
     # Deleting an absent sender key is a no-op.
     await store.remove_sender_key("group-missing")
+
+
+async def test_receiver_sender_key_has_no_private_key() -> None:
+    store = _store()
+    # A remote member's sender key: only the signing public key, plus a skipped
+    # message-key cache; no private key is fabricated.
+    receiver = SenderKeyState(
+        distribution_id="group-1:@alice",
+        chain_key=bytes([0x44]) * 32,
+        iteration=3,
+        signing_public_key=bytes([0x55]) * 32,
+        skipped_keys={2: b"skipped-message-key"},
+    )
+    await store.store_sender_key(receiver)
+    fetched = await store.get_sender_key("group-1:@alice")
+    assert fetched == receiver
+    assert fetched is not None
+    assert fetched.signing_private_key is None
+    assert fetched.skipped_keys[2] == b"skipped-message-key"
+
+
+async def test_stored_record_is_isolated_from_caller_mutation() -> None:
+    store = _store()
+    session = _session(70)
+    await store.store_session("@peer", session)
+
+    # Mutating the original object after storing must not affect the store.
+    session.skipped_keys[skipped_key_id(bytes([0x01]), 9)] = b"leak"
+    fetched = await store.get_session("@peer")
+    assert fetched is not None
+    assert skipped_key_id(bytes([0x01]), 9) not in fetched.skipped_keys
+
+    # Mutating a fetched copy must not affect the store either.
+    fetched.skipped_keys[skipped_key_id(bytes([0x02]), 9)] = b"leak2"
+    again = await store.get_session("@peer")
+    assert again is not None
+    assert skipped_key_id(bytes([0x02]), 9) not in again.skipped_keys

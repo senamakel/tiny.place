@@ -82,17 +82,22 @@ class SignedPreKeyPair:
 class SenderKeyState:
     """Sender-key state for a group distribution id.
 
-    Group (Sender Key) messaging persists a symmetric chain key plus the
-    signing key pair used to authenticate sender-key messages. This has no
-    direct one-to-one TypeScript ``store.ts`` analogue (the TS sender-key
-    state lives in ``sender-key.ts``), but the durable contract needs a place
-    to persist it, so the interface covers it here.
+    Persists both halves of the TypeScript sender-key model
+    (``SenderKeyOwnState`` / ``SenderKeyReceiverState`` in ``sender-key.ts``).
+    Group messages are authenticated with an **Ed25519** signing key (not
+    X25519): ``signing_public_key`` is always present so receivers can verify a
+    sender's messages, while ``signing_private_key`` is set only for our *own*
+    sending key — a receiver never holds a remote sender's private key.
+    ``skipped_keys`` caches message keys (by iteration) for out-of-order group
+    messages on the receiver side.
     """
 
     distribution_id: str
     chain_key: bytes
-    message_number: int
-    signing_key_pair: X25519KeyPair
+    iteration: int
+    signing_public_key: bytes
+    signing_private_key: bytes | None = None
+    skipped_keys: dict[int, bytes] = field(default_factory=dict)
 
 
 class SessionStore(ABC):
