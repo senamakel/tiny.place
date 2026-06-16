@@ -166,7 +166,9 @@ describe("SessionWalletSigner", () => {
 
 		// The identity signer (what DomainRegistration / x402 payments use) signs
 		// through the RAW wallet signMessage — never re-rendering the session dialog.
-		await session.walletSigner.sign(new TextEncoder().encode("register @alice"));
+		await session.walletSigner.sign(
+			new TextEncoder().encode("register @alice")
+		);
 		expect(rawSigns).toEqual(["register @alice"]);
 		expect(approvalSigns).toHaveLength(1);
 	});
