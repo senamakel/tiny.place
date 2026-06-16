@@ -270,4 +270,10 @@ impl RoomsApi {
             None => self.http.post_directory_auth(&path, Some(body)).await,
         }
     }
+
+    /// Open a room's real-time WebSocket stream (snapshots + action events).
+    pub fn stream(&self, room_id: &str) -> crate::websocket::TinyPlaceWebSocket {
+        let path = format!("/rooms/{}/stream", crate::util::encode(room_id));
+        self.http.websocket(&path, false)
+    }
 }

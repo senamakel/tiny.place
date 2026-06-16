@@ -117,4 +117,9 @@ impl LotteryApi {
             None => self.http.post_directory_auth(&path, request).await,
         }
     }
+
+    /// Open the lottery's real-time WebSocket stream (snapshot + `pot_update`).
+    pub fn stream(&self) -> crate::websocket::TinyPlaceWebSocket {
+        self.http.websocket("/lottery/stream", false)
+    }
 }
