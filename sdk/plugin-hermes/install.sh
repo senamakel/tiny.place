@@ -8,7 +8,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-PLUGIN_SRC="$SCRIPT_DIR/tinyplace"
+PLUGIN_SRC="$SCRIPT_DIR/src/tinyplace"
 INSTALL_DIR="${HERMES_HOME:-$HOME/.hermes}/plugins/tinyplace"
 
 # 1. Install the SDK the plugin wraps (editable from this repo by default).

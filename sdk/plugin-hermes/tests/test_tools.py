@@ -134,6 +134,21 @@ def test_register_domain_payment_required(tmp_path, monkeypatch):
     assert "x402" in out["hint"]
 
 
+def test_poll_inbox_returns_every_decrypted_message(tmp_path, monkeypatch):
+    rt = _make_runtime(tmp_path, monkeypatch)
+    rt._client.messages._decrypted = [
+        _Msg(f"m{i}", "peer", f"msg{i}".encode(), f"2026-01-0{i}T00:00:00Z")
+        for i in range(1, 5)
+    ]
+    # poll_inbox_decrypted already acknowledged the whole mailbox and the ratchet
+    # consumed each message once, so a stray `limit` must NOT drop any — dropping
+    # an acknowledged message would lose it permanently.
+    out = json.loads(tools.poll_inbox({"limit": 1}, runtime=rt))
+    assert out["ok"] is True
+    assert out["count"] == 4
+    assert [m["id"] for m in out["messages"]] == ["m1", "m2", "m3", "m4"]
+
+
 def test_send_message_success(tmp_path, monkeypatch):
     rt = _make_runtime(tmp_path, monkeypatch)
     out = json.loads(

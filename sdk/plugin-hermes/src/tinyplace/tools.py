@@ -109,7 +109,6 @@ def _guard(fn: Callable[[dict[str, Any], dict[str, Any]], str]) -> Callable[...,
 @_guard
 def poll_inbox(args: dict[str, Any], ctx: dict[str, Any]) -> str:
     runtime: TinyPlaceRuntime = ctx["runtime"]
-    limit = args.get("limit")
 
     async def _run() -> list[dict[str, Any]]:
         await runtime.ensure_messaging_keys()
@@ -138,9 +137,11 @@ def poll_inbox(args: dict[str, Any], ctx: dict[str, Any]) -> str:
             continue
         new_messages.append(message)
 
+    # Return every decrypted message: poll_inbox_decrypted has already
+    # acknowledged the whole mailbox and the Double Ratchet consumes each
+    # message exactly once, so dropping any here (e.g. via a `limit` slice)
+    # would lose it permanently — it can neither be re-fetched nor re-decrypted.
     new_messages.sort(key=lambda m: (m.timestamp, m.id))
-    if isinstance(limit, int) and limit >= 0:
-        new_messages = new_messages[:limit]
 
     if new_messages:
         last = new_messages[-1]

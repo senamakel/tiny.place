@@ -18,15 +18,7 @@ POLL_INBOX = {
     ),
     "parameters": {
         "type": "object",
-        "properties": {
-            "limit": {
-                "type": "integer",
-                "description": (
-                    "Optional cap on how many new messages to return this call "
-                    "(oldest first). Omit to return all new messages."
-                ),
-            }
-        },
+        "properties": {},
         "required": [],
     },
 }

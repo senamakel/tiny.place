@@ -46,6 +46,7 @@ T = TypeVar("T")
 
 _CURSOR_FILE = "inbox_cursor.json"
 _SESSION_FILE = "signal_session.json"
+_KEYS_PUBLISHED_FILE = "keys_published.json"
 _DEFAULT_PRE_KEY_COUNT = 20
 
 
@@ -77,6 +78,7 @@ class TinyPlaceRuntime:
         config.state_dir.mkdir(parents=True, exist_ok=True)
         self._store = FileSessionStore(config.state_dir / _SESSION_FILE, identity_kp)
         self._cursor_path = config.state_dir / _CURSOR_FILE
+        self._keys_published_path = config.state_dir / _KEYS_PUBLISHED_FILE
 
         # The agent's messaging address is its base64 Ed25519 encryption public
         # key (== signer.public_key_base64), used as both mailbox key and the
@@ -132,31 +134,46 @@ class TinyPlaceRuntime:
     async def ensure_messaging_keys(self) -> None:
         """Bootstrap and publish this agent's prekeys for receiving messages.
 
-        Idempotent and durable: if the store already holds an active signed
-        pre-key (from a previous run) this is a no-op. Otherwise it generates a
-        signed pre-key plus a batch of one-time pre-keys, stores them locally
-        (so inbound X3DH can complete) and uploads the public halves to ``/keys``
-        so peers can fetch a bundle and message this agent.
+        Idempotent and durable. Publication is only treated as complete once a
+        ``keys_published.json`` marker is written, which happens **after both**
+        the signed-prekey rotation and the one-time-prekey upload succeed. This
+        is deliberately decoupled from local key storage: if a previous run
+        stored the keys locally but a transient failure aborted publication, the
+        marker is absent, so this run re-publishes the **same** stored keys
+        (keeping the server bundle consistent with our local private keys)
+        rather than skipping forever and leaving peers unable to message us.
         """
         client, _ = await self._client_session()
-        if self._keys_ready or self._store.has_active_signed_pre_key():
+        if self._keys_ready or self._keys_published_path.exists():
             self._keys_ready = True
             return
 
-        signed_pre_key = await generate_signed_pre_key(self._signer, "spk_1")
-        pre_keys = await generate_pre_keys(self._signer, 1, _DEFAULT_PRE_KEY_COUNT)
-        await self._store.store_signed_pre_key(signed_pre_key)
-        for pre_key in pre_keys:
-            await self._store.store_pre_key(pre_key)
+        if self._store.has_active_signed_pre_key():
+            # Local keys exist from an earlier run whose publication did not
+            # complete — reuse and re-publish them.
+            signed_pre_key = await self._store.get_active_signed_pre_key()
+            pre_keys = await self._store.get_all_pre_keys()
+        else:
+            signed_pre_key = await generate_signed_pre_key(self._signer, "spk_1")
+            pre_keys = await generate_pre_keys(self._signer, 1, _DEFAULT_PRE_KEY_COUNT)
+            await self._store.store_signed_pre_key(signed_pre_key)
+            for pre_key in pre_keys:
+                await self._store.store_pre_key(pre_key)
 
         identity_key = self._signer.public_key_base64
         await client.keys.rotate_signed_pre_key(
             self.address,
             build_signed_pre_key_request(signed_pre_key, identity_key),
         )
-        await client.keys.upload_pre_keys(
-            self.address,
-            build_pre_keys_request(pre_keys, identity_key),
+        if pre_keys:
+            await client.keys.upload_pre_keys(
+                self.address,
+                build_pre_keys_request(pre_keys, identity_key),
+            )
+        # Only now — after both server calls succeeded — record publication.
+        self._keys_published_path.parent.mkdir(parents=True, exist_ok=True)
+        self._keys_published_path.write_text(
+            json.dumps({"published": True}), "utf-8"
         )
         self._keys_ready = True
 

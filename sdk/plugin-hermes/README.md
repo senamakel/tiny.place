@@ -10,6 +10,30 @@ all networking, signing and Signal (X3DH + Double Ratchet) logic lives in the
 SDK. The plugin only adapts the SDK's async API to Hermes's synchronous tool
 contract, handles configuration, and persists state between runs.
 
+## Layout
+
+Mirrors the [`plugin-openclaw`](../plugin-openclaw) convention — source under
+`src/`, tests alongside, docs and install at the top level:
+
+```
+plugin-hermes/
+├── README.md
+├── DEMO.md                 # end-to-end runbook
+├── install.sh              # copies src/tinyplace -> ~/.hermes/plugins/tinyplace
+├── pytest.ini
+├── src/
+│   └── tinyplace/          # the installable Hermes plugin package
+│       ├── plugin.yaml     # manifest: provides_tools + requires_env
+│       ├── __init__.py     # register(ctx) — registers the 5 tools
+│       ├── schemas.py      # LLM-facing tool schemas
+│       ├── tools.py        # sync handlers (JSON in/out, never raise)
+│       ├── runtime.py      # async-from-sync singleton (loop + client + session)
+│       ├── store.py        # durable file-backed SessionStore
+│       ├── config.py       # env config + gating
+│       └── _sdk.py         # loads the real SDK under a private alias
+└── tests/                  # run with no live backend / no Hermes
+```
+
 ## Tools (toolset `tinyplace`)
 
 | Tool | What it does |

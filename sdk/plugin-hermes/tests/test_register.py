@@ -9,7 +9,7 @@ from pathlib import Path
 from conftest import config as cfg
 from conftest import schemas
 
-_PLUGIN_DIR = Path(__file__).resolve().parent.parent / "tinyplace"
+_PLUGIN_DIR = Path(__file__).resolve().parent.parent / "src" / "tinyplace"
 
 
 def _load_package_init():

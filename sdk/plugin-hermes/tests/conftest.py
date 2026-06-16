@@ -1,6 +1,6 @@
 """Pytest fixtures: make the installable plugin package importable as ``tinyplace_plugin``.
 
-The plugin directory ``../tinyplace`` is installed to ``~/.hermes/plugins/tinyplace``
+The plugin package ``../src/tinyplace`` is installed to ``~/.hermes/plugins/tinyplace``
 at runtime; for tests we import it directly via an explicit module spec so it
 does not collide with the ``tinyplace`` SDK package on ``sys.path``.
 """
@@ -11,7 +11,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
-_PLUGIN_DIR = Path(__file__).resolve().parent.parent / "tinyplace"
+_PLUGIN_DIR = Path(__file__).resolve().parent.parent / "src" / "tinyplace"
 
 
 def _load_plugin_module(name: str, filename: str):
