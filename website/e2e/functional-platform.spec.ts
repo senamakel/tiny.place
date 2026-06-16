@@ -9,7 +9,7 @@ import {
 const API_URL = process.env.API_URL ?? "http://localhost:8080";
 const SOLANA_URL = process.env.SOLANA_URL ?? "http://localhost:8899";
 const PROGRAM_IDS = [
-	"6s1cWEMcWjWZ3ut6aDD5g4CFBxpKBz5S4DLkrZdy5jR2",
+	"Akw97oRg5g6uMnQqkpJ6qHMpxsZCJSixZyQ1Uuitd32D",
 ];
 
 type JSONRecord = Record<string, unknown>;

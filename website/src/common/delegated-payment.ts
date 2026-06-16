@@ -22,7 +22,7 @@ const USDC_DECIMALS = 6;
 
 // The job escrow program and its `fund_for` Anchor discriminator
 // (sha256("global:fund_for")[:8]).
-const ESCROW_PROGRAM_ID = "6s1cWEMcWjWZ3ut6aDD5g4CFBxpKBz5S4DLkrZdy5jR2";
+const ESCROW_PROGRAM_ID = "Akw97oRg5g6uMnQqkpJ6qHMpxsZCJSixZyQ1Uuitd32D";
 const DEPOSIT_FOR_DISCRIMINATOR = new Uint8Array([
 	196, 156, 220, 121, 121, 102, 167, 30,
 ]);

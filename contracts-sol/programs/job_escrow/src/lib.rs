@@ -3,7 +3,7 @@ use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
 pub mod math;
 
-declare_id!("6s1cWEMcWjWZ3ut6aDD5g4CFBxpKBz5S4DLkrZdy5jR2");
+declare_id!("Akw97oRg5g6uMnQqkpJ6qHMpxsZCJSixZyQ1Uuitd32D");
 
 #[cfg(not(feature = "no-entrypoint"))]
 solana_security_txt::security_txt! {
