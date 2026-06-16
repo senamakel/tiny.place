@@ -5,10 +5,14 @@ import { useCallback, useEffect } from "react";
 
 import { useApiClient } from "@src/common/api-context";
 import { publishEncryptionKey } from "@src/common/encryption-discovery";
-import type { SignalIdentity } from "@src/common/signal-identity";
+import {
+	hasSignalIdentity,
+	type SignalIdentity,
+} from "@src/common/signal-identity";
 import { publishKeyBundle } from "@src/common/signal-messaging";
 import { useAuthStore } from "@src/store/auth";
 import { useConversationsStore } from "@src/store/conversations";
+import { useGroupConversationsStore } from "@src/store/group-conversations";
 import { useMessagingStore } from "@src/store/messaging";
 import { useSignalStore, type SignalStatus } from "@src/store/signal";
 
@@ -43,15 +47,22 @@ export function useSignalIdentity(): UseSignalIdentityResult {
 	const reset = useSignalStore((state) => state.reset);
 	const setupMessaging = useMessagingStore((state) => state.setup);
 	const resetMessaging = useMessagingStore((state) => state.reset);
-	const resetConversations = useConversationsStore((state) => state.reset);
+	const ensureConversationsOwner = useConversationsStore(
+		(state) => state.ensureOwner
+	);
+	const ensureGroupConversationsOwner = useGroupConversationsStore(
+		(state) => state.ensureOwner
+	);
 
 	useEffect(() => {
 		if (!connected) {
+			// Drop the in-memory identity/client on disconnect, but keep persisted
+			// conversations: they're rescoped on the next enable() via ensureOwner,
+			// so reconnecting the same wallet restores its history.
 			reset();
 			resetMessaging();
-			resetConversations();
 		}
-	}, [connected, reset, resetMessaging, resetConversations]);
+	}, [connected, reset, resetMessaging]);
 
 	const canEnable = connected && Boolean(signMessage) && Boolean(agentId);
 
@@ -65,12 +76,17 @@ export function useSignalIdentity(): UseSignalIdentityResult {
 			return undefined;
 		}
 
-		// (Re)build the messaging client + session when the active identity changes
-		// (first enable, or a wallet/agent switch), clearing the previous user's
-		// conversations so they can't leak across identities.
+		// Scope persisted conversations to this identity. ensureOwner clears them
+		// only when a *different* wallet's history was rehydrated from storage, so
+		// reloading the same wallet keeps its threads.
 		const address = readyIdentity.signer.publicKeyBase64;
+		ensureConversationsOwner(address);
+		ensureGroupConversationsOwner(address);
+
+		// (Re)build the messaging client + session when the active identity changes
+		// (first enable, a wallet/agent switch, or a fresh page load — the client is
+		// in-memory and not persisted).
 		if (useMessagingStore.getState().address !== address) {
-			resetConversations();
 			setupMessaging(readyIdentity);
 		}
 
@@ -103,9 +119,38 @@ export function useSignalIdentity(): UseSignalIdentityResult {
 		signMessage,
 		enableIdentity,
 		setupMessaging,
-		resetConversations,
+		ensureConversationsOwner,
+		ensureGroupConversationsOwner,
 		walletClient,
 	]);
+
+	// Auto-restore encryption on load when this wallet already has a derived
+	// identity persisted in IndexedDB. The stored seed is reused, so no wallet
+	// signature is prompted — the user no longer has to click "Enable encryption"
+	// on every visit.
+	useEffect(() => {
+		if (!canEnable || status !== "idle" || !agentId) {
+			return;
+		}
+		let cancelled = false;
+		void (async (): Promise<void> => {
+			try {
+				const exists = await hasSignalIdentity(agentId);
+				if (
+					!cancelled &&
+					exists &&
+					useSignalStore.getState().status === "idle"
+				) {
+					await enable();
+				}
+			} catch {
+				// Best-effort restore; the manual "Enable encryption" button remains.
+			}
+		})();
+		return (): void => {
+			cancelled = true;
+		};
+	}, [canEnable, status, agentId, enable]);
 
 	return {
 		status,
