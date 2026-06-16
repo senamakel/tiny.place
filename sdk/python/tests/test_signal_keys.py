@@ -124,6 +124,17 @@ async def test_verify_accepts_prefixed_and_hex_identity_keys(signer: LocalSigner
     assert verify_pre_key_signature(hex_prefixed, serialized) is True
     # Bare base64 (the default identity encoding) verifies too.
     assert verify_pre_key_signature(signer.public_key_base64, serialized) is True
+    # Bare (unprefixed) hex also verifies: a 64-char hex key is valid base64
+    # too, so the decoder is length-aware and picks the 32-byte interpretation.
+    assert verify_pre_key_signature(identity_bytes.hex(), serialized) is True
+
+
+def test_verify_fails_closed_on_wrong_types() -> None:
+    # Non-dict signed_key and non-str identity_key must return False, not raise.
+    assert verify_pre_key_signature("identity", None) is False  # type: ignore[arg-type]
+    assert verify_pre_key_signature("identity", ["not", "a", "dict"]) is False  # type: ignore[arg-type]
+    assert verify_pre_key_signature(None, {"keyId": "x"}) is False  # type: ignore[arg-type]
+    assert verify_pre_key_signature(b"bytes-not-str", {"keyId": "x"}) is False  # type: ignore[arg-type]
 
 
 async def test_verify_accepts_hex_prefixed_signature(signer: LocalSigner) -> None:

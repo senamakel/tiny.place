@@ -132,10 +132,14 @@ def build_key_bundle(
     return bundle
 
 
-def _decode_key_bytes(value: str) -> bytes:
+def _decode_key_bytes(value: str, expected_len: int | None = None) -> bytes:
     """Decode a key/signature string the way the backend's ``decodeKeyBytes`` does.
 
-    Supports ``base64:``/``hex:`` prefixes, falling back to bare base64 then hex.
+    Supports ``base64:``/``hex:`` prefixes. For a bare (unprefixed) value the
+    base64 and hex alphabets overlap — a hex string is also valid base64 and
+    decodes to the wrong length — so when an ``expected_len`` is known we return
+    whichever decoding yields it, trying base64 first to match the backend's
+    preference. Without an expected length we keep the base64-first fallback.
     """
     value = value.strip()
     if value == "":
@@ -144,10 +148,22 @@ def _decode_key_bytes(value: str) -> bytes:
         return base64.standard_b64decode(value[len("base64:") :])
     if value.startswith("hex:"):
         return bytes.fromhex(value[len("hex:") :])
+    candidates: list[bytes] = []
     try:
-        return base64.standard_b64decode(value)
+        candidates.append(base64.standard_b64decode(value))
     except (ValueError, base64.binascii.Error):
-        return bytes.fromhex(value)
+        pass
+    try:
+        candidates.append(bytes.fromhex(value))
+    except ValueError:
+        pass
+    if not candidates:
+        raise ValueError("could not decode key value as base64 or hex")
+    if expected_len is not None:
+        for candidate in candidates:
+            if len(candidate) == expected_len:
+                return candidate
+    return candidates[0]
 
 
 def verify_pre_key_signature(identity_key: str, signed_key: dict[str, object]) -> bool:
@@ -160,6 +176,8 @@ def verify_pre_key_signature(identity_key: str, signed_key: dict[str, object]) -
 
     Returns ``False`` on any malformed input or signature mismatch.
     """
+    if not isinstance(signed_key, dict) or not isinstance(identity_key, str):
+        return False
     public_key = signed_key.get("publicKey")
     signature = signed_key.get("signature")
     key_id = signed_key.get("keyId")
@@ -170,10 +188,10 @@ def verify_pre_key_signature(identity_key: str, signed_key: dict[str, object]) -
     if not isinstance(key_id, str) or key_id.strip() == "":
         return False
     try:
-        identity_bytes = _decode_key_bytes(identity_key)
+        identity_bytes = _decode_key_bytes(identity_key, 32)
         if len(identity_bytes) != 32:
             return False
-        signature_bytes = _decode_key_bytes(signature)
+        signature_bytes = _decode_key_bytes(signature, 64)
         if len(signature_bytes) != 64:
             return False
         verify_key = VerifyKey(identity_bytes)
