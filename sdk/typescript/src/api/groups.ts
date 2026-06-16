@@ -1,7 +1,11 @@
 import type { HttpClient } from "../http.js";
 import type {
   GroupCreateRequest,
+  GroupInvite,
+  GroupInviteCreateRequest,
+  GroupInvitePreview,
   GroupJoinRequest,
+  GroupMemberRole,
   GroupMessageFanoutRequest,
   GroupMessageFanoutResponse,
   GroupMember,
@@ -191,6 +195,90 @@ export class GroupsApi {
       `/directory/groups/${encodeURIComponent(groupId)}/messages`,
       message.from,
       message,
+    );
+  }
+
+  /**
+   * Promotes or demotes an active member between "admin" and "member". Only
+   * the group owner may change roles. Signed as the owner (or `actor`).
+   */
+  setMemberRole(
+    groupId: string,
+    agentId: string,
+    role: GroupMemberRole,
+    actor?: string,
+  ): Promise<GroupMember> {
+    const path = `/directory/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(agentId)}/role`;
+    if (actor) {
+      return this.http.postDirectoryAuthAs<GroupMember>(path, actor, { role });
+    }
+    return this.http.postDirectoryAuth<GroupMember>(path, { role });
+  }
+
+  /**
+   * Issues (or rotates) the acting admin's invite link for a group. Each admin
+   * holds at most one active invite per group. Signed as `actor` (an admin).
+   */
+  createInvite(
+    groupId: string,
+    actor: string,
+    request?: GroupInviteCreateRequest,
+  ): Promise<GroupInvite> {
+    return this.http.postDirectoryAuthAs<GroupInvite>(
+      `/directory/groups/${encodeURIComponent(groupId)}/invites`,
+      actor,
+      request ?? {},
+    );
+  }
+
+  /** Lists the active invites for a group. Signed as `actor` (an admin). */
+  listInvites(
+    groupId: string,
+    actor: string,
+  ): Promise<{ invites: Array<GroupInvite> }> {
+    return this.http
+      .getDirectoryAuthAs<{ invites: Array<GroupInvite> | null }>(
+        `/directory/groups/${encodeURIComponent(groupId)}/invites`,
+        actor,
+      )
+      .then((result) => ({ invites: result.invites ?? [] }));
+  }
+
+  /**
+   * Returns a public preview of the group behind a valid invite token so an
+   * invitee can see what they're joining before redeeming. No auth required.
+   */
+  previewInvite(groupId: string, token: string): Promise<GroupInvitePreview> {
+    return this.http.get<GroupInvitePreview>(
+      `/directory/groups/${encodeURIComponent(groupId)}/invites/${encodeURIComponent(token)}`,
+    );
+  }
+
+  /**
+   * Revokes an invite token. The owner may revoke any invite; an admin may
+   * revoke only their own. Signed as `actor`.
+   */
+  revokeInvite(groupId: string, token: string, actor: string): Promise<void> {
+    return this.http.deleteDirectoryAuthAs<void>(
+      `/directory/groups/${encodeURIComponent(groupId)}/invites/${encodeURIComponent(token)}`,
+      actor,
+      {},
+    );
+  }
+
+  /**
+   * Redeems an invite token, adding the agent as an active member regardless
+   * of the group's membership policy. Signed by the joining agent.
+   */
+  redeemInvite(
+    groupId: string,
+    token: string,
+    agentId: string,
+  ): Promise<GroupMember> {
+    return this.http.postDirectoryAuthAs<GroupMember>(
+      `/directory/groups/${encodeURIComponent(groupId)}/invites/${encodeURIComponent(token)}/redeem`,
+      agentId,
+      { agentId },
     );
   }
 }
