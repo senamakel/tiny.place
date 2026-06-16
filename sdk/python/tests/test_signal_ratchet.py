@@ -11,6 +11,8 @@ independently from the crypto primitives (see ``test_known_answer_vector``).
 
 from __future__ import annotations
 
+from copy import deepcopy
+
 import pytest
 from nacl.bindings import crypto_scalarmult_base
 
@@ -139,6 +141,27 @@ def test_tampered_ciphertext_fails() -> None:
     bad = RatchetMessage(header=msg.header, ciphertext=bytes(tampered))
     with pytest.raises(ValueError):
         ratchet_decrypt(bob, bad, AD)
+
+
+def test_failed_decrypt_does_not_mutate_session() -> None:
+    # A tampered message carrying a NEW ratchet public key would, without
+    # staging, advance Bob's session (root key, recv chain, counters, send key)
+    # before the MAC check — corrupting it so the legitimate message can no
+    # longer be decrypted. Verify the session is rolled back on failure.
+    alice, bob = _fresh_sessions()
+    msg = ratchet_encrypt(alice, b"hi bob", AD)  # fresh ratchet key, triggers DH step
+
+    before = deepcopy(bob)
+    tampered = bytearray(msg.ciphertext)
+    tampered[0] ^= 0xFF
+    bad = RatchetMessage(header=msg.header, ciphertext=bytes(tampered))
+    with pytest.raises(ValueError):
+        ratchet_decrypt(bob, bad, AD)
+
+    # Bob's session is byte-for-byte unchanged after the failed decrypt...
+    assert bob == before
+    # ...so the genuine message still decrypts correctly.
+    assert ratchet_decrypt(bob, msg, AD) == b"hi bob"
 
 
 # --------------------------------------------------------------------------

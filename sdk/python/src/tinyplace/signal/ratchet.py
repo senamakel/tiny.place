@@ -24,7 +24,8 @@ The crypto primitives are reused verbatim from
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from copy import deepcopy
+from dataclasses import dataclass, fields
 
 from .crypto import (
     decrypt,
@@ -121,9 +122,33 @@ def ratchet_decrypt(
     3. Otherwise the next receiving message key from the current chain is used,
        skipping any intervening keys up to ``message.header.message_number``.
 
-    Mutates ``state`` in place. Raises ``ValueError`` if the AEAD MAC fails
-    (via :func:`~tinyplace.signal.crypto.decrypt`) or if more than
-    :data:`MAX_SKIP` keys would have to be skipped.
+    All ratchet mutations are **staged on a copy and committed only after the
+    AEAD MAC authenticates the message**. Otherwise a tampered ciphertext
+    carrying a fresh ratchet public key would advance the caller's live
+    ``SessionState`` to attacker-controlled key material before the MAC check,
+    permanently breaking decryption of later legitimate messages. On success
+    ``state`` is updated atomically; on any failure it is left untouched.
+
+    Raises ``ValueError`` if the AEAD MAC fails (via
+    :func:`~tinyplace.signal.crypto.decrypt`) or if more than :data:`MAX_SKIP`
+    keys would have to be skipped.
+    """
+    working = deepcopy(state)
+    plaintext = _ratchet_decrypt_into(working, message, associated_data)
+    # Authentication succeeded — commit the staged state atomically, preserving
+    # the caller's object identity.
+    for field in fields(state):
+        setattr(state, field.name, getattr(working, field.name))
+    return plaintext
+
+
+def _ratchet_decrypt_into(
+    state: SessionState, message: RatchetMessage, associated_data: bytes
+) -> bytes:
+    """Run the ratchet decrypt over ``state`` in place (see :func:`ratchet_decrypt`).
+
+    Operates on a throwaway working copy so a MAC failure cannot corrupt the
+    caller's session; callers should use :func:`ratchet_decrypt`.
     """
     header = message.header
     sk_id = skipped_key_id(header.public_key, header.message_number)
