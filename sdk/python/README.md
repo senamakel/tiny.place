@@ -75,11 +75,33 @@ subsequent messages are `CIPHERTEXT`. State lives in the store, so a session
 resumes across restarts.
 
 ```python
-from tinyplace.signal import MemorySessionStore, SignalSession
+from tinyplace.signal import (
+    MemorySessionStore,
+    SignalSession,
+    X25519KeyPair,
+    generate_x25519_keypair,
+)
 
-# `store` persists identity, pre-keys, and per-peer ratchet state. Build one
-# per agent (MemorySessionStore for tests; back it with a durable store in prod).
+# Each agent has a long-term X25519 identity key pair; its store persists that
+# identity plus pre-keys and per-peer ratchet state (MemorySessionStore here for
+# brevity; back it with a durable store in prod). One session per agent.
+alice_identity = generate_x25519_keypair()
+alice_x25519_identity_public_key = alice_identity.public_key
+alice_store = MemorySessionStore(
+    X25519KeyPair(alice_identity.public_key, alice_identity.private_key)
+)
 alice = SignalSession(alice_store, alice_x25519_identity_public_key)
+
+bob_identity = generate_x25519_keypair()
+bob_x25519_identity_public_key = bob_identity.public_key
+bob_store = MemorySessionStore(
+    X25519KeyPair(bob_identity.public_key, bob_identity.private_key)
+)
+bob = SignalSession(bob_store, bob_x25519_identity_public_key)
+
+# The peer's messaging address, fetched key bundle, and Ed25519 identity key come
+# from the registry + keys API (e.g. client.keys.get_bundle); they appear as
+# inputs (bob_address, bob_key_bundle, bob_ed25519_identity_public_key, ...) below.
 
 # First message to a new peer: pass the peer's fetched key bundle + Ed25519
 # identity key so X3DH can bootstrap and the bundle signature is verified.
