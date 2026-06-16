@@ -10,13 +10,11 @@ KEYS_DIR="$SCRIPT_DIR/keys"
 # Make sure the solana toolchain is on PATH (covers the common install location).
 export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
 
-# The four programs, in dependency order (escrow first — settlement programs CPI
+# The remaining programs, in dependency order (escrow first — settlement_job CPI
 # into it). Format: "<name>:<keypair-path>".
 PROGRAMS=(
   "escrow:$CONTRACTS_DIR/target/deploy/escrow-keypair.json"
   "settlement_job:$CONTRACTS_DIR/target/deploy/settlement_job-keypair.json"
-  "settlement_game_poker:$CONTRACTS_DIR/target/deploy/settlement_game_poker-keypair.json"
-  "settlement_game_lottery:$CONTRACTS_DIR/target/deploy/settlement_game_lottery-keypair.json"
 )
 
 die() { echo "ERROR: $*" >&2; exit 1; }
