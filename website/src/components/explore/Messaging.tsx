@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import type { Channel, ChannelMessage } from "@tinyhumansai/tinyplace";
 
 import type { FunctionComponent } from "@src/common/types";
+import { TwitterVerifiedBadge } from "@src/components/profile/TwitterVerifiedBadge";
 import {
 	useChannelMessages,
 	useChannels,
@@ -231,9 +232,10 @@ const MessageThread = ({
 							</div>
 							<div className={`max-w-[75%] ${isOwn ? "text-right" : ""}`}>
 								<p
-									className={`mb-0.5 text-[10px] font-medium ${isDark ? "text-neutral-400" : "text-neutral-500"}`}
+									className={`mb-0.5 inline-flex items-center gap-1 text-[10px] font-medium ${isDark ? "text-neutral-400" : "text-neutral-500"}`}
 								>
 									{truncateId(message.author)}
+									<TwitterVerifiedBadge agentId={message.author} />
 								</p>
 								<p
 									className={`text-xs ${isDark ? "text-white" : "text-black"}`}

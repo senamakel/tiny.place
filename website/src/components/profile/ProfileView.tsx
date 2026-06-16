@@ -1,7 +1,44 @@
-import type { AgentProfile } from "@tinyhumansai/tinyplace";
+import type { AgentProfile, ProfileAttestation } from "@tinyhumansai/tinyplace";
+import { CheckBadgeIcon } from "@heroicons/react/24/solid";
 import type { ReactElement, ReactNode } from "react";
 
 import { ProfileEntityLink } from "./EntityLink";
+
+/** Human label + external profile URL for a verified external account. */
+function attestationLink(attestation: ProfileAttestation): {
+	label: string;
+	url?: string;
+} {
+	const handle = attestation.handle.replace(/^@/, "");
+	switch (attestation.platform.toLowerCase()) {
+		case "twitter":
+		case "x":
+			return { label: `@${handle}`, url: `https://x.com/${handle}` };
+		case "github":
+			return { label: handle, url: `https://github.com/${handle}` };
+		case "discord":
+			return { label: handle };
+		case "openhuman":
+			return { label: handle, url: `https://openhuman.ai/${handle}` };
+		case "website":
+			return {
+				label: handle,
+				url: /^https?:\/\//.test(attestation.handle)
+					? attestation.handle
+					: `https://${handle}`,
+			};
+		default:
+			return { label: handle };
+	}
+}
+
+function platformLabel(platform: string): string {
+	const lower = platform.toLowerCase();
+	if (lower === "x" || lower === "twitter") {
+		return "Twitter / X";
+	}
+	return platform.charAt(0).toUpperCase() + platform.slice(1);
+}
 
 function truncateCryptoId(cryptoId: string): string {
 	if (cryptoId.length <= 12) {
@@ -152,6 +189,9 @@ export function ProfileView({
 	const events = profile.events ?? [];
 	const tags = profile.tags ?? [];
 	const link = profile.link;
+	const verifiedAccounts = (profile.attestations ?? []).filter(
+		(attestation) => attestation.status === "verified"
+	);
 
 	return (
 		<div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
@@ -316,6 +356,53 @@ export function ProfileView({
 								<span className={`text-xs ${t.muted}`}>{event.status}</span>
 							</li>
 						))}
+					</ul>
+				</Section>
+			)}
+
+			{verifiedAccounts.length > 0 && (
+				<Section
+					count={verifiedAccounts.length}
+					theme={t}
+					title="Verified accounts"
+				>
+					<ul className="flex flex-col gap-2">
+						{verifiedAccounts.map((attestation) => {
+							const { label, url } = attestationLink(attestation);
+							return (
+								<li
+									key={`${attestation.platform}:${attestation.handle}`}
+									className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm ${t.innerBorder}`}
+								>
+									<span className="flex min-w-0 items-center gap-2">
+										<CheckBadgeIcon
+											aria-hidden
+											className="h-4 w-4 shrink-0 text-sky-500"
+										/>
+										<span className={`shrink-0 text-xs ${t.muted}`}>
+											{platformLabel(attestation.platform)}
+										</span>
+										{url ? (
+											<a
+												className="truncate font-medium text-blue-500 hover:underline"
+												href={url}
+												rel="nofollow noopener noreferrer"
+												target="_blank"
+											>
+												{label}
+											</a>
+										) : (
+											<span className={`truncate font-medium ${t.primary}`}>
+												{label}
+											</span>
+										)}
+									</span>
+									<span className="shrink-0 rounded-full bg-sky-500/10 px-2 py-0.5 text-xs font-medium text-sky-500">
+										verified
+									</span>
+								</li>
+							);
+						})}
 					</ul>
 				</Section>
 			)}
