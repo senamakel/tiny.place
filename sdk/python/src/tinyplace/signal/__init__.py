@@ -1,20 +1,19 @@
-"""Signal Protocol implementation for the tiny.place Python SDK.
+"""Signal Protocol support for the tiny.place Python SDK.
 
-A byte-compatible port of the flagship TypeScript SDK's ``src/signal`` modules.
-This package currently ships the crypto primitives
-(:mod:`tinyplace.signal.crypto`) and the session-store contract with an
-in-memory implementation; X3DH, the Double Ratchet, key management and sender
-keys land in later slices.
+Ported slice-by-slice from the TypeScript SDK. This package currently provides
+crypto primitives (:mod:`tinyplace.signal.crypto`), key management / prekey
+bundles (:mod:`tinyplace.signal.keys`), and the session-store contract with an
+in-memory implementation (:mod:`tinyplace.signal.store`).
 
-Note: ``crypto`` and ``store`` each currently define an identical
-``X25519KeyPair`` dataclass; the package re-exports the crypto one. Unifying the
-two into a single shared type is tracked for the session-layer slice (#46).
+Note: ``crypto``, ``types`` and ``store`` currently each define identical
+``X25519KeyPair`` (and ``PreKeyPair`` / ``SignedPreKeyPair``) dataclasses; the
+package re-exports the ``types`` ones. Unifying these into a single shared
+module is tracked for the X3DH / session-layer slices (#44 / #46).
 """
 
 from __future__ import annotations
 
 from .crypto import (
-    X25519KeyPair,
     aes_decrypt,
     aes_encrypt,
     compute_hmac,
@@ -35,19 +34,27 @@ from .crypto import (
     to_base64,
     x25519_shared_secret,
 )
-from .memory_store import MemorySessionStore
-from .store import (
-    PreKeyPair,
-    SenderKeyState,
-    SessionState,
-    SessionStore,
-    SignedPreKeyPair,
-    skipped_key_id,
+from .keys import (
+    build_key_bundle,
+    build_pre_keys_request,
+    build_signed_pre_key_request,
+    generate_pre_keys,
+    generate_signed_pre_key,
+    generate_x25519_key_pair,
+    serialize_pre_key,
+    serialize_signed_key,
+    verify_pre_key_signature,
 )
+from .memory_store import MemorySessionStore
+from .store import SenderKeyState, SessionState, SessionStore, skipped_key_id
+from .types import PreKeyPair, SignedPreKeyPair, X25519KeyPair
 
 __all__ = [
-    # crypto primitives
+    # key material types
+    "PreKeyPair",
+    "SignedPreKeyPair",
     "X25519KeyPair",
+    # crypto primitives
     "generate_x25519_keypair",
     "x25519_shared_secret",
     "ed25519_seed_to_x25519_private",
@@ -67,12 +74,20 @@ __all__ = [
     "decrypt",
     "to_base64",
     "from_base64",
+    # key management
+    "build_key_bundle",
+    "build_pre_keys_request",
+    "build_signed_pre_key_request",
+    "generate_pre_keys",
+    "generate_signed_pre_key",
+    "generate_x25519_key_pair",
+    "serialize_pre_key",
+    "serialize_signed_key",
+    "verify_pre_key_signature",
     # session store
     "MemorySessionStore",
-    "PreKeyPair",
     "SenderKeyState",
     "SessionState",
     "SessionStore",
-    "SignedPreKeyPair",
     "skipped_key_id",
 ]
