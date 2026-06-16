@@ -49,6 +49,12 @@ from .keys import (
     verify_pre_key_signature,
 )
 from .memory_store import MemorySessionStore
+from .sender_key import (
+    GroupSenderKey,
+    GroupSenderKeyReceiver,
+    SenderKeyDistribution,
+    SenderKeyMessage,
+)
 from .ratchet import (
     MAX_SKIP,
     RatchetHeader,
@@ -124,6 +130,11 @@ __all__ = [
     "encode_header",
     "ratchet_encrypt",
     "ratchet_decrypt",
+    # sender keys (group messaging)
+    "GroupSenderKey",
+    "GroupSenderKeyReceiver",
+    "SenderKeyDistribution",
+    "SenderKeyMessage",
     # 1:1 session layer
     "EncryptedMessage",
     "SignalSession",
