@@ -152,7 +152,8 @@ export class SessionWalletSigner extends Signer {
 	public static async restoreOrEstablish(
 		walletPublicKey: Uint8Array,
 		walletSignMessage: SignMessageFunction,
-		createClient: ClientFactory
+		createClient: ClientFactory,
+		approveSignMessage?: SignMessageFunction
 	): Promise<SessionWalletSigner> {
 		const grantor = new WalletSigner(walletPublicKey, walletSignMessage);
 		const stored = await loadSession(grantor.agentId);
@@ -171,7 +172,8 @@ export class SessionWalletSigner extends Signer {
 		const fresh = await SessionWalletSigner.establish(
 			walletPublicKey,
 			walletSignMessage,
-			createClient()
+			createClient(),
+			approveSignMessage
 		);
 		await saveSession(fresh.toStoredSession());
 		return fresh;
@@ -222,20 +224,34 @@ export class SessionWalletSigner extends Signer {
 	 * Establishes a session: prompts the wallet a SINGLE time to approve a fresh
 	 * in-memory session key, registers the grant with the backend, and returns a
 	 * signer that uses the session key for everything thereafter.
+	 *
+	 * The one-time approval is signed through {@link approveSignMessage} when
+	 * provided — the wallet-context wires this to the "Approve browser session"
+	 * confirmation dialog. The persisted grantor/identity signer is built from the
+	 * RAW `walletSignMessage`, so later acts the backend cannot delegate (identity
+	 * registration, x402 payments) prompt the wallet directly instead of
+	 * re-rendering the session-approval dialog every time.
 	 */
 	public static async establish(
 		walletPublicKey: Uint8Array,
 		walletSignMessage: SignMessageFunction,
-		client: TinyPlaceClient
+		client: TinyPlaceClient,
+		approveSignMessage?: SignMessageFunction
 	): Promise<SessionWalletSigner> {
 		const grantor = new WalletSigner(walletPublicKey, walletSignMessage);
+		// Same wallet key, but routes the single approval signature through the
+		// session-approval dialog; falls back to the grantor when no dialog signer
+		// is supplied (e.g. the always-prompt fallback path).
+		const approver = approveSignMessage
+			? new WalletSigner(walletPublicKey, approveSignMessage)
+			: grantor;
 		const session = await BrowserSessionSigner.create();
 		const expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
 
 		// The one and only wallet prompt: sign the "upto" grant that approves the
 		// session key up to a budget and expiry.
 		const approval = await session.buildApprovalRequest(
-			grantor,
+			approver,
 			grantor.agentId,
 			{
 				network: SOLANA_MAINNET_NETWORK,

@@ -265,8 +265,13 @@ const WalletAuthSync = (): FunctionComponent => {
 			// still works but prompts the wallet per request.
 			inFlight.current = SessionWalletSigner.restoreOrEstablish(
 				publicKeyBytes,
-				confirmLoginSignature,
-				createClient
+				// Raw wallet signMessage backs the persistent grantor/identity signer,
+				// so wallet-only acts (identity registration, x402 payments) prompt the
+				// wallet directly. The session-approval dialog is used ONLY for the
+				// one-time grant signature, passed as approveSignMessage below.
+				signMessage,
+				createClient,
+				confirmLoginSignature
 			)
 				.then((signer) => {
 					if (activeWalletId.current !== walletId) return;

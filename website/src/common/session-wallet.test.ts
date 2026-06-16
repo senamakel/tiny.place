@@ -113,4 +113,61 @@ describe("SessionWalletSigner", () => {
 			parentNonce: approved!.nonce,
 		});
 	});
+
+	it("signs the one-time grant with the approval dialog but the persistent identity signer with the raw wallet signMessage", async () => {
+		const wallet = await LocalSigner.fromSeed(new Uint8Array(32).fill(7));
+		// Two distinct sign paths for the SAME wallet key: the dialog-wrapped
+		// approver (one-time session grant) and the raw signMessage (everything the
+		// identity signer does afterwards — registration, x402 payments).
+		const approvalSigns: Array<string> = [];
+		const rawSigns: Array<string> = [];
+		const approveSignMessage = async (
+			message: Uint8Array
+		): Promise<Uint8Array> => {
+			approvalSigns.push(new TextDecoder().decode(message));
+			return wallet.sign(message);
+		};
+		const walletSignMessage = async (
+			message: Uint8Array
+		): Promise<Uint8Array> => {
+			rawSigns.push(new TextDecoder().decode(message));
+			return wallet.sign(message);
+		};
+		const client = {
+			signers: {
+				approve: vi.fn((authorization: X402Authorization) =>
+					Promise.resolve({
+						signerKey: "session-key",
+						grantor: wallet.agentId,
+						network: authorization.network,
+						asset: authorization.asset,
+						budget: authorization.amount,
+						spent: "0",
+						remaining: authorization.amount,
+						expiresAt: authorization.expiresAt,
+						nonce: authorization.nonce,
+						status: "active",
+						createdAt: "2026-06-15T00:00:00.000Z",
+					})
+				),
+			},
+		} as unknown as TinyPlaceClient;
+
+		const session = await SessionWalletSigner.establish(
+			wallet.publicKey,
+			walletSignMessage,
+			client,
+			approveSignMessage
+		);
+
+		// The grant approval went through the dialog signer, NOT the raw path.
+		expect(approvalSigns).toHaveLength(1);
+		expect(rawSigns).toHaveLength(0);
+
+		// The identity signer (what DomainRegistration / x402 payments use) signs
+		// through the RAW wallet signMessage — never re-rendering the session dialog.
+		await session.walletSigner.sign(new TextEncoder().encode("register @alice"));
+		expect(rawSigns).toEqual(["register @alice"]);
+		expect(approvalSigns).toHaveLength(1);
+	});
 });

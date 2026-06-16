@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 
 import {
+	identityPublicKey,
 	TinyPlaceError,
 	type X402AuthorizationFields,
 } from "@tinyhumansai/tinyplace";
@@ -60,14 +61,15 @@ type DomainRegistrationProperties = {
 export const DomainRegistration = ({
 	isDark,
 }: DomainRegistrationProperties): FunctionComponent => {
-	// Registration binds the cryptoId to the public key, an act the backend
-	// rejects under session-key delegation (it requires base58(publicKey) ===
-	// cryptoId). So we sign with the identity signer — the wallet itself — whose
-	// key derives the agentId, not the hot session key used for routine calls.
-	const identitySigner = useAuthStore((state) => state.identitySigner);
+	// Sign with the hot SESSION signer, like every other authenticated action —
+	// the wallet only ever signs the one-time session grant. The handle still
+	// binds to the WALLET key (see `publicKey` below), and the backend authorizes
+	// the session key as the wallet's approved delegate (`verifyOwnershipOrDelegate`).
+	// `agentId` is the wallet cryptoId either way (the session reports it as its
+	// agentId), so the identity is owned by the wallet, not the ephemeral key.
+	const signer = useAuthStore((state) => state.signer);
 	const agentId = useAuthStore((state) => state.agentId);
-	const signer = identitySigner;
-	const client = useMemo(() => createClient(identitySigner), [identitySigner]);
+	const client = useMemo(() => createClient(signer), [signer]);
 	const confirmX402 = useOptionalX402Confirm();
 
 	const [searchInput, setSearchInput] = useState("");
@@ -100,7 +102,11 @@ export const DomainRegistration = ({
 			const request = {
 				username: selectedName,
 				cryptoId: agentId,
-				publicKey: signer.publicKeyBase64,
+				// The handle binds to the WALLET key (which derives agentId), not the
+				// ephemeral session key that signs the request. identityPublicKey()
+				// returns the wallet key for a session signer, the signer's own key
+				// otherwise.
+				publicKey: identityPublicKey(signer) ?? signer.publicKeyBase64,
 				primary,
 				actorType: "human" as const,
 			};

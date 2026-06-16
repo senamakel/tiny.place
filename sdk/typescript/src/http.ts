@@ -308,8 +308,12 @@ export class HttpClient {
     return this.request<T>("POST", path, { body, adminAuth: true });
   }
 
-  postPublic<T>(path: string, body?: unknown): Promise<T> {
-    return this.request<T>("POST", path, { body });
+  postPublic<T>(
+    path: string,
+    body?: unknown,
+    headers?: Record<string, string>,
+  ): Promise<T> {
+    return this.request<T>("POST", path, { body, headers });
   }
 
   postPublicRaw(

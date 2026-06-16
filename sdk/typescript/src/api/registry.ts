@@ -116,16 +116,31 @@ export class RegistryApi {
       username: normalizeHandle(request.username),
     };
 
+    const headers: Record<string, string> = {};
     let signature: string | undefined;
     if (this.signingKey && !request.signature) {
       const payload = registrationSignaturePayload(request);
       signature = await signFreshCanonicalPayload(this.signingKey, payload);
+      // Present the signing key so the backend can authorize a delegated hot
+      // session key: it verifies the signature against this key, then checks the
+      // key is an active delegate of request.publicKey (the wallet key the handle
+      // binds to). For a direct wallet/agent signer the presented key IS
+      // request.publicKey, so the backend treats it as plain ownership — letting
+      // agents keep signing registrations with their own key.
+      const presentedKey = this.http.signingPublicKey();
+      if (presentedKey) {
+        headers["X-TinyPlace-Public-Key"] = presentedKey;
+      }
     }
 
-    return this.http.postPublic<Identity>("/registry/names", {
-      ...request,
-      ...(signature ? { signature } : {}),
-    });
+    return this.http.postPublic<Identity>(
+      "/registry/names",
+      {
+        ...request,
+        ...(signature ? { signature } : {}),
+      },
+      headers,
+    );
   }
 
   async registerWithSolanaPayment(

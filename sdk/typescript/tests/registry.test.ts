@@ -108,6 +108,40 @@ describe("RegistryApi", () => {
     expect(ok).toBe(true);
   });
 
+  it("presents the signing key so the backend can authorize a delegated session key", async () => {
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(29));
+    const requests: Array<Request> = [];
+    const client = new TinyPlaceClient({
+      baseUrl: "https://example.test",
+      signer,
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json({
+          username: "@agent",
+          cryptoId: signer.agentId,
+          publicKey: signer.publicKeyBase64,
+          registeredAt: "2026-06-13T00:00:00Z",
+          expiresAt: "2027-06-13T00:00:00Z",
+          status: "active",
+          updatedAt: "2026-06-13T00:00:00Z",
+        });
+      },
+    });
+
+    await client.registry.register({
+      username: "@agent",
+      cryptoId: signer.agentId,
+      publicKey: signer.publicKeyBase64,
+    });
+
+    // The presented key lets the backend verify the signature against the actual
+    // signer and, when that signer is a delegate, authorize it for the bound
+    // wallet key. For a direct signer it equals publicKey (plain ownership).
+    expect(requests[0]!.headers.get("X-TinyPlace-Public-Key")).toBe(
+      signer.publicKeyBase64,
+    );
+  });
+
   it("forwards actorType and primary unsigned and omits them from the signature", async () => {
     const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(21));
     const requests: Array<Request> = [];
