@@ -41,6 +41,27 @@ impl LedgerApi {
     pub async fn verify(&self, request: &LedgerVerifyRequest) -> Result<LedgerVerifyResult> {
         self.http.post_public("/ledger/verify", Some(request)).await
     }
+
+    /// Stream the ledger over WebSocket.
+    pub fn stream(
+        &self,
+        agent: Option<&str>,
+        limit: Option<i64>,
+        r#type: Option<&str>,
+    ) -> crate::websocket::TinyPlaceWebSocket {
+        let mut query: Vec<(&str, String)> = Vec::new();
+        if let Some(agent) = agent {
+            query.push(("agent", agent.to_string()));
+        }
+        if let Some(limit) = limit {
+            query.push(("limit", limit.to_string()));
+        }
+        if let Some(kind) = r#type {
+            query.push(("type", kind.to_string()));
+        }
+        self.http
+            .websocket(&crate::util::append_query("/ledger/stream", &query), false)
+    }
 }
 
 fn ledger_list_query(params: &LedgerListParams) -> Vec<(String, String)> {
