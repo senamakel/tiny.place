@@ -82,15 +82,35 @@ export function useGroupMessages(actor: string): UseGroupMessagesResult {
 			if (!encryptionClient || !session || !identity) {
 				throw new Error("Enable encryption before sending group messages");
 			}
+			// The cached group list does not refresh when *another* agent joins, so
+			// the epoch passed in can be stale — and the backend rejects a stale
+			// epoch with "requires current sender key epoch". Re-read the live group
+			// metadata and active members right before sending so the sender key id
+			// and key handoffs target the current membership epoch. Fall back to the
+			// cached input if the refresh fails.
+			let epoch = input.epoch;
+			let members = input.members;
+			try {
+				const liveGroup = await walletClient.groups.get(input.groupId);
+				if (typeof liveGroup.membershipEpoch === "number") {
+					epoch = liveGroup.membershipEpoch;
+				}
+				const liveMembers = await walletClient.groups.members(input.groupId);
+				members = (liveMembers.members ?? [])
+					.filter((member): boolean => member.status === "active")
+					.map((member): string => member.agentId);
+			} catch {
+				/* keep the cached epoch/members; the send still attempts below */
+			}
 			return sendGroupMessage({
 				walletClient,
 				encClient: encryptionClient,
 				session,
 				identity,
 				groupId: input.groupId,
-				epoch: input.epoch,
+				epoch,
 				sender: actor,
-				members: input.members,
+				members,
 				text: input.text,
 			});
 		},
