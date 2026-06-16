@@ -15,7 +15,7 @@ import {
 } from "@tinyhumansai/tinyplace";
 
 import { useApiClient } from "@src/common/api-context";
-import { signX402ChallengePaymentMap } from "@src/common/auth-payment";
+import { confirmAndSettleX402 } from "@src/common/x402-settle";
 import { queryKeys } from "@src/common/query-keys";
 import {
 	useOptionalX402Confirm,
@@ -51,7 +51,10 @@ function registryPaymentChallenge(
 	};
 }
 
-async function signRegistryPaymentChallenge(
+// Signs a registry x402 challenge and submits it via `submit`, resolving only
+// once the payment has settled on-chain. When a confirm dialog is provided the
+// whole sign+settle runs inside it, so it stays "Confirming…" until settlement.
+function settleRegistryPaymentChallenge<T>(
 	signer: NonNullable<ReturnType<typeof useAuthStore.getState>["signer"]>,
 	challenge: RegistryPaymentChallenge,
 	options: {
@@ -61,36 +64,24 @@ async function signRegistryPaymentChallenge(
 		handle: string;
 		noncePrefix: string;
 		purpose: string;
+		submit: (payment: Record<string, string>) => Promise<T>;
 	}
-): Promise<Record<string, string>> {
+): Promise<T> {
 	const challengePayment = challenge.payment;
-	const sign = async (): Promise<Record<string, string>> => {
-		return signX402ChallengePaymentMap({
-			fallbackFrom: options.fallbackFrom,
-			metadata: {
-				domain: challengePayment.metadata?.["domain"] ?? "tiny.place",
-				identity: challengePayment.metadata?.["identity"] ?? options.handle,
-				purpose: challengePayment.metadata?.["purpose"] ?? options.purpose,
-			},
-			noncePrefix: options.noncePrefix,
-			payment: challengePayment,
-			signer,
-		});
-	};
-
-	if (!options.confirmX402) {
-		return sign();
-	}
-
-	return (await options.confirmX402(
-		{
-			amount: challengePayment.amount,
-			asset: challengePayment.asset,
-			recipient: challengePayment.to,
-			...options.confirmRequest,
+	return confirmAndSettleX402<T>({
+		payment: challengePayment,
+		signer,
+		fallbackFrom: options.fallbackFrom,
+		noncePrefix: options.noncePrefix,
+		metadata: {
+			domain: challengePayment.metadata?.["domain"] ?? "tiny.place",
+			identity: challengePayment.metadata?.["identity"] ?? options.handle,
+			purpose: challengePayment.metadata?.["purpose"] ?? options.purpose,
 		},
-		sign
-	)) as Record<string, string>;
+		submit: options.submit,
+		confirmX402: options.confirmX402,
+		confirmRequest: options.confirmRequest,
+	});
 }
 
 /**
@@ -141,21 +132,20 @@ export function useRenewIdentity(): UseMutationResult<
 				if (!signer || !agentId) {
 					throw new Error("Connect your wallet first");
 				}
-				return client.registry.renew(handle, {
-					...(request ?? {}),
-					payment: await signRegistryPaymentChallenge(signer, challenge, {
-						confirmRequest: {
-							title: "Renew identity",
-							subject: handle,
-							note: "The server returned an x402 renewal challenge. Confirm to sign the payment authorization and renew this identity.",
-							confirmLabel: "Sign x402",
-						},
-						confirmX402,
-						fallbackFrom: agentId,
-						handle,
-						noncePrefix: "renew",
-						purpose: "renewal",
-					}),
+				return settleRegistryPaymentChallenge(signer, challenge, {
+					confirmRequest: {
+						title: "Renew identity",
+						subject: handle,
+						note: "Sign the x402 renewal authorization and renew — this waits for on-chain settlement to confirm.",
+						confirmLabel: "Sign x402",
+					},
+					confirmX402,
+					fallbackFrom: agentId,
+					handle,
+					noncePrefix: "renew",
+					purpose: "renewal",
+					submit: (payment) =>
+						client.registry.renew(handle, { ...(request ?? {}), payment }),
 				});
 			}
 		},
@@ -297,21 +287,20 @@ export function useClaimIdentity(): UseMutationResult<
 				if (!challenge) {
 					throw error;
 				}
-				return client.registry.claim(handle, {
-					...claimRequest,
-					payment: await signRegistryPaymentChallenge(signer, challenge, {
-						confirmRequest: {
-							title: "Claim identity",
-							subject: handle,
-							note: "Confirm to sign the x402 authorization needed to claim this identity.",
-							confirmLabel: "Sign x402",
-						},
-						confirmX402,
-						fallbackFrom: claimRequest.cryptoId,
-						handle,
-						noncePrefix: "claim",
-						purpose: "auction_claim",
-					}),
+				return settleRegistryPaymentChallenge(signer, challenge, {
+					confirmRequest: {
+						title: "Claim identity",
+						subject: handle,
+						note: "Sign the x402 authorization and claim — this waits for on-chain settlement to confirm.",
+						confirmLabel: "Sign x402",
+					},
+					confirmX402,
+					fallbackFrom: claimRequest.cryptoId,
+					handle,
+					noncePrefix: "claim",
+					purpose: "auction_claim",
+					submit: (payment) =>
+						client.registry.claim(handle, { ...claimRequest, payment }),
 				});
 			}
 		},

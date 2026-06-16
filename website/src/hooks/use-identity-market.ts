@@ -20,7 +20,7 @@ import {
 } from "@tinyhumansai/tinyplace";
 
 import { useApiClient } from "@src/common/api-context";
-import { signX402ChallengePaymentMap } from "@src/common/auth-payment";
+import { confirmAndSettleX402 } from "@src/common/x402-settle";
 import { queryKeys } from "@src/common/query-keys";
 import {
 	useOptionalX402Confirm,
@@ -173,41 +173,36 @@ function identityPaymentChallenge(
 	};
 }
 
-async function signIdentityPaymentChallenge(
+// Signs an identity-market x402 challenge and submits it via `submit`, resolving
+// only once the payment has settled on-chain. When a confirm dialog is provided
+// the whole sign+settle runs inside it, so it stays "Confirming…" until settled.
+function settleIdentityPaymentChallenge<T>(
 	signer: NonNullable<ReturnType<typeof useAuthStore.getState>["signer"]>,
 	challenge: IdentityPaymentChallenge,
 	fallbackFrom: string,
 	noncePrefix: string,
-	expected: ExpectedX402Payment = {},
-	confirmX402?: ConfirmX402,
-	confirmRequest?: X402ConfirmRequest
-): Promise<Record<string, string>> {
-	const challengePayment = challenge.payment;
-	const sign = async (): Promise<Record<string, string>> => {
-		return signX402ChallengePaymentMap({
-			expected,
-			fallbackFrom,
-			noncePrefix,
-			payment: challengePayment,
-			signer,
-		});
-	};
-
-	if (!confirmX402) {
-		return sign();
-	}
-
-	return (await confirmX402(
-		{
-			title: confirmRequest?.title ?? "Confirm identity payment",
-			subject: confirmRequest?.subject ?? fallbackFrom,
-			amount: challengePayment.amount,
-			asset: challengePayment.asset,
-			recipient: challengePayment.to,
-			...confirmRequest,
-		},
-		sign
-	)) as Record<string, string>;
+	expected: ExpectedX402Payment,
+	confirmX402: ConfirmX402,
+	confirmRequest: X402ConfirmRequest | undefined,
+	submit: (payment: Record<string, string>) => Promise<T>
+): Promise<T> {
+	return confirmAndSettleX402<T>({
+		payment: challenge.payment,
+		signer,
+		fallbackFrom,
+		noncePrefix,
+		expected,
+		submit,
+		confirmX402,
+		// Preserve the prior default-request behavior: a dialog still appears when
+		// confirmX402 is set even if the caller passed no explicit request.
+		confirmRequest: confirmX402
+			? (confirmRequest ?? {
+					title: "Confirm identity payment",
+					subject: fallbackFrom,
+				})
+			: undefined,
+	});
 }
 
 export function useCreateIdentityListing(): UseMutationResult<
@@ -347,23 +342,25 @@ export function useBuyIdentityListing(): UseMutationResult<
 						}
 					: {};
 
-				return client.marketplace.buyIdentityListing(listingId, {
-					...request,
-					payment: await signIdentityPaymentChallenge(
-						signer,
-						challenge,
-						buyer,
-						"identity",
-						expected,
-						confirmX402,
-						{
-							title: "Buy identity",
-							subject: listing?.name ?? listingId,
-							note: "The server returned an x402 challenge. Confirm to sign the payment authorization and complete the buy.",
-							confirmLabel: "Sign x402",
-						}
-					),
-				});
+				return settleIdentityPaymentChallenge(
+					signer,
+					challenge,
+					buyer,
+					"identity",
+					expected,
+					confirmX402,
+					{
+						title: "Buy identity",
+						subject: listing?.name ?? listingId,
+						note: "Sign the x402 authorization and buy — this waits for on-chain settlement to confirm.",
+						confirmLabel: "Sign x402",
+					},
+					(payment) =>
+						client.marketplace.buyIdentityListing(listingId, {
+							...request,
+							payment,
+						})
+				);
 			}
 		},
 		onSuccess: (sale): void => {
@@ -419,29 +416,28 @@ export function usePlaceIdentityBid(): UseMutationResult<
 					throw error;
 				}
 
-				return client.marketplace.placeBid(listingId, {
-					...request,
-					payment: await signIdentityPaymentChallenge(
-						signer,
-						challenge,
-						bid.bidder,
-						"identity-bid",
-						bid.price
-							? {
-									amount: bid.price.amount,
-									asset: bid.price.asset,
-									network: bid.price.network,
-								}
-							: {},
-						confirmX402,
-						{
-							title: "Place auction bid",
-							subject: listingId,
-							note: "Confirm to sign the x402 authorization for this bid.",
-							confirmLabel: "Sign x402",
-						}
-					),
-				});
+				return settleIdentityPaymentChallenge(
+					signer,
+					challenge,
+					bid.bidder,
+					"identity-bid",
+					bid.price
+						? {
+								amount: bid.price.amount,
+								asset: bid.price.asset,
+								network: bid.price.network,
+							}
+						: {},
+					confirmX402,
+					{
+						title: "Place auction bid",
+						subject: listingId,
+						note: "Sign the x402 authorization for this bid — this waits for on-chain settlement to confirm.",
+						confirmLabel: "Sign x402",
+					},
+					(payment) =>
+						client.marketplace.placeBid(listingId, { ...request, payment })
+				);
 			}
 		},
 		onSuccess: (_listing, { listingId }): void => {
@@ -490,23 +486,25 @@ export function useCloseIdentityAuction(): UseMutationResult<
 					throw new Error("Connect your wallet first");
 				}
 
-				return client.marketplace.closeListing(listingId, sellerId, {
-					...request,
-					payment: await signIdentityPaymentChallenge(
-						signer,
-						challenge,
-						sellerId ?? agentId ?? "",
-						"identity-auction",
-						{},
-						confirmX402,
-						{
-							title: "Settle auction",
-							subject: listingId,
-							note: "Confirm to sign the x402 authorization needed to settle this auction.",
-							confirmLabel: "Sign x402",
-						}
-					),
-				});
+				return settleIdentityPaymentChallenge(
+					signer,
+					challenge,
+					sellerId ?? agentId ?? "",
+					"identity-auction",
+					{},
+					confirmX402,
+					{
+						title: "Settle auction",
+						subject: listingId,
+						note: "Sign the x402 authorization and settle this auction — this waits for on-chain settlement to confirm.",
+						confirmLabel: "Sign x402",
+					},
+					(payment) =>
+						client.marketplace.closeListing(listingId, sellerId, {
+							...request,
+							payment,
+						})
+				);
 			}
 		},
 		onSuccess: (sale): void => {
@@ -564,26 +562,25 @@ export function useDefaultIdentityAuction(): UseMutationResult<
 					throw new Error("Connect your wallet first");
 				}
 
-				return client.marketplace.setDefaultIdentityListing(
-					listingId,
+				return settleIdentityPaymentChallenge(
+					signer,
+					challenge,
+					sellerId ?? agentId ?? "",
+					"identity-auction-default",
+					{},
+					confirmX402,
 					{
-						...request,
-						payment: await signIdentityPaymentChallenge(
-							signer,
-							challenge,
-							sellerId ?? agentId ?? "",
-							"identity-auction-default",
-							{},
-							confirmX402,
-							{
-								title: "Default auction",
-								subject: listingId,
-								note: "Confirm to sign the x402 authorization needed to default this auction.",
-								confirmLabel: "Sign x402",
-							}
-						),
+						title: "Default auction",
+						subject: listingId,
+						note: "Sign the x402 authorization and default this auction — this waits for on-chain settlement to confirm.",
+						confirmLabel: "Sign x402",
 					},
-					sellerId
+					(payment) =>
+						client.marketplace.setDefaultIdentityListing(
+							listingId,
+							{ ...request, payment },
+							sellerId
+						)
 				);
 			}
 		},
@@ -645,26 +642,24 @@ export function useCreateIdentityOffer(): UseMutationResult<
 						}
 					: {};
 
-				return client.marketplace.createOffer({
-					...request,
-					payment: await signIdentityPaymentChallenge(
-						signer,
-						challenge,
-						offer.buyer,
-						"identity-offer",
-						expected,
-						confirmX402,
-						{
-							title: "Make an offer",
-							subject: offer.name ?? "Identity offer",
-							note: "Confirm to sign the x402 authorization for this offer.",
-							confirmLabel: "Sign x402",
-						}
-					),
-				});
+				return settleIdentityPaymentChallenge(
+					signer,
+					challenge,
+					offer.buyer,
+					"identity-offer",
+					expected,
+					confirmX402,
+					{
+						title: "Make an offer",
+						subject: offer.name ?? "Identity offer",
+						note: "Sign the x402 authorization for this offer — this waits for on-chain settlement to confirm.",
+						confirmLabel: "Sign x402",
+					},
+					(payment) => client.marketplace.createOffer({ ...request, payment })
+				);
 			}
 		},
-		onSuccess: (sale): void => {
+		onSuccess: (): void => {
 			void queryClient.invalidateQueries({
 				queryKey: queryKeys.marketplace.identityListings(),
 			});
@@ -703,7 +698,7 @@ export function useAcceptIdentityOffer(): UseMutationResult<
 	return useMutation({
 		mutationFn: ({ offerId, request }): Promise<IdentitySale> =>
 			client.marketplace.acceptOffer(offerId, request),
-		onSuccess: (): void => {
+		onSuccess: (sale): void => {
 			void queryClient.invalidateQueries({
 				queryKey: queryKeys.marketplace.identityListings(),
 			});
