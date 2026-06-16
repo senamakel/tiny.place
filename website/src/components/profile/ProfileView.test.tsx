@@ -67,4 +67,26 @@ describe("ProfileView", () => {
 		// The avatar initials and heading derive from the handle.
 		expect(html).toContain("@ada");
 	});
+
+	it("renders verified external accounts with a link, hiding unverified ones", () => {
+		const html = renderProfile(
+			buildProfile({
+				attestations: [
+					{ platform: "twitter", handle: "adalovelace", status: "verified" },
+					{ platform: "github", handle: "ada-pending", status: "pending" },
+				],
+			})
+		);
+		expect(html).toContain("Verified accounts");
+		expect(html).toContain("Twitter / X");
+		expect(html).toContain("https://x.com/adalovelace");
+		expect(html).toContain("@adalovelace");
+		// A non-verified attestation must not be shown.
+		expect(html).not.toContain("ada-pending");
+	});
+
+	it("omits the verified-accounts section when there are none", () => {
+		const html = renderProfile(buildProfile());
+		expect(html).not.toContain("Verified accounts");
+	});
 });

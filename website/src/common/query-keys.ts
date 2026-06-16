@@ -140,6 +140,10 @@ export const queryKeys = {
 	reputation: {
 		score: (agentId: string) => ["reputation", "score", agentId] as const,
 		reviews: (agentId: string) => ["reputation", "reviews", agentId] as const,
+		attestations: (agentId: string) =>
+			["reputation", "attestations", agentId] as const,
+		twitterStatus: (attestationId: string) =>
+			["reputation", "twitter-status", attestationId] as const,
 		history: (agentId: string) => ["reputation", "history", agentId] as const,
 		trustGraph: (limit?: number) =>
 			["reputation", "trust-graph", limit] as const,

@@ -10,6 +10,7 @@ import { ProfileSessions } from "@src/components/profile/ProfileSessions";
 import { ProfileView } from "@src/components/profile/ProfileView";
 import { ProfileWalletBalances } from "@src/components/profile/ProfileWalletBalances";
 import { ReputationPanel } from "@src/components/profile/ReputationPanel";
+import { TwitterVerificationCard } from "@src/components/profile/TwitterVerificationCard";
 import { Chip } from "@src/components/ui/Chip";
 import { useAppStore } from "@src/store/app";
 import { useAuthStore } from "@src/store/auth";
@@ -112,12 +113,18 @@ export function ProfileTabs({
 				</div>
 			)}
 			{resolvedTab === "reputation" && (
-				<div className="mx-auto w-full max-w-3xl">
+				<div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
 					<ReputationPanel
 						agentId={profile.reputation?.agentId || profile.cryptoId}
 						isDark={isDark}
 						score={profile.reputation}
 					/>
+					{isOwnProfile && (
+						<TwitterVerificationCard
+							agent={profile.username}
+							agentCryptoId={profile.cryptoId}
+						/>
+					)}
 				</div>
 			)}
 			{resolvedTab === "sessions" && isOwnProfile && (

@@ -1,5 +1,13 @@
-import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import {
+	useMutation,
+	useQuery,
+	useQueryClient,
+	type UseMutationResult,
+	type UseQueryResult,
+} from "@tanstack/react-query";
 import type {
+	Attestation,
+	AttestationCreate,
 	LeaderboardCategory,
 	LeaderboardQueryParams,
 	LeaderboardResponse,
@@ -7,6 +15,9 @@ import type {
 	ReputationReview,
 	ReputationScore,
 	TrustGraph,
+	TwitterChallengeRequest,
+	TwitterChallengeResult,
+	TwitterVerificationStatus,
 } from "@tinyhumansai/tinyplace";
 
 import { useApiClient } from "@src/common/api-context";
@@ -33,6 +44,73 @@ export function useReputationReviews(
 		queryFn: (): Promise<{ reviews: Array<ReputationReview> }> =>
 			client.reputation.getReviews(agentId),
 		enabled: Boolean(agentId),
+	});
+}
+
+export function useAttestations(
+	agentId: string
+): UseQueryResult<{ attestations: Array<Attestation> }> {
+	const client = useApiClient();
+	return useQuery({
+		queryKey: queryKeys.reputation.attestations(agentId),
+		queryFn: (): Promise<{ attestations: Array<Attestation> }> =>
+			client.reputation.getAttestations(agentId),
+		enabled: Boolean(agentId),
+	});
+}
+
+export function useRequestTwitterChallenge(): UseMutationResult<
+	TwitterChallengeResult,
+	Error,
+	TwitterChallengeRequest
+> {
+	const client = useApiClient();
+	return useMutation({
+		mutationFn: (
+			request: TwitterChallengeRequest
+		): Promise<TwitterChallengeResult> =>
+			client.reputation.requestTwitterChallenge(request),
+	});
+}
+
+export function useSubmitTwitterAttestation(): UseMutationResult<
+	Attestation,
+	Error,
+	AttestationCreate
+> {
+	const client = useApiClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (attestation: AttestationCreate): Promise<Attestation> =>
+			client.reputation.submitTwitterAttestation(attestation),
+		onSuccess: (attestation): void => {
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.reputation.attestations(attestation.agentCryptoId),
+			});
+		},
+	});
+}
+
+/**
+ * Polls the async verification status of a submitted Twitter/X attestation.
+ * Pass `enabled` to start polling once an attestation has been submitted; it
+ * stops refetching automatically once a terminal (verified/failed) status is
+ * reached.
+ */
+export function useTwitterVerificationStatus(
+	attestationId: string | undefined,
+	enabled: boolean
+): UseQueryResult<TwitterVerificationStatus> {
+	const client = useApiClient();
+	return useQuery({
+		queryKey: queryKeys.reputation.twitterStatus(attestationId ?? ""),
+		queryFn: (): Promise<TwitterVerificationStatus> =>
+			client.reputation.getTwitterVerificationStatus(attestationId ?? ""),
+		enabled: enabled && Boolean(attestationId),
+		refetchInterval: (query): number | false => {
+			const status = query.state.data?.status;
+			return status === "verified" || status === "failed" ? false : 3000;
+		},
 	});
 }
 
