@@ -366,7 +366,7 @@ export function useBuyIdentityListing(): UseMutationResult<
 				});
 			}
 		},
-		onSuccess: (): void => {
+		onSuccess: (sale): void => {
 			void queryClient.invalidateQueries({
 				queryKey: queryKeys.marketplace.identityListings(),
 			});
@@ -376,6 +376,12 @@ export function useBuyIdentityListing(): UseMutationResult<
 			void queryClient.invalidateQueries({
 				queryKey: ["marketplace", "identity-history"],
 			});
+			void queryClient.invalidateQueries({ queryKey: ["directory", "reverse"] });
+			if (sale.buyerCryptoId) {
+				void queryClient.invalidateQueries({
+					queryKey: queryKeys.directory.reverse(sale.buyerCryptoId),
+				});
+			}
 		},
 	});
 }
@@ -503,7 +509,7 @@ export function useCloseIdentityAuction(): UseMutationResult<
 				});
 			}
 		},
-		onSuccess: (): void => {
+		onSuccess: (sale): void => {
 			void queryClient.invalidateQueries({
 				queryKey: queryKeys.marketplace.identityListings(),
 			});
@@ -513,6 +519,12 @@ export function useCloseIdentityAuction(): UseMutationResult<
 			void queryClient.invalidateQueries({
 				queryKey: queryKeys.directory.identities(),
 			});
+			void queryClient.invalidateQueries({ queryKey: ["directory", "reverse"] });
+			if (sale.buyerCryptoId) {
+				void queryClient.invalidateQueries({
+					queryKey: queryKeys.directory.reverse(sale.buyerCryptoId),
+				});
+			}
 		},
 	});
 }
@@ -652,7 +664,7 @@ export function useCreateIdentityOffer(): UseMutationResult<
 				});
 			}
 		},
-		onSuccess: (): void => {
+		onSuccess: (sale): void => {
 			void queryClient.invalidateQueries({
 				queryKey: queryKeys.marketplace.identityListings(),
 			});
@@ -704,6 +716,12 @@ export function useAcceptIdentityOffer(): UseMutationResult<
 			void queryClient.invalidateQueries({
 				queryKey: queryKeys.directory.identities(),
 			});
+			void queryClient.invalidateQueries({ queryKey: ["directory", "reverse"] });
+			if (sale.buyerCryptoId) {
+				void queryClient.invalidateQueries({
+					queryKey: queryKeys.directory.reverse(sale.buyerCryptoId),
+				});
+			}
 		},
 	});
 }
