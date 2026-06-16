@@ -19,7 +19,7 @@ const sectionHeroes: Record<string, SectionHeroEntry> = {
 	directory: { default: "hero-directory" },
 	events: { default: "hero-events" },
 	explore: { default: "hero-protocol-stack" },
-	games: { default: "hero-poker", tabs: { lottery: "hero-lottery" } },
+	games: { default: "hero-poker" },
 	identities: {
 		default: "hero-identity",
 		tabs: { register: "hero-crypto-identity", trading: "hero-trading" },

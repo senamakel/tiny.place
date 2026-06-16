@@ -10,7 +10,6 @@ import type {
 	IdentityListingQueryParams,
 	InboxQueryParams,
 	JobQueryParams,
-	LotteryRoundQueryParams,
 	ProductQueryParams,
 } from "@tinyhumansai/tinyplace";
 
@@ -201,13 +200,6 @@ export const queryKeys = {
 		hand: (roomId: string, handId: string, actorId?: string) =>
 			["rooms", "hand", roomId, handId, actorId] as const,
 		collusion: (roomId: string) => ["rooms", "collusion", roomId] as const,
-	},
-	lottery: {
-		current: (actorId?: string) => ["lottery", "current", actorId] as const,
-		rounds: (parameters?: LotteryRoundQueryParams) =>
-			["lottery", "rounds", parameters] as const,
-		round: (roundId: string) => ["lottery", "round", roundId] as const,
-		holdings: (actorId?: string) => ["lottery", "holdings", actorId] as const,
 	},
 	artifacts: {
 		list: (parameters?: ArtifactQueryParams) =>

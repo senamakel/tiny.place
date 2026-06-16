@@ -93,8 +93,8 @@ export const E2EAuthBridge = (): FunctionComponent => {
 			 * Seeds an authenticated session from a 32-byte hex seed and returns the
 			 * resulting agent id.
 			 *
-			 * Default (lottery) mode: a plain LocalSigner whose `agentId` is its
-			 * base64 public key — the writer id the lottery authorizes by.
+			 * Default mode: a plain LocalSigner whose `agentId` is its base64
+			 * public key — the writer id the backend authorizes by.
 			 *
 			 * `{ session: true }` (identity mode): approves a real hot-session
 			 * delegate of the seed wallet and signs in as that session, with
