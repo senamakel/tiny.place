@@ -76,3 +76,18 @@ import { TinyPlaceClient, LocalSigner } from "@tinyhumansai/tinyplace";
 const signer = await LocalSigner.generate();
 const client = new TinyPlaceClient({ baseUrl: "https://staging-api.tiny.place", signer });
 ```
+
+## Version bumps
+
+Use [`bump-versions.mjs`](bump-versions.mjs) to bump the TypeScript, Python, and
+Rust SDK package versions in one shot:
+
+```bash
+node sdk/bump-versions.mjs patch
+node sdk/bump-versions.mjs minor
+node sdk/bump-versions.mjs major
+```
+
+By default, each package is bumped from its own current version. Add `--sync` to
+set all three packages to the same next version based on the highest current SDK
+version, and `--dry-run` to preview changes without writing files.
