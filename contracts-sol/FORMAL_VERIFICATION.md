@@ -1,4 +1,4 @@
-# Formal Verification — tiny.place settlement contracts
+# Formal Verification — tiny.place custody and job settlement contracts
 
 This document defines the safety **invariants** the on-chain programs must
 uphold, and maps each to its enforcement point in code, its **Kani** proof
@@ -27,13 +27,12 @@ TS integration suite (`tests/`) once a validator is available.
 
 Last verified on the Anchor 1.0.2 / Solana 3.1.10 toolchain:
 
-- **Kani:** 6/6 proof harnesses verified, 0 failures (escrow 3, settlement_job 2,
-  settlement_game_poker 1) — including the direct `disbursed + total` add proven
-  overflow-free.
-- **cargo-fuzz (libFuzzer):** no crashes — `disburse` ~43.6M execs, `rake` ~6.9M,
-  `pot_split` ~7.0M.
-- **`cargo test`:** 20/20 host unit + fuzz tests.
-- **`anchor test`:** 13/13 integration + e2e against a local validator.
+- **Kani:** escrow and settlement_job proof harnesses verified.
+- **cargo-fuzz (libFuzzer):** `disburse` and `rake` targets cover custody
+  solvency and job-fund conservation.
+- **`cargo test`:** host unit + fuzz tests cover the remaining programs.
+- **`anchor test`:** integration + e2e tests exercise escrow and settlement_job
+  against a local validator.
 
 ## Running the proofs
 
@@ -42,7 +41,6 @@ cargo install --locked kani-verifier && cargo kani setup     # one-time
 cd contracts-sol
 cargo kani -p escrow                  # solvency, no-overspend, replay-safety
 cargo kani -p settlement_job          # conservation, no-fee-on-refund
-cargo kani -p settlement_game_poker   # pot conservation
 ```
 
 Unit tests + randomized fuzz loops (no extra tooling — the `fuzz_*` tests run
@@ -58,7 +56,6 @@ Coverage-guided fuzzing (libFuzzer, needs nightly + `cargo install cargo-fuzz`):
 cd contracts-sol
 cargo +nightly fuzz run disburse    # escrow solvency / no-overspend
 cargo +nightly fuzz run rake        # job fund conservation
-cargo +nightly fuzz run pot_split   # poker pot conservation
 ```
 
 ## Coverage
@@ -72,7 +69,7 @@ region/line coverage and are additionally proven by Kani. The instruction
 handlers in each `lib.rs` are not exercised by host `cargo test` (they require
 the Solana runtime: `Clock`, CPI, account constraints), so their line coverage
 is ~0% here. Covering them requires the Anchor integration suite in `tests/`
-(`escrow.ts`, `settlement_job.ts`, `settlement_game_poker.ts`) run against a
+(`escrow.ts`, `settlement_job.ts`) run against a
 local validator:
 
 ```bash
@@ -80,8 +77,7 @@ cd contracts-sol && npm install && anchor test
 ```
 
 That suite exercises the happy paths plus the _constraint-enforced_ invariants
-below (authority/PDA checks, state-machine transitions, replay/expiry, winner
-eligibility, min-players, refund integrity). It needs the Solana + Anchor
+below (authority/PDA checks, state-machine transitions, replay/expiry). It needs the Solana + Anchor
 toolchain installed, so it is not run in the host CI used for the math
 coverage above.
 
@@ -109,23 +105,13 @@ coverage above.
 | **J4 State machine**    | Transitions follow `Open→Delivered→Resolved` / `Disputed`; only `provider` delivers, only `client` approves, only `controller` resolves disputes, only `client` refunds while Open. | per-handler `require!` on state + actor.                                                    | constraint-enforced (TS integration)                     |
 | **J5 Vault binding**    | A job only operates on its own vault, and that vault is bound to this program.                                                                                                      | `constraint = job.vault == vault.key()`; `require!(vault.settlement_program == crate::ID)`. | constraint-enforced (TS integration)                     |
 
-### settlement_game_poker
-
-| ID                        | Invariant                                                                                                     | Enforcement                                                                               | Proof / test                                           |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| **P1 Pot conservation**   | On settle, `payout_to_winner + fee == pot` (the full vault balance).                                          | `math::pot_split`.                                                                        | Kani `pot_split_conserves_value`; test `conserves_pot` |
-| **P2 Fee bound**          | `fee ≤ pot`.                                                                                                  | `math::pot_split`.                                                                        | Kani `pot_split_conserves_value`                       |
-| **P3 Winner eligibility** | The settled winner must have joined (a `PlayerEntry` exists for them) and the payout token account is theirs. | `require!(winner_entry.game == game.key())`, `winner_token.owner == winner_entry.player`. | constraint-enforced (TS integration)                   |
-| **P4 Min players**        | A game can only settle with ≥ 2 players.                                                                      | `require!(game.player_count >= 2)`.                                                       | constraint-enforced (TS integration)                   |
-| **P5 Refund integrity**   | Each player can refund exactly their stake once, only after `cancel`.                                         | `require!(!entry.refunded)`, state `Cancelled`, `disburse(entry.amount, 0)`.              | constraint-enforced (TS integration)                   |
-
 ## Notes on the funds-conservation chain
 
 End-to-end solvency is the composition of two facts:
 
-1. **Settlement never asks escrow for more than the pot/balance.** J1/J3 and
-   P1/P2 prove that the `(amount, fee)` a settlement program passes to
-   `escrow::disburse` sums to at most the available balance it read.
+1. **Job settlement never asks escrow for more than the funded balance.** J1/J3
+   prove that the `(amount, fee)` settlement_job passes to `escrow::disburse`
+   sums to at most the available balance it read.
 2. **Escrow never releases more than it holds.** E1/E2 prove `apply_disburse`
    rejects any `amount + fee` exceeding `deposited − disbursed`, independent of
    what the caller requests.

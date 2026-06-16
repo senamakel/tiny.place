@@ -1,7 +1,7 @@
 # Devnet deploy + e2e
 
-Deploy the custody/settlement programs to Solana devnet and run a full
-round-trip of every settlement mode against them with real (test) USDC.
+Deploy the custody/job-settlement programs to Solana devnet and run a full
+round-trip against them with real (test) USDC.
 
 The TS SDK has **no** Anchor client for these on-chain programs, so the e2e
 drives them directly through their IDLs (`target/idl/*.json`).
@@ -20,7 +20,7 @@ file:
 - `DEPLOYER_PRIVATE_KEY` (base58 or JSON array) **or** `DEPLOYER_KEYPAIR` (file)
 - `RELAY_PRIVATE_KEY` **or** `RELAY_KEYPAIR` (optional; else an ephemeral key)
 - `TESTER_PRIVATE_KEY` **or** `TESTER_KEYPAIR` (optional; makes your wallet the
-  visible job provider + poker/lottery winner)
+  visible job provider)
 
 When you give a private key, the deploy/reclaim scripts write a temp keypair file
 just for the solana command and delete it on exit. (Prefer a file? Convert a
@@ -30,13 +30,13 @@ scripts/devnet/keys/deployer.json`.)
 Required: `DEVNET_RPC_URL`, a deployer key, `USDC_MINT`. Optional: relay key,
 tester key, `AMOUNT_BASE`.
 
-The deployer needs **~7+ SOL** (deploy rent for all four ~250 KB programs, all
+The deployer needs SOL for deploy rent for the remaining programs, all
 recoverable) plus a little for test fees, and some **test USDC** for the e2e.
 
 ## 2. Deploy (build from source + deploy/upgrade)
 
 ```bash
-scripts/devnet/deploy.sh              # anchor build, then deploy all four
+scripts/devnet/deploy.sh              # anchor build, then deploy remaining programs
 SKIP_BUILD=1 scripts/devnet/deploy.sh # reuse existing target/deploy/*.so
 ```
 
@@ -49,8 +49,7 @@ NODE_OPTIONS=--no-experimental-strip-types \
   yarn ts-mocha -p ./tsconfig.json -t 1000000 scripts/devnet/e2e.devnet.ts
 ```
 
-Covers: escrow x402 deposit; job fund→deliver→approve (rake); poker join×2→settle
-(winner takes pot minus rake); lottery buy×2→begin_draw→settle_winner→finalize.
+Covers: escrow x402 deposit and job fund→deliver→approve (rake).
 Each run uses fresh, timestamped vault/record ids so it's safely repeatable.
 
 ## 3b. Verify
@@ -87,7 +86,7 @@ record, so it must be the deployer.
 ## 4. Reclaim rent (when fully done)
 
 ```bash
-scripts/devnet/reclaim.sh    # PERMANENT: closes all four programs, refunds rent
+scripts/devnet/reclaim.sh    # PERMANENT: closes deployed programs, refunds rent
 ```
 
 Closing a program is irreversible — those program ids can never be redeployed.

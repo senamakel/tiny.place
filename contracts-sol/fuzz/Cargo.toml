@@ -11,7 +11,6 @@ cargo-fuzz = true
 libfuzzer-sys = "0.4"
 escrow = { path = "../programs/escrow" }
 settlement_job = { path = "../programs/settlement_job" }
-settlement_game_poker = { path = "../programs/settlement_game_poker" }
 
 [[bin]]
 name = "disburse"
@@ -23,13 +22,6 @@ bench = false
 [[bin]]
 name = "rake"
 path = "fuzz_targets/rake.rs"
-test = false
-doc = false
-bench = false
-
-[[bin]]
-name = "pot_split"
-path = "fuzz_targets/pot_split.rs"
 test = false
 doc = false
 bench = false

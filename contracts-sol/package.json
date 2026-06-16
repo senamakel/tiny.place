@@ -2,7 +2,7 @@
   "name": "tinyplace-contracts-sol",
   "version": "0.1.0",
   "private": true,
-  "description": "Anchor integration tests for the tiny.place settlement programs",
+  "description": "Anchor integration tests for the tiny.place escrow and job settlement programs",
   "scripts": {
     "test": "anchor test",
     "test:logs": "anchor test --skip-build"

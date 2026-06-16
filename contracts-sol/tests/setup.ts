@@ -26,10 +26,6 @@ anchor.setProvider(provider);
 // Anchor populates `workspace` with PascalCase program names from Anchor.toml.
 export const escrowProgram = anchor.workspace.Escrow as anchor.Program<any>;
 export const jobProgram = anchor.workspace.SettlementJob as anchor.Program<any>;
-export const pokerProgram =
-  anchor.workspace.SettlementGamePoker as anchor.Program<any>;
-export const lotteryProgram =
-  anchor.workspace.SettlementGameLottery as anchor.Program<any>;
 
 export const payer = (provider.wallet as anchor.Wallet).payer;
 export const connection = provider.connection;
@@ -113,34 +109,6 @@ export function jobPda(jobId: number[]): PublicKey {
   )[0];
 }
 
-export function gamePda(gameId: number[]): PublicKey {
-  return PublicKey.findProgramAddressSync(
-    [Buffer.from("game"), Buffer.from(gameId)],
-    pokerProgram.programId,
-  )[0];
-}
-
-export function playerPda(game: PublicKey, player: PublicKey): PublicKey {
-  return PublicKey.findProgramAddressSync(
-    [Buffer.from("player"), game.toBuffer(), player.toBuffer()],
-    pokerProgram.programId,
-  )[0];
-}
-
-export function roundPda(roundId: number[]): PublicKey {
-  return PublicKey.findProgramAddressSync(
-    [Buffer.from("round"), Buffer.from(roundId)],
-    lotteryProgram.programId,
-  )[0];
-}
-
-export function ticketPda(round: PublicKey, buyer: PublicKey): PublicKey {
-  return PublicKey.findProgramAddressSync(
-    [Buffer.from("ticket"), round.toBuffer(), buyer.toBuffer()],
-    lotteryProgram.programId,
-  )[0];
-}
-
 /** An x402 PaymentPayload object matching the on-chain struct. */
 export function payload(
   payerKey: PublicKey,
@@ -179,20 +147,12 @@ export async function createVault(
   const vault = vaultPda(vaultId);
   const vaultToken = Keypair.generate();
 
-  // A vault is bound 1:1 to the job/game that will claim it. By convention the
-  // vault label equals the job/game id label, so derive the owning record's PDA
-  // for the matching settlement program (callers can override for negative
-  // tests). Escrow itself never checks `owner`; the binding is enforced by
-  // settlement_job::create_job / settlement_game_poker::create_game.
+  // A vault is bound 1:1 to the job that will claim it. By convention the
+  // vault label equals the job id label, so derive the owning record's PDA for
+  // settlement_job (callers can override for negative tests). Escrow itself
+  // never checks `owner`; the binding is enforced by settlement_job::create_job.
   const resolvedOwner =
-    owner ??
-    (settlementProgram.equals(jobProgram.programId)
-      ? jobPda(vaultId)
-      : settlementProgram.equals(pokerProgram.programId)
-        ? gamePda(vaultId)
-        : settlementProgram.equals(lotteryProgram.programId)
-          ? roundPda(vaultId)
-          : payer.publicKey);
+    owner ?? (settlementProgram.equals(jobProgram.programId) ? jobPda(vaultId) : payer.publicKey);
 
   await escrowProgram.methods
     .createVault(vaultId, settlementProgram, resolvedOwner)

@@ -1,16 +1,14 @@
-// End-to-end devnet exercise of the on-chain custody + settlement programs using
-// real SPL (test USDC). Drives every settlement mode through escrow:
+// End-to-end devnet exercise of the remaining on-chain custody + job settlement
+// programs using real SPL (test USDC):
 //
 //   escrow   : create vault -> x402 deposit -> balance tracked
 //   job      : create -> fund -> deliver -> approve (provider paid minus rake)
-//   poker    : create -> 2 joins -> settle (winner takes pot minus rake)
-//   lottery  : create -> 2 buys -> begin_draw -> settle_winner -> finalize
 //
 // Reads scripts/devnet/.env.devnet. The SDK has no Anchor client for these
-// programs, so this talks to them directly via their IDLs. Parties that must sign
-// (clients/players) are ephemeral keypairs the script funds from the deployer;
-// balances are verified over RPC. Set TESTER_KEYPAIR to make your own wallet a
-// visible participant (job provider + the poker/lottery winner).
+// programs, so this talks to them directly via their IDLs. Parties that must
+// sign are ephemeral keypairs the script funds from the deployer; balances are
+// verified over RPC. Set TESTER_KEYPAIR to make your own wallet a visible job
+// provider.
 //
 // Run:  NODE_OPTIONS=--no-experimental-strip-types \
 //         yarn ts-mocha -p ./tsconfig.json -t 1000000 scripts/devnet/e2e.devnet.ts
@@ -115,8 +113,6 @@ function loadProgram(name: string): any {
 }
 const escrowProgram = loadProgram("escrow");
 const jobProgram = loadProgram("settlement_job");
-const pokerProgram = loadProgram("settlement_game_poker");
-const lotteryProgram = loadProgram("settlement_game_lottery");
 
 // --- helpers ----------------------------------------------------------------
 
@@ -138,17 +134,9 @@ function vaultAuthorityPda(program: PublicKey): PublicKey {
 function recordPda(program: PublicKey, seed: string, id: Array<number>): PublicKey {
   return PublicKey.findProgramAddressSync([enc(seed), Buffer.from(id)], program)[0];
 }
-function childPda(program: PublicKey, seed: string, parent: PublicKey, who: PublicKey): PublicKey {
-  return PublicKey.findProgramAddressSync(
-    [enc(seed), parent.toBuffer(), who.toBuffer()],
-    program,
-  )[0];
-}
-
 // Monotonic nonce source. The escrow nonce tracker is a persistent per-payer
-// account requiring strictly increasing nonces, so a fixed nonce breaks when a
-// wallet is reused across modes (e.g. the tester in poker then lottery) or
-// across reruns. Seeding from the clock keeps it increasing run-to-run too.
+// account requiring strictly increasing nonces, so seeding from the clock keeps
+// it increasing run-to-run.
 let nonceSeq = Date.now();
 const nextNonce = (): number => ++nonceSeq;
 
@@ -255,7 +243,6 @@ describe("devnet e2e (escrow + settlement modes, real USDC)", function () {
     console.log(`    relay  ${relay.publicKey.toBase58()}${haveRelay ? "" : " (ephemeral)"}`);
     console.log(`    tester ${tester ? tester.publicKey.toBase58() : "(none — using ephemeral parties)"}`);
     if (tester) await giveSol(tester.publicKey, 0.05);
-    // The relay signs poker.settle / lottery.draw, so it needs a little SOL.
     await giveSol(relay.publicKey, 0.02);
   });
 
@@ -357,152 +344,4 @@ describe("devnet e2e (escrow + settlement modes, real USDC)", function () {
     console.log(`    ✓ provider got ${AMOUNT - fee}, rake ${fee} (provider ${providerKp.publicKey.toBase58()})`);
   });
 
-  it("poker: two players join and the settler awards the pot minus rake", async () => {
-    const FEE_BPS = 500;
-    const MAX_PLAYERS = 4;
-    const label = `poker-${tag()}`;
-    const gameId = id32(label);
-    const game = recordPda(pokerProgram.programId, "game", gameId);
-    const { vault, vaultToken } = await createVault(pokerProgram.programId, feeAccount, label, game);
-
-    await pokerProgram.methods
-      .createGame(gameId, relay.publicKey, new BN(AMOUNT), MAX_PLAYERS, FEE_BPS)
-      .accounts({ game, creator: deployer.publicKey, vault, systemProgram: SystemProgram.programId })
-      .rpc();
-
-    const p1 = await newParty(AMOUNT);
-    const p2 = tester ?? (await newParty(AMOUNT));
-    if (tester) await giveUsdc(tester.publicKey, AMOUNT);
-    const winner = p2; // tester wins if provided, else ephemeral p2
-
-    for (const p of [p1, p2]) {
-      await initNonce(p);
-      const playerToken = await ataFor(p.publicKey);
-      await pokerProgram.methods
-        .join(payload(p.publicKey, AMOUNT))
-        .accounts({
-          game,
-          playerEntry: childPda(pokerProgram.programId, "player", game, p.publicKey),
-          vault,
-          nonceTracker: noncePda(p.publicKey),
-          player: p.publicKey,
-          playerToken,
-          vaultToken,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          escrowProgram: escrowProgram.programId,
-          systemProgram: SystemProgram.programId,
-        })
-        .signers([p])
-        .rpc();
-    }
-
-    const pot = 2 * AMOUNT;
-    assert.equal(await bal(vaultToken), BigInt(pot));
-    const winnerToken = await ataFor(winner.publicKey);
-    const wBefore = await bal(winnerToken);
-    const feeBefore = await bal(feeAccount);
-
-    await pokerProgram.methods
-      .settle()
-      .accounts({
-        game,
-        settler: relay.publicKey,
-        winnerEntry: childPda(pokerProgram.programId, "player", game, winner.publicKey),
-        vault,
-        vaultAuthority: vaultAuthorityPda(pokerProgram.programId),
-        vaultToken,
-        winnerToken,
-        feeToken: feeAccount,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        escrowProgram: escrowProgram.programId,
-      })
-      .signers([relay])
-      .rpc();
-
-    const fee = rake(pot, FEE_BPS);
-    assert.equal((await bal(winnerToken)) - wBefore, BigInt(pot - fee));
-    assert.equal((await bal(feeAccount)) - feeBefore, BigInt(fee));
-    console.log(`    ✓ winner got ${pot - fee}, rake ${fee} (winner ${winner.publicKey.toBase58()})`);
-  });
-
-  it("lottery: buys accumulate, drawer pays the winner, round finalizes", async () => {
-    const FEE_BPS = 500;
-    const label = `lottery-${tag()}`;
-    const roundId = id32(label);
-    const round = recordPda(lotteryProgram.programId, "round", roundId);
-    const { vault, vaultToken } = await createVault(lotteryProgram.programId, feeAccount, label, round);
-
-    await lotteryProgram.methods
-      .createRound(roundId, relay.publicKey, new BN(AMOUNT), FEE_BPS)
-      .accounts({ round, creator: deployer.publicKey, vault, systemProgram: SystemProgram.programId })
-      .rpc();
-
-    const p1 = await newParty(AMOUNT);
-    const p2 = tester ?? (await newParty(AMOUNT));
-    if (tester) await giveUsdc(tester.publicKey, AMOUNT);
-    const winner = p1;
-
-    for (const p of [p1, p2]) {
-      await initNonce(p);
-      const playerToken = await ataFor(p.publicKey);
-      await lotteryProgram.methods
-        .buy(payload(p.publicKey, AMOUNT))
-        .accounts({
-          round,
-          ticketEntry: childPda(lotteryProgram.programId, "ticket", round, p.publicKey),
-          vault,
-          nonceTracker: noncePda(p.publicKey),
-          player: p.publicKey,
-          playerToken,
-          vaultToken,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          escrowProgram: escrowProgram.programId,
-          systemProgram: SystemProgram.programId,
-        })
-        .signers([p])
-        .rpc();
-    }
-
-    const pot = 2 * AMOUNT;
-    assert.equal(await bal(vaultToken), BigInt(pot));
-
-    await lotteryProgram.methods
-      .beginDraw()
-      .accounts({ round, drawer: relay.publicKey })
-      .signers([relay])
-      .rpc();
-
-    const fee = rake(pot, FEE_BPS);
-    const payout = pot - fee; // single winner takes the whole pool
-    const winnerToken = await ataFor(winner.publicKey);
-    const wBefore = await bal(winnerToken);
-    const feeBefore = await bal(feeAccount);
-
-    await lotteryProgram.methods
-      .settleWinner(new BN(payout), new BN(fee))
-      .accounts({
-        round,
-        drawer: relay.publicKey,
-        vault,
-        vaultAuthority: vaultAuthorityPda(lotteryProgram.programId),
-        vaultToken,
-        winnerToken,
-        feeToken: feeAccount,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        escrowProgram: escrowProgram.programId,
-      })
-      .signers([relay])
-      .rpc();
-
-    await lotteryProgram.methods
-      .finalize()
-      .accounts({ round, drawer: relay.publicKey })
-      .signers([relay])
-      .rpc();
-
-    assert.equal((await bal(winnerToken)) - wBefore, BigInt(payout));
-    assert.equal((await bal(feeAccount)) - feeBefore, BigInt(fee));
-    assert.equal(await bal(vaultToken), BigInt(0), "pot fully disbursed");
-    console.log(`    ✓ winner got ${payout}, rake ${fee} (winner ${winner.publicKey.toBase58()})`);
-  });
 });
