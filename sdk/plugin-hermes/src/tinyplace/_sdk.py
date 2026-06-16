@@ -65,7 +65,13 @@ def _load_sdk() -> object:
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     sys.modules[_ALIAS] = module
-    spec.loader.exec_module(module)
+    try:
+        spec.loader.exec_module(module)
+    except BaseException:
+        # Don't leave a half-initialized module cached — a later import would
+        # silently get the broken object instead of re-attempting the load.
+        sys.modules.pop(_ALIAS, None)
+        raise
     return module
 
 

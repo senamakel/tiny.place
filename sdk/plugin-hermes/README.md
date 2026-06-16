@@ -111,7 +111,7 @@ restart, the file-backed session store round-trips, all five tools register, and
 config gating disables tools when unconfigured.
 
 ```bash
-python3.14 -m venv .venv
+python3 -m venv .venv          # Python 3.11+ (the SDK uses datetime.UTC)
 ./.venv/bin/pip install -e ../python pytest pytest-asyncio pyyaml
 ./.venv/bin/python -m pytest
 ```
