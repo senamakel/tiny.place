@@ -46,6 +46,14 @@ from .keys import (
     verify_pre_key_signature,
 )
 from .memory_store import MemorySessionStore
+from .ratchet import (
+    MAX_SKIP,
+    RatchetHeader,
+    RatchetMessage,
+    encode_header,
+    ratchet_decrypt,
+    ratchet_encrypt,
+)
 from .store import SenderKeyState, SessionState, SessionStore, skipped_key_id
 from .types import PreKeyPair, SignedPreKeyPair, X25519KeyPair
 from .x3dh import (
@@ -105,4 +113,11 @@ __all__ = [
     "x3dh_respond",
     "build_associated_data",
     "verify_pre_key_signature_raw",
+    # double ratchet
+    "MAX_SKIP",
+    "RatchetHeader",
+    "RatchetMessage",
+    "encode_header",
+    "ratchet_encrypt",
+    "ratchet_decrypt",
 ]
