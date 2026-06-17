@@ -17,10 +17,6 @@ import {
 	useJoinGroup,
 	useMyGroups,
 } from "@src/hooks/use-groups";
-import {
-	firstActiveIdentity,
-	useOwnedIdentities,
-} from "@src/hooks/use-marketplace";
 import { useAuthStore } from "@src/store/auth";
 import { groupUnread } from "@src/store/group-conversations";
 
@@ -35,9 +31,12 @@ export const Groups = ({ isDark }: { isDark: boolean }): FunctionComponent => {
 	const [isPublic, setIsPublic] = useState(false);
 	const [messageInput, setMessageInput] = useState("");
 	const agentId = useAuthStore((state) => state.agentId);
-	const ownedIdentities = useOwnedIdentities(agentId);
-	const groupIdentity = firstActiveIdentity(ownedIdentities.data?.identities);
-	const actor = groupIdentity?.username ?? agentId ?? "";
+	// Group membership, fanout delivery, and message addressing are all keyed by
+	// the wallet agent id (a @handle is display/resolution only — authorization is
+	// always by the wallet signature). Using the @handle username here broke
+	// membership detection (member.agentId === actor), `groups.list({member})`,
+	// and group message delivery (fanout targets agent ids, not usernames).
+	const actor = agentId ?? "";
 
 	const myGroupsQuery = useMyGroups(actor);
 	const discoverQuery = useGroups();
