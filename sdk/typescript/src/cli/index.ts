@@ -2,6 +2,7 @@ import { boolFlag, parseArgs } from "./args.js";
 import { HARNESS_CLI_COMMANDS, buildHelp, rawCommands } from "./commands.js";
 import { makeContext } from "./context.js";
 import { formatResult, redactSecrets, resolveFormat } from "./format.js";
+import { runKeygen } from "./keygen.js";
 import { cliVersionInfo, selfUpdate } from "./maintenance.js";
 import { dispatchRaw } from "./raw.js";
 import type { CliContext, ParsedArgs, TinyPlaceCliOptions, TinyPlaceCliResult } from "./types.js";
@@ -69,6 +70,8 @@ async function dispatchTop(ctx: CliContext, parsed: ParsedArgs): Promise<unknown
     case "fund":
       return fundInfo(ctx, flags);
     // Maintenance.
+    case "keygen":
+      return runKeygen(ctx, flags);
     case "update":
     case "upgrade":
       return selfUpdate(flags);
