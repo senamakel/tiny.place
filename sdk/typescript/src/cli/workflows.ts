@@ -1,47 +1,55 @@
-import { listFlag, numberFlag, required, requiredFlag, stringFlag, bodyFlag } from "./args.js";
+import { bodyFlag, listFlag, numberFlag, required, stringFlag } from "./args.js";
 import type { CliContext, Flags, JsonObject } from "./types.js";
 
-// ── init: the skill.md first-run sequence in one command. ────────────────────
+// ── init: set up the wallet + public details, then prompt to fund. ───────────
+//
+// init does NOT claim a @handle — registration is a paid action, so it happens
+// after the wallet is funded (see the `next` checklist). init only configures the
+// auto-generated wallet, your profile (name/bio), and your discoverable card.
 
 export async function initFlow(ctx: CliContext, flags: Flags): Promise<unknown> {
-  const agentId = required(ctx.signer?.agentId, "init requires TINYPLACE_SECRET_KEY");
-  const publicKey = required(ctx.signer?.publicKeyBase64, "init requires a signer public key");
-  const handle = requiredFlag(flags, "handle");
+  const agentId = required(ctx.signer?.agentId, "init requires a wallet (re-run; the key auto-generates)");
+  const publicKey = required(ctx.signer?.publicKeyBase64, "init requires a wallet public key");
+  const name = stringFlag(flags, "name");
   const bio = stringFlag(flags, "bio");
-  const name = stringFlag(flags, "name") ?? handle;
+  const wantedHandle = stringFlag(flags, "handle");
   const steps: Array<JsonObject> = [];
 
-  steps.push(await runStep("register", () =>
-    ctx.client.registry.register({ username: handle, cryptoId: agentId, publicKey, ...(bio ? { bio } : {}) }),
-  ));
-  steps.push(await runStep("set-profile", () =>
-    ctx.client.users.updateProfile(agentId, { displayName: name, ...(bio ? { bio } : {}) } as never),
-  ));
-  steps.push(await runStep("publish-card", () => {
-    const now = new Date().toISOString();
-    return ctx.client.directory.upsertAgent(agentId, {
-      agentId,
-      cryptoId: agentId,
-      publicKey,
-      name,
-      ...(bio ? { description: bio } : {}),
-      ...(listFlag(flags, "skills") ? { skills: listFlag(flags, "skills") } : {}),
-      createdAt: now,
-      updatedAt: now,
-    } as never);
-  }));
+  if (name || bio) {
+    steps.push(await runStep("set-profile", () =>
+      ctx.client.users.updateProfile(agentId, {
+        ...(name ? { displayName: name } : {}),
+        ...(bio ? { bio } : {}),
+      } as never),
+    ));
+  }
+  if (name) {
+    steps.push(await runStep("publish-card", () => {
+      const now = new Date().toISOString();
+      return ctx.client.directory.upsertAgent(agentId, {
+        agentId,
+        cryptoId: agentId,
+        publicKey,
+        name,
+        ...(bio ? { description: bio } : {}),
+        ...(listFlag(flags, "skills") ? { skills: listFlag(flags, "skills") } : {}),
+        createdAt: now,
+        updatedAt: now,
+      } as never);
+    }));
+  }
 
+  const fundUrl = buildFundUrl(ctx.env, publicKey, undefined, "SOL");
   return {
-    handle,
-    agentId,
-    publicKey,
-    fundUrl: buildFundUrl(ctx.env, publicKey),
+    wallet: { agentId, publicKey },
+    profile: { ...(name ? { name } : {}), ...(bio ? { bio } : {}) },
     steps,
+    fundUrl,
+    action: "Fund your SOL wallet, then claim your @handle.",
     next: [
-      "Fund your wallet via fundUrl above (card or crypto) — registration needs SOL/USDC.",
-      "Upload Signal prekeys before messaging (skill.md §12a).",
-      "Discover where to participate: `tinyplace discover`.",
-      "Run your steady-state loop: `tinyplace status`.",
+      `Fund your SOL wallet (card or crypto): ${fundUrl}`,
+      `Once funded, claim your @handle: tinyplace raw register --handle ${wantedHandle ?? "@your-agent"}`,
+      "Then run your steady-state loop: tinyplace status",
     ],
   };
 }

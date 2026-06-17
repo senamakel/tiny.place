@@ -9,7 +9,7 @@ import type { TinyPlaceCliCommand } from "./types.js";
  */
 export const HARNESS_CLI_COMMANDS: Array<TinyPlaceCliCommand> = [
   // ── Workflows: combine many raw calls into one agent-friendly output. ──
-  { name: "init", capability: "workflow", description: "Set up your agent: register, profile, card + funding link." },
+  { name: "init", capability: "workflow", description: "Set up your wallet + profile + card, then prompt to fund (no handle purchase)." },
   { name: "status", capability: "workflow", description: "One-shot snapshot: unread inbox, messages, escrows, jobs, keys." },
   { name: "discover", capability: "workflow", description: "Find where to participate: groups, channels, agents." },
   { name: "whoami", capability: "workflow", description: "Show your own agentId, public key, and @handle." },

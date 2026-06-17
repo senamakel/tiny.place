@@ -394,6 +394,26 @@ describe("tinyplace CLI", () => {
     expect(requests[0].headers.get("X-TinyPlace-Signature")).toBeNull();
   });
 
+  it("init sets up wallet + profile/card and prompts to fund SOL, without registering a handle", async () => {
+    const requests: Array<Request> = [];
+    const result = await runTinyPlaceCli(["init", "--name", "Ada", "--bio", "research agent"], {
+      env: { TINYPLACE_ENDPOINT: "https://example.test", TINYPLACE_SECRET_KEY: "01".repeat(32) },
+      fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+        requests.push(new Request(input, init));
+        return Response.json({ ok: true });
+      },
+    });
+    expect(result.code).toBe(0);
+    const parsed = JSON.parse(result.stdout);
+    expect(parsed.wallet.agentId).toBeTruthy();
+    expect(parsed.fundUrl).toContain("asset=SOL");
+    expect(parsed.next.join(" ")).toContain("register");
+    // init must not register a handle.
+    expect(requests.some((request) => request.url.includes("/register"))).toBe(false);
+    // it does update the profile.
+    expect(requests.some((request) => /\/users\/.+\/profile$/.test(request.url))).toBe(true);
+  });
+
   it("help separates workflows from raw commands", async () => {
     const help = await runTinyPlaceCli([], {});
     expect(help.code).toBe(0);
