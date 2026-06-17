@@ -6,12 +6,18 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import type { FunctionComponent } from "@src/common/types";
-import { buildDeBridgeFundUrl } from "@src/common/debridge";
+import {
+	buildDeBridgeFundUrl,
+	SOL_NATIVE_SOLANA,
+	USDC_SOLANA_MINT,
+} from "@src/common/debridge";
 import {
 	buildMoonPayBuyUrl,
 	MOONPAY_BASE_CURRENCY_CODE,
+	MOONPAY_SOL_CURRENCY_CODE,
 	MOONPAY_USDC_SOLANA_CURRENCY_CODE,
 } from "@src/common/moonpay";
+import { normalizeSolanaAddress } from "@src/common/solana-address";
 import { Chip } from "@src/components/ui/Chip";
 import { useTabRoute } from "@src/hooks/use-tab-route";
 
@@ -34,6 +40,34 @@ const fundingMethodLabels: Record<FundingMethod, string> = {
 	crypto: "Crypto",
 };
 
+// The wallet can be funded with native SOL or with USDC on Solana. A `?asset=`
+// URL param (sent by the CLI's fund link) preselects which one.
+const fundAssets = ["SOL", "USDC"] as const;
+
+type FundAsset = (typeof fundAssets)[number];
+
+const fundAssetLabels: Record<FundAsset, string> = {
+	SOL: "SOL",
+	USDC: "USDC",
+};
+
+// Maps the chosen asset to the MoonPay currency code and deBridge output token
+// that settle into it on the user's Solana wallet.
+const moonPayCurrencyCode = (asset: FundAsset): string =>
+	asset === "SOL"
+		? MOONPAY_SOL_CURRENCY_CODE
+		: MOONPAY_USDC_SOLANA_CURRENCY_CODE;
+
+const deBridgeOutputCurrency = (asset: FundAsset): string =>
+	asset === "SOL" ? SOL_NATIVE_SOLANA : USDC_SOLANA_MINT;
+
+// Accepts a `?asset=` value case-insensitively; anything unrecognized is
+// ignored so the default asset is used.
+const parseAsset = (raw: string | null): FundAsset | undefined => {
+	const upper = raw?.trim().toUpperCase();
+	return fundAssets.find((asset) => asset === upper);
+};
+
 // Accepts a positive decimal USD amount from the URL; anything else is ignored
 // so a stray ?amount= value can't break the widget.
 const sanitizeAmount = (raw: string | null): string | undefined => {
@@ -50,15 +84,17 @@ const sanitizeAmount = (raw: string | null): string | undefined => {
 type WidgetProperties = {
 	isDark: boolean;
 	walletAddress?: string;
+	asset: FundAsset;
 };
 
 type CardFundPanelProperties = WidgetProperties & {
 	baseCurrencyAmount?: string;
 };
 
-// Funds the SOL wallet with USDC via a fiat card payment (fiat → USDC on
-// Solana), redirecting to MoonPay's hosted widget.
+// Funds the SOL wallet with the chosen asset via a fiat card payment (fiat →
+// SOL or USDC on Solana), redirecting to MoonPay's hosted widget.
 const CardFundPanel = ({
+	asset,
 	baseCurrencyAmount,
 	isDark,
 	walletAddress,
@@ -78,10 +114,9 @@ const CardFundPanel = ({
 			{baseCurrencyAmount === undefined
 				? ""
 				: ` (prefilled to $${baseCurrencyAmount})`}
-			; USDC settles straight to your Solana wallet.
+			; {asset} settles straight to your Solana wallet.
 		</p>
 		<a
-			href={buildMoonPayBuyUrl({ walletAddress, baseCurrencyAmount })}
 			rel="noreferrer"
 			target="_blank"
 			className={`inline-flex items-center rounded-md px-4 py-2 text-sm font-medium transition-colors ${
@@ -89,15 +124,22 @@ const CardFundPanel = ({
 					? "bg-white text-black hover:bg-neutral-200"
 					: "bg-black text-white hover:bg-neutral-800"
 			}`}
+			href={buildMoonPayBuyUrl({
+				walletAddress,
+				baseCurrencyAmount,
+				currencyCode: moonPayCurrencyCode(asset),
+			})}
 		>
 			Fund with card on MoonPay →
 		</a>
 	</div>
 );
 
-// Funds the SOL wallet with USDC by bridging crypto from another chain via
-// deBridge. We can only build the link once we know the destination wallet.
+// Funds the SOL wallet with the chosen asset by bridging crypto from another
+// chain via deBridge. We can only build the link once we know the destination
+// wallet.
 const CryptoFundPanel = ({
+	asset,
 	isDark,
 	walletAddress,
 }: WidgetProperties): FunctionComponent => {
@@ -110,8 +152,8 @@ const CryptoFundPanel = ({
 						: "border-neutral-200 bg-neutral-50 text-neutral-500"
 				}`}
 			>
-				Connect your wallet, or open this page with a <code>?wallet=</code>{" "}
-				address, to fund it with crypto.
+				Connect your wallet, or open this page with an <code>?address=</code>{" "}
+				wallet, to fund it with crypto.
 			</p>
 		);
 	}
@@ -127,12 +169,11 @@ const CryptoFundPanel = ({
 			<p
 				className={`text-sm ${isDark ? "text-neutral-400" : "text-neutral-600"}`}
 			>
-				Already hold crypto on another chain? Bridge it into USDC on this Solana
-				wallet through deBridge. You pick the source chain, token, and amount on
-				deBridge; funds settle straight to your wallet.
+				Already hold crypto on another chain? Bridge it into {asset} on this
+				Solana wallet through deBridge. You pick the source chain, token, and
+				amount on deBridge; funds settle straight to your wallet.
 			</p>
 			<a
-				href={buildDeBridgeFundUrl(walletAddress)}
 				rel="noreferrer"
 				target="_blank"
 				className={`inline-flex items-center rounded-md px-4 py-2 text-sm font-medium transition-colors ${
@@ -140,6 +181,10 @@ const CryptoFundPanel = ({
 						? "bg-white text-black hover:bg-neutral-200"
 						: "bg-black text-white hover:bg-neutral-800"
 				}`}
+				href={buildDeBridgeFundUrl(
+					walletAddress,
+					deBridgeOutputCurrency(asset)
+				)}
 			>
 				Fund with crypto on deBridge →
 			</a>
@@ -147,13 +192,15 @@ const CryptoFundPanel = ({
 	);
 };
 
-// Cashes USDC on Solana out to fiat, refunding to the connected SOL wallet.
+// Cashes the chosen asset on Solana out to fiat, refunding to the connected SOL
+// wallet.
 const OffRampWidget = ({
+	asset,
 	walletAddress,
 }: WidgetProperties): FunctionComponent => (
 	<MoonPaySellWidget
 		visible
-		baseCurrencyCode={MOONPAY_USDC_SOLANA_CURRENCY_CODE}
+		baseCurrencyCode={moonPayCurrencyCode(asset)}
 		quoteCurrencyCode={MOONPAY_BASE_CURRENCY_CODE}
 		refundWalletAddress={walletAddress}
 		variant="embedded"
@@ -170,15 +217,22 @@ export const OnRamp = ({ isDark }: OnRampProperties): FunctionComponent => {
 	const { activeTab, setTab } = useTabRoute<Tab>(tabs, "onramp");
 	const [fundingMethod, setFundingMethod] = useState<FundingMethod>("card");
 
-	// A `?wallet=` URL param (e.g. an agent funding link) targets a specific
-	// wallet and takes precedence over the connected one; otherwise we use the
-	// connected wallet, if any.
-	const walletParameter = searchParameters.get("wallet")?.trim();
+	// A funding link (e.g. the CLI's `/fund` link) targets a specific wallet via
+	// `?address=` (or the legacy `?wallet=`) and takes precedence over the
+	// connected one; otherwise we use the connected wallet, if any. The address
+	// may arrive base58 or base64 — normalize it to the base58 form MoonPay and
+	// deBridge require.
+	const addressParameter =
+		searchParameters.get("address") ?? searchParameters.get("wallet");
 	const walletAddress =
-		walletParameter !== undefined && walletParameter !== ""
-			? walletParameter
-			: publicKey?.toBase58();
+		normalizeSolanaAddress(addressParameter) ?? publicKey?.toBase58();
+
 	const amount = sanitizeAmount(searchParameters.get("amount"));
+
+	// The asset to fund/cash out, preselected from `?asset=` (defaults to USDC).
+	const [asset, setAsset] = useState<FundAsset>(
+		parseAsset(searchParameters.get("asset")) ?? "USDC"
+	);
 
 	return (
 		<div className="space-y-3">
@@ -215,6 +269,29 @@ export const OnRamp = ({ isDark }: OnRampProperties): FunctionComponent => {
 				</p>
 			)}
 
+			<div className="space-y-1">
+				<p
+					className={`text-xs font-medium ${isDark ? "text-neutral-400" : "text-neutral-500"}`}
+				>
+					Asset
+				</p>
+				<div className="flex gap-1">
+					{fundAssets.map((option) => (
+						<Chip
+							key={option}
+							active={asset === option}
+							isDark={isDark}
+							shape="pill"
+							onClick={(): void => {
+								setAsset(option);
+							}}
+						>
+							{fundAssetLabels[option]}
+						</Chip>
+					))}
+				</div>
+			</div>
+
 			<div className="flex gap-1">
 				{tabs.map((tab) => (
 					<Chip
@@ -249,16 +326,25 @@ export const OnRamp = ({ isDark }: OnRampProperties): FunctionComponent => {
 					</div>
 					{fundingMethod === "card" ? (
 						<CardFundPanel
+							asset={asset}
 							baseCurrencyAmount={amount}
 							isDark={isDark}
 							walletAddress={walletAddress}
 						/>
 					) : (
-						<CryptoFundPanel isDark={isDark} walletAddress={walletAddress} />
+						<CryptoFundPanel
+							asset={asset}
+							isDark={isDark}
+							walletAddress={walletAddress}
+						/>
 					)}
 				</div>
 			) : (
-				<OffRampWidget isDark={isDark} walletAddress={walletAddress} />
+				<OffRampWidget
+					asset={asset}
+					isDark={isDark}
+					walletAddress={walletAddress}
+				/>
 			)}
 		</div>
 	);
