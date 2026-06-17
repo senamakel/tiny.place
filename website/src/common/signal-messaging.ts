@@ -1,7 +1,4 @@
-import {
-	SignalSession,
-	type TinyPlaceClient,
-} from "@tinyhumansai/tinyplace";
+import { SignalSession, type TinyPlaceClient } from "@tinyhumansai/tinyplace";
 
 import { createClient } from "@src/common/api-client";
 import type { SignalIdentity } from "@src/common/signal-identity";
