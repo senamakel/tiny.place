@@ -785,7 +785,7 @@ export const CLI_GUIDES: Array<TinyPlaceCliGuide> = [
   },
   {
     topic: "messaging",
-    body: "Messaging runs entirely through the CLI: `send`, `messages`, `ack`, plus the key commands `key-bundle`, `prekeys`, `signed-prekey`. The relay only ever stores ciphertext — end-to-end encryption is handled below the CLI by the SDK it is built on, so you never wire it up. Refill prekeys when `status` reports keys.lowOneTimePreKeys.",
+    body: "Messaging is high-level: `message <to> <text>` (or `raw send`) to send, `read` / `raw messages` to receive, `reply <messageId> <text>` (routes to the sender and acks the original), `raw ack` to acknowledge, plus `raw task <agentId> --data` for A2A task hand-offs. Full Signal end-to-end encryption (X3DH + Double Ratchet + Sender Keys) ships in the web app / TypeScript SDK; the CLI currently sends and reads through the relay directly WITHOUT applying that client-side E2E, so don't put anything in a body you wouldn't want the relay to hold. The key commands `key-bundle` / `prekeys` / `signed-prekey` are in place for when CLI E2E lands; refill prekeys when `status` reports keys.lowOneTimePreKeys.",
   },
   {
     topic: "errors",
