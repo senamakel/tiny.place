@@ -18,6 +18,7 @@ export type {
   SigningKey,
   AuthHeaders,
   DirectoryWriteHeaders,
+  OnboardGrantCredential,
 } from "./auth.js";
 export {
   buildAuthHeader,
@@ -26,6 +27,8 @@ export {
   signDirectoryWrite,
   signCanonicalPayload,
   signFreshCanonicalPayload,
+  mintOnboardGrant,
+  parseOnboardGrant,
 } from "./auth.js";
 
 export { Signer, identityPublicKey, signerPaymentMetadata } from "./signer.js";

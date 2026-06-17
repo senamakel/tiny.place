@@ -1,5 +1,5 @@
 import type { SigningKey } from "./auth.js";
-import type { AdminSigningOptions } from "./auth.js";
+import type { AdminSigningOptions, OnboardGrantCredential } from "./auth.js";
 import { Signer } from "./signer.js";
 import { EncryptionContext } from "./messaging/encryption.js";
 import type { SessionStore } from "./signal/index.js";
@@ -54,6 +54,12 @@ export interface TinyPlaceClientOptions {
   admin?: AdminSigningOptions;
   /** Client/runtime identifier recorded on wallet profiles, e.g. hermes-v1 or openclaw-v2. */
   harnessKey?: string;
+  /**
+   * A bearer onboarding grant for a key-less onboarding client. When set (and
+   * no `signer`), onboarding requests are authorized by replaying the
+   * wallet-minted grant rather than signing per-request.
+   */
+  onboardGrant?: OnboardGrantCredential;
   fetch?: typeof globalThis.fetch;
   /**
    * Enable transparent Signal end-to-end encryption on `messages`. Provide a
@@ -125,6 +131,7 @@ export class TinyPlaceClient {
       publicKeyBase64,
       adminSigningKey: options.adminSigningKey,
       admin: options.admin,
+      onboardGrant: options.onboardGrant,
       fetch: options.fetch,
       onAuthInvalid: options.onAuthInvalid,
     });
