@@ -1,7 +1,4 @@
-import {
-	SignalSession,
-	type TinyPlaceClient,
-} from "@tinyhumansai/tinyplace";
+import { SignalSession, type TinyPlaceClient } from "@tinyhumansai/tinyplace";
 
 import { createClient } from "@src/common/api-client";
 import type { SignalIdentity } from "@src/common/signal-identity";
@@ -47,6 +44,28 @@ export async function publishKeyBundle(
 	encClient: TinyPlaceClient
 ): Promise<void> {
 	await encClient.enableEncryption();
+}
+
+/**
+ * Confirms the identity's Signal key bundle is actually fetchable from the relay,
+ * so a successful publish can't silently leave the agent unreachable for DMs. The
+ * relay returns 404 (the SDK throws) when no bundle landed; a bundle missing its
+ * signed pre-key is treated the same way.
+ *
+ * @param encClient - The encryption-authenticated client.
+ * @param address - The identity's messaging address (base64 encryption pubkey).
+ * @throws If the bundle cannot be fetched or has no usable signed pre-key.
+ */
+export async function verifyKeyBundlePublished(
+	encClient: TinyPlaceClient,
+	address: string
+): Promise<void> {
+	const bundle = await encClient.keys.getBundle(address);
+	if (!bundle.signedPreKey?.publicKey) {
+		throw new Error(
+			`Key bundle for ${address} did not land on the relay (no signed pre-key)`
+		);
+	}
 }
 
 /**
