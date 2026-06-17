@@ -450,7 +450,7 @@ export async function dispatchRaw(
       return client.payments.settle(typedBody(flags));
     case "payment-verify":
       return client.payments.verify(typedBody(flags));
-    case "balance":
+    case "payment-networks":
       return client.payments.supported();
     case "subscription":
       return client.payments.getSubscription(

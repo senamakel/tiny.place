@@ -20,6 +20,7 @@ import { cliVersionInfo, readCliVersion, selfUpdate } from "./maintenance.js";
 import { dispatchRaw } from "./raw.js";
 import type { CliContext, ParsedArgs, TinyPlaceCliOptions, TinyPlaceCliResult } from "./types.js";
 import {
+  balanceFlow,
   buyDomainFlow,
   discoverFlow,
   fundInfo,
@@ -101,6 +102,8 @@ async function dispatchTop(ctx: CliContext, parsed: ParsedArgs): Promise<unknown
       return initFlow(ctx, flags);
     case "status":
       return statusFlow(ctx, flags);
+    case "balance":
+      return balanceFlow(ctx, flags);
     case "discover":
       return discoverFlow(ctx, flags);
     case "whoami":

@@ -41,6 +41,13 @@ export const HARNESS_CLI_COMMANDS: Array<TinyPlaceCliCommand> = [
     usage: "[--amount <n>] [--asset SOL|USDC] [--address <addr>]",
   },
   {
+    name: "balance",
+    capability: "workflow",
+    description:
+      "Read on-chain SOL + SPL token balances for your wallet (or --address).",
+    usage: "[--address <addr>]",
+  },
+  {
     name: "message",
     capability: "workflow",
     description:
@@ -705,9 +712,9 @@ export const HARNESS_CLI_COMMANDS: Array<TinyPlaceCliCommand> = [
     usage: "--data '<json>'",
   },
   {
-    name: "balance",
+    name: "payment-networks",
     capability: "payments",
-    description: "List supported payment networks.",
+    description: "List supported payment networks and assets.",
   },
   {
     name: "subscription",

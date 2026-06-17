@@ -13,6 +13,7 @@ import {
 } from "./keygen.js";
 import { runFlow, runPaidAction, suggest, type Suggestion } from "./suggest.js";
 import type { CliContext, Flags, JsonObject } from "./types.js";
+import type { OnChainBalances } from "../api/solana.js";
 
 // ── init: set up the wallet + public details, then prompt to fund. ───────────
 //
@@ -155,6 +156,37 @@ async function maybeGrindVanity(
   );
 }
 
+// ── balance: read the agent's on-chain SOL + SPL token balances. ─────────────
+
+export async function balanceFlow(
+  ctx: CliContext,
+  flags: Flags,
+): Promise<unknown> {
+  const address = required(
+    stringFlag(flags, "address") ?? ctx.signer?.agentId,
+    "balance requires a wallet (set TINYPLACE_SECRET_KEY or pass --address)",
+  );
+
+  const onChain = await ctx.client.solana.balances(address);
+  const fundUrl = buildFundUrl(ctx.env, address, undefined, "SOL");
+  const attention: Array<string> = [];
+  const suggestions: Array<Suggestion> = [];
+
+  const native = onChain.balances.find((entry) => entry.mint === undefined);
+  if (native && BigInt(native.raw) === 0n) {
+    attention.push(`${native.symbol} balance is empty — fund your wallet`);
+    suggestions.push(suggest("Fund your wallet", "tinyplace fund"));
+  }
+
+  return {
+    ...onChain,
+    explorer: `${onChain.explorerUrl.replace(/\/+$/, "")}/account/${address}`,
+    fundUrl,
+    attention,
+    suggestions,
+  };
+}
+
 // ── status: a single snapshot of everything that needs the agent's attention. ─
 
 export async function statusFlow(
@@ -168,8 +200,8 @@ export async function statusFlow(
   const publicKey = ctx.signer?.publicKeyBase64;
   const limit = numberFlag(flags, "limit") ?? 5;
 
-  const [counts, inbox, messages, escrows, jobs, keyHealth] = await Promise.all(
-    [
+  const [counts, inbox, messages, escrows, jobs, keyHealth, balances] =
+    await Promise.all([
       settle(() => ctx.client.inbox.counts(agentId)),
       settle(() => ctx.client.inbox.list(undefined, agentId)),
       settle(() => ctx.client.messages.list(publicKey ?? agentId, limit)),
@@ -180,8 +212,8 @@ export async function statusFlow(
           ? ctx.client.keys.health(publicKey)
           : Promise.reject(new Error("no signer public key")),
       ),
-    ],
-  );
+      settle(() => ctx.client.solana.balances(agentId)),
+    ]);
 
   const inboxSummary = summarize(inbox, limit);
   const messageSummary = summarize(messages, limit);
@@ -234,8 +266,33 @@ export async function statusFlow(
     );
   }
 
+  // On-chain balance: always queryable (no identity needed), so it doubles as a
+  // health check that the wallet is funded enough to act.
+  const balanceSummary = summarizeBalances(balances.ok ? balances.value : undefined);
+  if (balances.ok) {
+    const native = balances.value.balances.find((entry) => entry.mint === undefined);
+    if (native && BigInt(native.raw) === 0n) {
+      attention.push(`${native.symbol} balance is empty — fund your wallet to act`);
+      suggestions.push(suggest("Fund your wallet", "tinyplace fund"));
+    }
+  }
+
+  // Onboarding awareness: inbox/keys 403/404 usually mean the identity was never
+  // registered against this endpoint. Surface a clear next step instead of leaving
+  // raw HTTP errors as the only signal.
+  if (notRegistered(counts) && notRegistered(keyHealth)) {
+    attention.push(
+      "Not registered on this endpoint yet — run `tinyplace init` then `tinyplace register`",
+    );
+    suggestions.push(
+      suggest("Set up your profile + discoverable card", "tinyplace init"),
+      suggest("Claim your @handle (after funding)", "tinyplace register @you --execute"),
+    );
+  }
+
   return {
     agentId,
+    balance: balanceSummary,
     counts: counts.ok ? counts.value : { error: counts.error },
     inbox: inboxSummary,
     messages: messageSummary,
@@ -245,6 +302,30 @@ export async function statusFlow(
     attention,
     suggestions,
   };
+}
+
+/** Condenses a settled on-chain balance read into a compact status field. */
+function summarizeBalances(
+  onChain: OnChainBalances | undefined,
+):
+  | { error: string }
+  | { network: string; assets: Record<string, string> } {
+  if (!onChain) {
+    return { error: "balance unavailable" };
+  }
+  const assets: Record<string, string> = {};
+  for (const entry of onChain.balances) {
+    assets[entry.symbol] = entry.amount;
+  }
+  return { network: onChain.network, assets };
+}
+
+/** True when a settled call failed with a 401/403/404 — the not-onboarded shape. */
+function notRegistered(settled: { ok: boolean; error?: string }): boolean {
+  if (settled.ok || !settled.error) {
+    return false;
+  }
+  return /HTTP (401|403|404)/.test(settled.error);
 }
 
 // ── discover: where can this agent participate right now? ─────────────────────
