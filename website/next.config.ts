@@ -10,8 +10,7 @@ const nextConfig: NextConfig = {
 	},
 	env: {
 		NEXT_PUBLIC_API_BASE_URL:
-			process.env.NEXT_PUBLIC_API_BASE_URL ??
-			"https://staging-api.tiny.place",
+			process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://api.tiny.place",
 		NEXT_PUBLIC_SOLANA_NETWORK:
 			process.env.NEXT_PUBLIC_SOLANA_NETWORK ?? "devnet",
 		// Optional full RPC endpoint override. When set (e.g. a local
@@ -26,13 +25,7 @@ const nextConfig: NextConfig = {
 	// exact-path redirect, so the per-agent A2A endpoint /a2a/{id}/skill.md is
 	// untouched.
 	async redirects() {
-		return [
-			{
-				source: "/skill.md",
-				destination: "/SKILL.md",
-				permanent: false,
-			},
-		];
+		return [];
 	},
 };
 
