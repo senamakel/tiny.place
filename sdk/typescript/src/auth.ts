@@ -1,8 +1,89 @@
-import { sha256Hex } from "./crypto.js";
+import { canonicalPayload, sha256Hex } from "./crypto.js";
 
 export interface SigningKey {
   agentId: string;
   sign(data: Uint8Array): Promise<Uint8Array> | Uint8Array;
+}
+
+/**
+ * A bearer onboarding grant: a scoped, short-TTL capability token the wallet
+ * signs once (CLI-side, where the private key lives) and a key-less web client
+ * replays as its credential on every onboarding request. The token is
+ * `og1.<base64url(claims)>.<v1-freshness-signature>`; the web client attaches
+ * `Authorization: TinyPlace-Onboard <wallet>:<token>` to each call instead of
+ * signing per-request.
+ */
+export interface OnboardGrantCredential {
+  readonly kind: "onboard-grant";
+  /** The wallet cryptoId the grant was minted for. */
+  readonly wallet: string;
+  /** The self-describing token `og1.<b64url(claims)>.<v1-sig>`. */
+  readonly grant: string;
+  /** The Authorization header value to present on each request. */
+  authorizationHeader(): string;
+  /** The `<wallet>:<token>` value to carry in an onboarding URL fragment. */
+  fragmentValue(): string;
+}
+
+const ONBOARD_GRANT_SCHEME = "TinyPlace-Onboard";
+const ONBOARD_TOKEN_PREFIX = "og1.";
+
+function onboardCredential(
+  wallet: string,
+  grant: string,
+): OnboardGrantCredential {
+  return {
+    kind: "onboard-grant",
+    wallet,
+    grant,
+    authorizationHeader: () => `${ONBOARD_GRANT_SCHEME} ${wallet}:${grant}`,
+    fragmentValue: () => `${wallet}:${grant}`,
+  };
+}
+
+/**
+ * Mint a bearer onboarding grant. The signed bytes are
+ * `canonicalPayload("onboard.grant", claims)`; the claims are also carried
+ * (base64url) inside the token purely for transport — the server reconstructs
+ * and verifies the canonical payload from them. `scope` must list only
+ * whitelisted onboarding actions, and `ttlMs` must be within the server-side
+ * ceiling (currently 1h; 15m is the recommended value).
+ */
+export async function mintOnboardGrant(
+  key: SigningKey,
+  ownerPublicKeyBase64: string,
+  scope: Array<string>,
+  ttlMs: number,
+): Promise<OnboardGrantCredential> {
+  const wallet = key.agentId;
+  const expiresAt = new Date(Date.now() + ttlMs).toISOString();
+  const claims = { wallet, ownerPublicKey: ownerPublicKeyBase64, scope, expiresAt };
+  const payload = canonicalPayload("onboard.grant", {
+    expiresAt,
+    ownerPublicKey: ownerPublicKeyBase64,
+    scope,
+    wallet,
+  });
+  const signature = await signFreshCanonicalPayload(key, payload);
+  const grant = `${ONBOARD_TOKEN_PREFIX}${toBase64Url(JSON.stringify(claims))}.${signature}`;
+  return onboardCredential(wallet, grant);
+}
+
+/**
+ * Parse an onboarding grant from a `<wallet>:<token>` URL-fragment value (the
+ * inverse of {@link OnboardGrantCredential.fragmentValue}). Returns undefined
+ * when the value is malformed.
+ */
+export function parseOnboardGrant(
+  value: string,
+): OnboardGrantCredential | undefined {
+  const trimmed = value.trim();
+  const separator = trimmed.indexOf(":");
+  if (separator <= 0) return undefined;
+  const wallet = trimmed.slice(0, separator).trim();
+  const grant = trimmed.slice(separator + 1).trim();
+  if (!wallet || !grant.startsWith(ONBOARD_TOKEN_PREFIX)) return undefined;
+  return onboardCredential(wallet, grant);
 }
 
 export interface AuthHeaders {

@@ -1,4 +1,4 @@
-import type { SigningKey } from "./auth.js";
+import type { OnboardGrantCredential, SigningKey } from "./auth.js";
 import {
   signAdminRequest,
   signDirectoryWrite,
@@ -53,6 +53,13 @@ export interface HttpClientOptions {
   publicKeyBase64?: string;
   adminSigningKey?: SigningKey;
   admin?: AdminSigningOptions;
+  /**
+   * A bearer onboarding grant for key-less onboarding clients. When set, every
+   * request carries `Authorization: TinyPlace-Onboard …` instead of a
+   * per-request signature; the backend authorizes whitelisted onboarding
+   * actions for the grant's wallet.
+   */
+  onboardGrant?: OnboardGrantCredential;
   fetch?: typeof globalThis.fetch;
   /**
    * Invoked when a request is rejected with 401/403, just before the error is
@@ -87,6 +94,7 @@ export class HttpClient {
   private readonly publicKeyBase64?: string;
   private readonly adminSigningKey?: SigningKey;
   private readonly admin?: AdminSigningOptions;
+  private readonly onboardGrant?: OnboardGrantCredential;
   private readonly _fetch: typeof globalThis.fetch;
   private readonly onAuthInvalid?: (status: number, body: unknown) => void;
 
@@ -96,6 +104,7 @@ export class HttpClient {
     this.publicKeyBase64 = options.publicKeyBase64;
     this.adminSigningKey = options.adminSigningKey;
     this.admin = options.admin;
+    this.onboardGrant = options.onboardGrant;
     this._fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
     this.onAuthInvalid = options.onAuthInvalid;
   }
@@ -133,6 +142,13 @@ export class HttpClient {
     };
 
     const bodyStr = options?.body != null ? JSON.stringify(options.body) : "";
+
+    // A key-less onboarding client carries its bearer grant on every request in
+    // place of a per-request signature. The backend authorizes only whitelisted
+    // onboarding actions for the grant's wallet.
+    if (this.onboardGrant) {
+      headers["Authorization"] = this.onboardGrant.authorizationHeader();
+    }
 
     if (options?.adminAuth && this.adminSigningKey) {
       const requestUri = `${path}${queryString}`;
