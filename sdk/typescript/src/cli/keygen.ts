@@ -3,16 +3,14 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { ed25519 } from "@noble/curves/ed25519.js";
 import { publicKeyToSolanaAddress } from "../crypto.js";
-import { boolFlag, bytesToHex, numberFlag, requiredFlag, stringFlag } from "./args.js";
+import { bytesToHex, numberFlag, requiredFlag } from "./args.js";
 import type { CliContext, Flags } from "./types.js";
 
 // A tiny.place wallet address is the base58 Solana address (== signer.agentId).
-const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-// Encoding 32 bytes in base58 yields a 44-char address ~96% of the time, and a
-// 44-char address can only begin with one of these "leadable" characters. A
-// prefix whose first character is leadable grinds fast; anything else (lowercase,
-// R–Z, etc.) only appears in the rare ~4% short-encoding case and is very slow.
-const LEADABLE_FIRST = "123456789ABCDEFGHJKLMNPQ";
+// Matching is case-insensitive, so a base58 address lowercases to [1-9a-z]: any
+// letter or a digit 1-9 is a valid prefix character (only "0" is impossible).
+const VALID_PREFIX_CHARS = "123456789abcdefghijklmnopqrstuvwxyz";
+const MAX_TIMEOUT_SECONDS = 60;
 
 export interface VanityHit {
   seedHex: string;
@@ -20,32 +18,41 @@ export interface VanityHit {
   attempts: number;
 }
 
+export interface VanityWallet extends VanityHit {
+  matched: boolean;
+}
+
 export function validateVanityPrefix(prefix: string): void {
   if (!prefix) {
     throw new Error("usage: --vanity <prefix>");
   }
-  for (const char of prefix) {
-    if (!BASE58_ALPHABET.includes(char)) {
+  for (const char of prefix.toLowerCase()) {
+    if (!VALID_PREFIX_CHARS.includes(char)) {
       throw new Error(
-        `'${char}' is not a base58 character — addresses exclude 0 (zero), O, I, and l. ` +
-          `Try a prefix using only: ${BASE58_ALPHABET}`,
+        `'${char}' can never appear in a wallet address — base58 has no "0" (zero) and no symbols. ` +
+          "Use letters or digits 1-9.",
       );
     }
   }
 }
 
 function randomSeed(): Uint8Array {
+  // Fresh CSPRNG bytes every attempt — the grind is fully randomized.
   const seed = new Uint8Array(32);
   globalThis.crypto.getRandomValues(seed);
   return seed;
 }
 
-/** Grinds random keypairs until the base58 address matches `prefix`, or the budget runs out. */
+function addressForSeed(seed: Uint8Array): string {
+  return publicKeyToSolanaAddress(ed25519.getPublicKey(seed));
+}
+
+/** Grinds random keypairs until the address starts (case-insensitively) with `prefix`, or the budget runs out. */
 export function grindVanity(
   prefix: string,
-  options: { timeoutMs: number; ignoreCase: boolean; now: () => number },
+  options: { timeoutMs: number; now: () => number },
 ): VanityHit | null {
-  const needle = options.ignoreCase ? prefix.toLowerCase() : prefix;
+  const needle = prefix.toLowerCase();
   const deadline = options.now() + options.timeoutMs;
   let attempts = 0;
   while (options.now() < deadline) {
@@ -53,11 +60,8 @@ export function grindVanity(
     for (let index = 0; index < 5000; index += 1) {
       attempts += 1;
       const seed = randomSeed();
-      const address = publicKeyToSolanaAddress(ed25519.getPublicKey(seed));
-      const head = options.ignoreCase
-        ? address.slice(0, prefix.length).toLowerCase()
-        : address.slice(0, prefix.length);
-      if (head === needle) {
+      const address = addressForSeed(seed);
+      if (address.slice(0, prefix.length).toLowerCase() === needle) {
         return { seedHex: bytesToHex(seed), address, attempts };
       }
     }
@@ -65,38 +69,42 @@ export function grindVanity(
   return null;
 }
 
+/** Grinds for a vanity prefix within the budget; on timeout, returns a fresh random wallet. */
+export function generateVanityWallet(
+  prefix: string,
+  options: { timeoutMs: number; now: () => number },
+): VanityWallet {
+  const hit = grindVanity(prefix, options);
+  if (hit) {
+    return { ...hit, matched: true };
+  }
+  const seed = randomSeed();
+  return { seedHex: bytesToHex(seed), address: addressForSeed(seed), attempts: 0, matched: false };
+}
+
 export async function runKeygen(ctx: CliContext, flags: Flags): Promise<unknown> {
   const prefix = requiredFlag(flags, "vanity");
   validateVanityPrefix(prefix);
-  const ignoreCase = boolFlag(flags, "ignore-case");
-  const timeoutMs = Math.max(1, numberFlag(flags, "timeout") ?? 30) * 1000;
+  const timeoutSeconds = Math.min(MAX_TIMEOUT_SECONDS, Math.max(1, numberFlag(flags, "timeout") ?? MAX_TIMEOUT_SECONDS));
+  const timeoutMs = timeoutSeconds * 1000;
 
-  const firstLeadable = LEADABLE_FIRST.includes(prefix[0] ?? "");
   const startedAt = Date.now();
-  const hit = grindVanity(prefix, { timeoutMs, ignoreCase, now: () => Date.now() });
+  const wallet = generateVanityWallet(prefix, { timeoutMs, now: () => Date.now() });
   const seconds = Math.round((Date.now() - startedAt) / 100) / 10;
 
-  if (!hit) {
-    return {
-      found: false,
-      prefix,
-      seconds,
-      hint: firstLeadable
-        ? "Not found in the time budget — raise --timeout or shorten the prefix."
-        : `'${prefix[0]}' rarely leads an address, so this is slow. Use a leadable first ` +
-          `character (one of ${LEADABLE_FIRST}) or pass --timeout <seconds>.`,
-    };
-  }
-
-  await persistSecretKey(ctx.env, hit.seedHex);
+  await persistSecretKey(ctx.env, wallet.seedHex);
   return {
-    wallet: hit.address,
+    wallet: wallet.address,
     prefix,
-    attempts: hit.attempts,
+    matched: wallet.matched,
+    ...(wallet.matched ? { attempts: wallet.attempts } : { fallbackRandom: true }),
     seconds,
     saved: true,
     previousWallet: ctx.signer?.agentId,
-    note: "This is now your wallet/identity. Back up ~/.tinyplace/config.json — losing it loses the wallet.",
+    note: wallet.matched
+      ? "Vanity wallet saved as your identity. Back up ~/.tinyplace/config.json — losing it loses the wallet."
+      : `No '${prefix}' wallet found within ${timeoutSeconds}s — saved a random wallet instead. ` +
+        "Back up ~/.tinyplace/config.json — losing it loses the wallet.",
   };
 }
 

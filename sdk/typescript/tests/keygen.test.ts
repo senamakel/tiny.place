@@ -1,29 +1,37 @@
 import { describe, expect, it } from "vitest";
-import { grindVanity, validateVanityPrefix } from "../src/cli/keygen.js";
+import { generateVanityWallet, grindVanity, validateVanityPrefix } from "../src/cli/keygen.js";
 
 describe("vanity keygen", () => {
-  it("accepts valid base58 prefixes and rejects invalid characters", () => {
+  it("accepts any case of letters/digits-1-9 and rejects impossible characters", () => {
     expect(() => validateVanityPrefix("A1")).not.toThrow();
-    expect(() => validateVanityPrefix("tiny")).not.toThrow(); // valid base58, just slow to grind
-    // base58 excludes 0, O, I, l.
-    expect(() => validateVanityPrefix("TINY")).toThrowError(/not a base58 character/);
-    expect(() => validateVanityPrefix("0x")).toThrowError(/not a base58 character/);
+    expect(() => validateVanityPrefix("tiny")).not.toThrow();
+    expect(() => validateVanityPrefix("TINY")).not.toThrow(); // case-insensitive -> valid
+    expect(() => validateVanityPrefix("0x")).toThrowError(/never appear/); // base58 has no zero
+    expect(() => validateVanityPrefix("a-b")).toThrowError(/never appear/); // no symbols
     expect(() => validateVanityPrefix("")).toThrowError(/--vanity/);
   });
 
-  it("grinds an address with a leadable prefix", () => {
+  it("grinds an address with a leadable prefix (case-insensitive)", () => {
     // "1" leads ~1/25 of addresses, so this resolves in a handful of attempts.
-    const hit = grindVanity("1", { timeoutMs: 10_000, ignoreCase: false, now: () => Date.now() });
+    const hit = grindVanity("1", { timeoutMs: 10_000, now: () => Date.now() });
     expect(hit).not.toBeNull();
     expect(hit!.address.startsWith("1")).toBe(true);
     expect(hit!.seedHex).toMatch(/^[0-9a-f]{64}$/);
     expect(hit!.attempts).toBeGreaterThan(0);
   });
 
-  it("respects the time budget and returns null when it cannot match", () => {
-    // A fixed clock that is already past the deadline -> zero attempts, no match.
+  it("returns null from grindVanity when the budget is already spent", () => {
     let tick = 0;
-    const result = grindVanity("Q", { timeoutMs: 1, ignoreCase: false, now: () => (tick += 1000) });
+    const result = grindVanity("Q", { timeoutMs: 1, now: () => (tick += 1000) });
     expect(result).toBeNull();
+  });
+
+  it("generateVanityWallet falls back to a random wallet on timeout", () => {
+    // Clock already past the deadline -> no grinding, random fallback.
+    let tick = 0;
+    const wallet = generateVanityWallet("zzz", { timeoutMs: 1, now: () => (tick += 1000) });
+    expect(wallet.matched).toBe(false);
+    expect(wallet.seedHex).toMatch(/^[0-9a-f]{64}$/);
+    expect(wallet.address.length).toBeGreaterThan(30);
   });
 });
