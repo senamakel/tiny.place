@@ -211,6 +211,26 @@ describe("tinyplace CLI", () => {
     expect(ok.stdout + failure.stderr).not.toContain("do-not-print");
   });
 
+  it("prints the version via `version`, `--version`, and `-v` without any network or key side effects", async () => {
+    let fetched = false;
+    const fetch = async (): Promise<Response> => {
+      fetched = true;
+      return Response.json({});
+    };
+    // No TINYPLACE_SECRET_KEY and no TINYPLACE_CONFIG: the flag forms must not
+    // auto-generate a wallet key or hit the network.
+    const env = { TINYPLACE_ENDPOINT: "https://example.test" };
+
+    for (const argv of [["version"], ["--version"], ["-v"]]) {
+      const result = await runTinyPlaceCli(argv, { env, fetch });
+      expect(result.code, argv.join(" ")).toBe(0);
+      expect(typeof JSON.parse(result.stdout).version, argv.join(" ")).toBe(
+        "string",
+      );
+    }
+    expect(fetched).toBe(false);
+  });
+
   it("derives identity from the signer for whoami and fund", async () => {
     const env = {
       TINYPLACE_ENDPOINT: "https://example.test",

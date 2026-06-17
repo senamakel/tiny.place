@@ -16,7 +16,7 @@ import {
   unfollowFlow,
 } from "./flows.js";
 import { runKeygen } from "./keygen.js";
-import { cliVersionInfo, selfUpdate } from "./maintenance.js";
+import { cliVersionInfo, readCliVersion, selfUpdate } from "./maintenance.js";
 import { dispatchRaw } from "./raw.js";
 import type { CliContext, ParsedArgs, TinyPlaceCliOptions, TinyPlaceCliResult } from "./types.js";
 import {
@@ -47,6 +47,20 @@ export async function runTinyPlaceCli(
   options: TinyPlaceCliOptions = {},
 ): Promise<TinyPlaceCliResult> {
   const parsed = parseArgs(argv);
+  // `--version` / `-v` short-circuit BEFORE makeContext so a plain version probe
+  // never auto-generates a wallet key as a side effect. Use `version --check` for
+  // the update comparison (it needs network + the resolved context).
+  if (
+    parsed.command === "-v" ||
+    parsed.command === "--version" ||
+    (boolFlag(parsed.flags, "version") && !parsed.command)
+  ) {
+    return {
+      code: 0,
+      stdout: `${JSON.stringify({ version: await readCliVersion() }, null, 2)}\n`,
+      stderr: "",
+    };
+  }
   if (!parsed.command || parsed.command === "help" || parsed.command === "--help") {
     return { code: 0, stdout: HELP, stderr: "" };
   }

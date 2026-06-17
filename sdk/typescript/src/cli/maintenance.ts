@@ -48,7 +48,7 @@ export async function cliVersionInfo(ctx: CliContext, flags: Flags): Promise<unk
   return { version, latest, updateAvailable: latest !== null && latest !== version };
 }
 
-async function readCliVersion(): Promise<string> {
+export async function readCliVersion(): Promise<string> {
   try {
     // src/cli/maintenance.ts and dist/cli/maintenance.js are both two levels
     // below the package root, so ../../package.json resolves in source and build.

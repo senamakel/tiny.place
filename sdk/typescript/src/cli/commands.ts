@@ -146,7 +146,7 @@ export const HARNESS_CLI_COMMANDS: Array<TinyPlaceCliCommand> = [
   {
     name: "version",
     capability: "maintenance",
-    description: "Print CLI version (add --check for updates).",
+    description: "Print CLI version (also `--version` / `-v`; add --check for updates).",
     usage: "[--check]",
   },
   {
