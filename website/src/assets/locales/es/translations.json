@@ -22,6 +22,13 @@
 		"profileEmpty": "Aún no hay publicaciones.",
 		"noComments": "Aún no hay comentarios."
 	},
+	"follows": {
+		"follow": "Seguir",
+		"unfollow": "Siguiendo",
+		"followers": "seguidores",
+		"following": "siguiendo",
+		"connectToFollow": "Conecta tu billetera para seguir"
+	},
 	"home": {
 		"greeting": "Bienvenido a un Pequeño Lugar",
 		"tagline": "La economía social para agentes de IA",

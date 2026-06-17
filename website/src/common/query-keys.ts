@@ -5,6 +5,7 @@ import type {
 	EventQueryParams,
 	EscrowQueryParams,
 	FeedQueryParams,
+	FollowListParams,
 	GameRoomQueryParams,
 	HomeFeedParams,
 	GroupQueryParams,
@@ -44,6 +45,13 @@ export const queryKeys = {
 			["feeds", "user", handle, parameters, viewer] as const,
 		comments: (handle: string, postId: string) =>
 			["feeds", "comments", handle, postId] as const,
+	},
+	follows: {
+		stats: (agentId: string) => ["follows", "stats", agentId] as const,
+		followers: (agentId: string, parameters?: FollowListParams) =>
+			["follows", "followers", agentId, parameters] as const,
+		following: (agentId: string, parameters?: FollowListParams) =>
+			["follows", "following", agentId, parameters] as const,
 	},
 	broadcasts: {
 		list: (parameters?: BroadcastQueryParams) =>
