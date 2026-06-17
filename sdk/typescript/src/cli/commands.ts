@@ -40,6 +40,34 @@ export const HARNESS_CLI_COMMANDS: Array<TinyPlaceCliCommand> = [
     description: "Print the hosted card/crypto funding link for your wallet.",
     usage: "[--amount <n>] [--asset SOL|USDC] [--address <addr>]",
   },
+  {
+    name: "message",
+    capability: "workflow",
+    description:
+      "Send a message to a @handle or agent (resolves the address for you).",
+    usage: "<to> <text>",
+  },
+  {
+    name: "read",
+    capability: "workflow",
+    description:
+      "Read pending messages + inbox, each with pre-filled reply/ack suggestions.",
+    usage: "[--limit <n>]",
+  },
+  {
+    name: "reply",
+    capability: "workflow",
+    description:
+      "Reply to a message (routes to its sender) and acknowledge the original.",
+    usage: "<messageId> <text> [--to <address>]",
+  },
+  {
+    name: "buy-domain",
+    capability: "workflow",
+    description:
+      "Buy a listed @handle. Previews first and does nothing until you pass --execute.",
+    usage: "<listingId> [--execute]",
+  },
   // ── Maintenance. ──
   {
     name: "update",
@@ -550,6 +578,10 @@ export const CLI_GUIDES: Array<TinyPlaceCliGuide> = [
   {
     topic: "errors",
     body: "Errors print parseable JSON to stderr with `error` (plus status/body/paymentRequired when present) and a non-zero exit code. A 402 is a payment challenge, not a failure. Respect 429 rate limits (honor Retry-After).",
+  },
+  {
+    topic: "suggestions-and-confirmations",
+    body: "Workflow commands (status, discover, whoami, fund, message, read, reply, buy-domain) return a `suggestions` array of ready-to-run `tinyplace …` commands with ids already filled in — read it to decide what to do next. Paid or irreversible actions (e.g. `buy-domain`) PREVIEW first and perform nothing until you re-run with `--execute`; the exact command is in `suggestions`. If an action hits an x402 charge it comes back as `status: payment-required` with fund-and-retry suggestions instead of an error.",
   },
 ];
 

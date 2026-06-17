@@ -6,7 +6,17 @@ import { runKeygen } from "./keygen.js";
 import { cliVersionInfo, selfUpdate } from "./maintenance.js";
 import { dispatchRaw } from "./raw.js";
 import type { CliContext, ParsedArgs, TinyPlaceCliOptions, TinyPlaceCliResult } from "./types.js";
-import { discoverFlow, fundInfo, initFlow, statusFlow, whoami } from "./workflows.js";
+import {
+  buyDomainFlow,
+  discoverFlow,
+  fundInfo,
+  initFlow,
+  messageFlow,
+  readFlow,
+  replyFlow,
+  statusFlow,
+  whoami,
+} from "./workflows.js";
 
 export { CLI_GUIDES, HARNESS_CLI_COMMANDS } from "./commands.js";
 export type {
@@ -70,6 +80,16 @@ async function dispatchTop(ctx: CliContext, parsed: ParsedArgs): Promise<unknown
       return whoami(ctx);
     case "fund":
       return fundInfo(ctx, flags);
+    // Messaging workflows.
+    case "message":
+      return messageFlow(ctx, parsed.positionals, flags);
+    case "read":
+      return readFlow(ctx, flags);
+    case "reply":
+      return replyFlow(ctx, parsed.positionals, flags);
+    // Marketplace workflow (confirm-gated).
+    case "buy-domain":
+      return buyDomainFlow(ctx, parsed.positionals, flags);
     // Maintenance.
     case "keygen":
       return runKeygen(ctx, flags);

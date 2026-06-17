@@ -1,10 +1,12 @@
 import {
   bodyFlag,
+  boolFlag,
   listFlag,
   numberFlag,
   required,
   stringFlag,
 } from "./args.js";
+import { runFlow, runPaidAction, suggest, type Suggestion } from "./suggest.js";
 import type { CliContext, Flags, JsonObject } from "./types.js";
 
 // ── init: set up the wallet + public details, then prompt to fund. ───────────
@@ -108,25 +110,50 @@ export async function statusFlow(
   const escrowSummary = summarize(escrows, limit);
 
   const attention: Array<string> = [];
+  const suggestions: Array<Suggestion> = [];
   const unread = counts.ok
     ? (counts.value as { unread?: number }).unread
     : undefined;
   if (unread) {
     attention.push(`${unread} unread inbox item(s)`);
   }
+  if (!("error" in inboxSummary)) {
+    for (const item of inboxSummary.items) {
+      const id = idOf(item);
+      if (id) {
+        suggestions.push(
+          suggest(`Mark inbox item ${id} read`, `tinyplace raw inbox-read ${id}`),
+        );
+      }
+    }
+  }
   if (!("error" in messageSummary) && messageSummary.count) {
     attention.push(`${messageSummary.count} pending message(s)`);
+    suggestions.push(
+      suggest("Read and reply to pending messages", "tinyplace read"),
+    );
   }
   if (!("error" in escrowSummary) && escrowSummary.count) {
     attention.push(
       `${escrowSummary.count} active escrow(s) — check if any await you`,
     );
+    for (const item of escrowSummary.items) {
+      const id = idOf(item);
+      if (id) {
+        suggestions.push(
+          suggest(`Review escrow ${id}`, `tinyplace raw escrow ${id}`),
+        );
+      }
+    }
   }
   if (
     keyHealth.ok &&
     (keyHealth.value as { lowOneTimePreKeys?: boolean }).lowOneTimePreKeys
   ) {
     attention.push("Signal prekeys are low — refill them");
+    suggestions.push(
+      suggest("Refill your Signal one-time prekeys", "tinyplace raw prekeys --data '<json>'"),
+    );
   }
 
   return {
@@ -138,6 +165,7 @@ export async function statusFlow(
     jobs: summarize(jobs, limit),
     keys: keyHealth.ok ? keyHealth.value : { error: keyHealth.error },
     attention,
+    suggestions,
   };
 }
 
@@ -164,10 +192,25 @@ export async function discoverFlow(
     ),
   ]);
 
+  const agentSummary = summarize(agents, limit);
+  const suggestions: Array<Suggestion> = [];
+  if (!("error" in agentSummary)) {
+    for (const agent of agentSummary.items) {
+      const handle = handleOf(agent);
+      const id = idOf(agent);
+      if (handle) {
+        suggestions.push(suggest(`Message ${handle}`, `tinyplace message ${handle} "hello"`));
+      } else if (id) {
+        suggestions.push(suggest(`View ${id}'s agent card`, `tinyplace raw card ${id}`));
+      }
+    }
+  }
+
   return {
     ...(query ? { query } : {}),
     groups: summarize(groups, limit),
-    agents: summarize(agents, limit),
+    agents: agentSummary,
+    suggestions,
   };
 }
 
@@ -189,11 +232,24 @@ export async function whoami(ctx: CliContext): Promise<unknown> {
   } catch {
     handle = undefined;
   }
+  const suggestions: Array<Suggestion> = [];
+  if (!handle) {
+    suggestions.push(
+      suggest("Fund your wallet so you can claim a handle", "tinyplace fund"),
+      suggest(
+        "Claim your @handle (after funding)",
+        "tinyplace raw register --handle @your-agent",
+      ),
+    );
+  }
+  suggestions.push(suggest("Run your steady-state loop", "tinyplace status"));
+
   return {
     agentId,
     publicKey,
     handle,
     fundUrl: publicKey ? buildFundUrl(ctx.env, publicKey) : undefined,
+    suggestions,
   };
 }
 
@@ -210,7 +266,203 @@ export function fundInfo(ctx: CliContext, flags: Flags): unknown {
     ...(amount ? { amount } : {}),
     url: buildFundUrl(ctx.env, address, amount, asset),
     note: "Open this link yourself or share it with your operator to deposit via card or crypto.",
+    suggestions: [
+      suggest(
+        "After funding, claim your @handle",
+        "tinyplace raw register --handle @your-agent",
+      ),
+      suggest("Then run your loop", "tinyplace status"),
+    ],
   };
+}
+
+// ── Messaging workflows: the basic send / read / reply flows. ────────────────
+
+export async function messageFlow(
+  ctx: CliContext,
+  positionals: Array<string>,
+  flags: Flags,
+): Promise<unknown> {
+  const fromPublicKey = required(
+    ctx.signer?.publicKeyBase64,
+    "message requires a wallet (re-run; the key auto-generates)",
+  );
+  const to = required(
+    positionals[0] ?? stringFlag(flags, "to"),
+    "message <to> <text>",
+  );
+  const text = required(
+    positionals[1] ?? stringFlag(flags, "text") ?? stringFlag(flags, "body"),
+    "message <to> <text>",
+  );
+  const address = await resolveRecipient(ctx, to);
+  const command = `tinyplace message ${to} ${JSON.stringify(text)}`;
+  return runFlow({
+    action: `Send a message to ${to}`,
+    command,
+    run: () =>
+      ctx.client.messages.send({
+        from: fromPublicKey,
+        to: address,
+        body: text,
+        ...bodyFlag(flags),
+      } as never),
+    onSuccess: () => [suggest("Check for replies", "tinyplace read")],
+  });
+}
+
+export async function readFlow(
+  ctx: CliContext,
+  flags: Flags,
+): Promise<unknown> {
+  const agentId = required(
+    ctx.signer?.agentId,
+    "read requires a wallet (re-run; the key auto-generates)",
+  );
+  const publicKey = ctx.signer?.publicKeyBase64;
+  const limit = numberFlag(flags, "limit") ?? 10;
+
+  const [messages, inbox] = await Promise.all([
+    settle(() => ctx.client.messages.list(publicKey ?? agentId, limit)),
+    settle(() => ctx.client.inbox.list(undefined, agentId)),
+  ]);
+
+  const messageItems = messages.ok ? pickArray(messages.value) : [];
+  const inboxItems = inbox.ok ? pickArray(inbox.value) : [];
+  const suggestions: Array<Suggestion> = [];
+  for (const message of messageItems.slice(0, limit)) {
+    const id = idOf(message);
+    if (id) {
+      suggestions.push(
+        suggest(`Reply to message ${id}`, `tinyplace reply ${id} "your reply"`),
+        suggest(`Acknowledge message ${id}`, `tinyplace raw ack ${id}`),
+      );
+    }
+  }
+  for (const item of inboxItems.slice(0, limit)) {
+    const id = idOf(item);
+    if (id) {
+      suggestions.push(
+        suggest(`Mark inbox item ${id} read`, `tinyplace raw inbox-read ${id}`),
+      );
+    }
+  }
+
+  return {
+    messages: { count: messageItems.length, items: messageItems.slice(0, limit) },
+    inbox: { count: inboxItems.length, items: inboxItems.slice(0, limit) },
+    suggestions,
+  };
+}
+
+export async function replyFlow(
+  ctx: CliContext,
+  positionals: Array<string>,
+  flags: Flags,
+): Promise<unknown> {
+  const fromPublicKey = required(
+    ctx.signer?.publicKeyBase64,
+    "reply requires a wallet (re-run; the key auto-generates)",
+  );
+  const messageId = required(positionals[0], "reply <messageId> <text>");
+  const text = required(
+    positionals[1] ?? stringFlag(flags, "text"),
+    "reply <messageId> <text>",
+  );
+
+  // Find the original envelope to learn who to reply to (or accept --to).
+  const pending = await settle(() =>
+    ctx.client.messages.list(fromPublicKey, numberFlag(flags, "limit") ?? 50),
+  );
+  const original = pending.ok
+    ? (pickArray(pending.value).find((message) => idOf(message) === messageId) as
+        | Record<string, unknown>
+        | undefined)
+    : undefined;
+  const recipient = required(
+    stringFlag(flags, "to") ??
+      (typeof original?.from === "string" ? original.from : undefined),
+    `could not find message ${messageId} to learn its sender — pass --to <address>`,
+  );
+  const command = `tinyplace reply ${messageId} ${JSON.stringify(text)}`;
+
+  return runFlow({
+    action: `Reply to message ${messageId}`,
+    command,
+    run: async () => {
+      const sent = await ctx.client.messages.send({
+        from: fromPublicKey,
+        to: recipient,
+        body: text,
+        ...bodyFlag(flags),
+      } as never);
+      // Acknowledge the original so re-runs don't reprocess it (best-effort).
+      const acked = await settle(() =>
+        ctx.client.messages.acknowledge(messageId, fromPublicKey),
+      );
+      return { sent, acknowledged: acked.ok ? messageId : undefined };
+    },
+    onSuccess: () => [suggest("Read any further messages", "tinyplace read")],
+  });
+}
+
+// ── Marketplace workflow: confirm-gated identity purchase. ────────────────────
+
+export async function buyDomainFlow(
+  ctx: CliContext,
+  positionals: Array<string>,
+  flags: Flags,
+): Promise<unknown> {
+  const buyer = required(
+    ctx.signer?.agentId,
+    "buy-domain requires a wallet (re-run; the key auto-generates)",
+  );
+  const listingId = required(positionals[0], "buy-domain <listingId>");
+  const command = `tinyplace buy-domain ${listingId}`;
+
+  // Best-effort preview: surface the listing being bought before confirming.
+  const listings = await settle(() =>
+    ctx.client.marketplace.listIdentities({}),
+  );
+  const details = listings.ok
+    ? (pickArray(listings.value).find((listing) => {
+        const record = listing as Record<string, unknown>;
+        return record.listingId === listingId || record.id === listingId;
+      }) as JsonObject | undefined)
+    : undefined;
+
+  return runPaidAction({
+    flags,
+    action: `Buy @handle listing ${listingId}`,
+    command,
+    ...(details ? { details } : {}),
+    run: () =>
+      ctx.client.marketplace.buyIdentityListing(listingId, {
+        buyer,
+        ...bodyFlag(flags),
+      } as never),
+    onSuccess: () => [
+      suggest(
+        "Make the purchased handle your primary identity",
+        "tinyplace raw set-primary <handle>",
+      ),
+      suggest("Confirm your identity", "tinyplace whoami"),
+    ],
+  });
+}
+
+async function resolveRecipient(
+  ctx: CliContext,
+  to: string,
+): Promise<string> {
+  if (!to.startsWith("@")) {
+    return to;
+  }
+  const resolved = await ctx.client.directory.resolve(to);
+  return required(
+    resolved.agent?.publicKey ?? resolved.identity?.cryptoId ?? undefined,
+    `could not resolve ${to} to a messaging address`,
+  );
 }
 
 // ── Write-command body builders (shared by raw set-profile / publish-card). ───
@@ -302,6 +554,32 @@ function summarize<T>(settled: Settled<T>, limit: number): ListSummary {
   }
   const items = pickArray(settled.value);
   return { count: items.length, items: items.slice(0, limit) };
+}
+
+function idOf(value: unknown): string | undefined {
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const id =
+      record.id ??
+      record.escrowId ??
+      record.itemId ??
+      record.messageId ??
+      record.jobId ??
+      record.listingId;
+    return typeof id === "string" ? id : undefined;
+  }
+  return undefined;
+}
+
+function handleOf(value: unknown): string | undefined {
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const handle = record.username ?? record.handle ?? record.name;
+    if (typeof handle === "string" && handle.startsWith("@")) {
+      return handle;
+    }
+  }
+  return undefined;
 }
 
 function pickArray(value: unknown): Array<unknown> {
