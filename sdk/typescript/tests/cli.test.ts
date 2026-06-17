@@ -3,6 +3,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { HARNESS_CLI_COMMANDS, runTinyPlaceCli } from "../src/cli.js";
+import {
+  LocalSigner,
+  generatePreKeys,
+  generateSignedPreKey,
+  serializePreKey,
+  serializeSignedKey,
+} from "../src/index.js";
 
 describe("tinyplace CLI", () => {
   it("exposes documented harness command families", () => {
@@ -587,20 +594,46 @@ describe("tinyplace CLI", () => {
     ]);
   });
 
-  it("resolves a @handle before sending a message and suggests checking replies", async () => {
+  it("resolves a @handle, encrypts, and sends a message (ciphertext on the wire)", async () => {
+    // Real recipient identity + published bundle so transparent E2E can run X3DH.
+    const peer = await LocalSigner.fromSeed(new Uint8Array(32).fill(2));
+    const peerPub = peer.publicKeyBase64;
+    const signedPreKey = serializeSignedKey(
+      await generateSignedPreKey(peer, "spk_1"),
+    );
+    const [oneTimePreKey] = (await generatePreKeys(peer, 1, 1)).map(
+      serializePreKey,
+    );
+    const bundle = {
+      agentId: peerPub,
+      identityKey: peerPub,
+      signedPreKey,
+      oneTimePreKey,
+      updatedAt: "2026-06-16T00:00:00.000Z",
+    };
+
+    const configDir = await mkdtemp(join(tmpdir(), "tp-cli-msg-"));
     const requests: Array<Request> = [];
     const result = await runTinyPlaceCli(["message", "@peer", "hello there"], {
       env: {
         TINYPLACE_ENDPOINT: "https://example.test",
         TINYPLACE_SECRET_KEY: "01".repeat(32),
+        TINYPLACE_CONFIG: join(configDir, "config.json"),
       },
       fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
-        requests.push(new Request(input, init));
-        const url = String(input instanceof Request ? input.url : input);
+        const request = new Request(input, init);
+        requests.push(request);
+        const url = request.url;
         if (url.includes("/directory/resolve")) {
-          return Response.json({ identity: { cryptoId: "c1" }, agent: { publicKey: "PEERPUB" } });
+          return Response.json({
+            identity: { cryptoId: "c1" },
+            agent: { publicKey: peerPub },
+          });
         }
-        return Response.json({ id: "m-new", to: "PEERPUB" });
+        if (url.includes("/bundle")) {
+          return Response.json(bundle);
+        }
+        return Response.json({ id: "m-new", to: peerPub });
       },
     });
 
@@ -608,9 +641,17 @@ describe("tinyplace CLI", () => {
     const parsed = JSON.parse(result.stdout);
     expect(parsed.status).toBe("done");
     expect(parsed.suggestions[0].run).toBe("tinyplace read");
-    expect(requests.some((request) => request.url.includes("/directory/resolve"))).toBe(true);
+    expect(requests.some((request) => request.url.includes("/directory/resolve"))).toBe(
+      true,
+    );
+    expect(requests.some((request) => request.url.includes("/bundle"))).toBe(true);
+
     const send = requests.find((request) => request.method === "PUT");
     expect(send?.url).toContain("/messages");
+    const sent = (await send!.json()) as { body: string; type: string };
+    // The plaintext never leaves the process: the relay sees ciphertext.
+    expect(sent.body).not.toBe("hello there");
+    expect(sent.type).toBe("PREKEY_BUNDLE");
   });
 
   it("status surfaces ready-to-run suggestions alongside attention", async () => {

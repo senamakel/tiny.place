@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { TinyPlaceClient } from "../client.js";
 import { LocalSigner } from "../local-signer.js";
+import { FileSessionStore } from "../node/index.js";
 import { bytesToHex, hexToBytes } from "./args.js";
 import type { CliContext, TinyPlaceCliConfig, TinyPlaceCliOptions } from "./types.js";
 
@@ -31,12 +32,36 @@ export async function makeContext(options: TinyPlaceCliOptions): Promise<CliCont
   }
   const signer = seed ? await LocalSigner.fromSeed(hexToBytes(seed)) : undefined;
 
+  // Transparent Signal E2E: persist ratchet/pre-key state next to the identity key
+  // (~/.tinyplace/signal/<address>.json). The X25519 identity is derived from the
+  // same seed, so it never needs to be written to disk.
+  const encryption = signer
+    ? { store: await signalStoreFor(env, signer) }
+    : undefined;
+
   const client = new TinyPlaceClient({
     baseUrl,
     ...(signer ? { signer } : {}),
+    ...(encryption ? { encryption } : {}),
     fetch: options.fetch,
   });
   return { client, signer, env, fetch: options.fetch, baseUrl, generated };
+}
+
+/**
+ * Build the filesystem-backed Signal store for an identity, persisting alongside
+ * the wallet config (`<config-dir>/signal/<address>.json`). Shared by makeContext
+ * and the vanity-grind path so a freshly minted wallet is immediately E2E-capable.
+ */
+export async function signalStoreFor(
+  env: Record<string, string | undefined>,
+  signer: LocalSigner,
+): Promise<FileSessionStore> {
+  const signalDir = join(dirname(configPathFor(env)), "signal");
+  return new FileSessionStore(
+    FileSessionStore.defaultPath(signer.publicKeyBase64, signalDir),
+    await signer.getX25519KeyPair(),
+  );
 }
 
 function configPathFor(env: Record<string, string | undefined>): string {

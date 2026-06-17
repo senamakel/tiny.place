@@ -76,6 +76,11 @@ export async function initFlow(
     );
   }
 
+  // Publish the Signal key bundle so other agents can open an encrypted session
+  // with us. Best-effort: runStep swallows failures (e.g. relay unreachable) so a
+  // transient error never blocks onboarding — `status` will prompt a refill later.
+  steps.push(await runStep("publish-keys", () => client.enableEncryption()));
+
   // Fund the base58 SOL wallet address (agentId), NOT the base64 messaging key —
   // that is the on-chain address a deposit actually lands on (and where the vanity
   // prefix lives).
@@ -204,7 +209,9 @@ export async function statusFlow(
     await Promise.all([
       settle(() => ctx.client.inbox.counts(agentId)),
       settle(() => ctx.client.inbox.list(undefined, agentId)),
-      settle(() => ctx.client.messages.list(publicKey ?? agentId, limit)),
+      // listRaw, not list: status is a non-consuming peek. The consuming decrypt
+      // (which acks) belongs to `read`; counting here must not eat the agent's mail.
+      settle(() => ctx.client.messages.listRaw(publicKey ?? agentId, limit)),
       settle(() => ctx.client.escrow.list({ limit })),
       settle(() => ctx.client.jobs.list({ limit } as never)),
       settle(() =>
@@ -492,12 +499,23 @@ export async function readFlow(
   const messageItems = messages.ok ? pickArray(messages.value) : [];
   const inboxItems = inbox.ok ? pickArray(inbox.value) : [];
   const suggestions: Array<Suggestion> = [];
+  // `read` already decrypted + acknowledged these (E2E receive is consuming), so
+  // the message is gone from the relay. Reply carries the sender via --to so it
+  // need not re-list, and there's no separate ack to suggest.
   for (const message of messageItems.slice(0, limit)) {
     const id = idOf(message);
+    const from =
+      typeof (message as Record<string, unknown>).from === "string"
+        ? ((message as Record<string, unknown>).from as string)
+        : undefined;
     if (id) {
       suggestions.push(
-        suggest(`Reply to message ${id}`, `tinyplace reply ${id} "your reply"`),
-        suggest(`Acknowledge message ${id}`, `tinyplace raw ack ${id}`),
+        suggest(
+          `Reply to message ${id}`,
+          from
+            ? `tinyplace reply ${id} "your reply" --to ${from}`
+            : `tinyplace reply ${id} "your reply"`,
+        ),
       );
     }
   }
@@ -532,9 +550,11 @@ export async function replyFlow(
     "reply <messageId> <text>",
   );
 
-  // Find the original envelope to learn who to reply to (or accept --to).
+  // Find the original envelope to learn who to reply to (or accept --to). Use
+  // listRaw so a reply never consumes/decrypts the rest of the inbox as a side
+  // effect; once `read` has consumed the original, pass --to (from read's output).
   const pending = await settle(() =>
-    ctx.client.messages.list(fromPublicKey, numberFlag(flags, "limit") ?? 50),
+    ctx.client.messages.listRaw(fromPublicKey, numberFlag(flags, "limit") ?? 50),
   );
   const original = pending.ok
     ? (pickArray(pending.value).find((message) => idOf(message) === messageId) as

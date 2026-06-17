@@ -9,6 +9,7 @@ import { TinyPlaceClient } from "../client.js";
 import { publicKeyToSolanaAddress } from "../crypto.js";
 import { LocalSigner } from "../local-signer.js";
 import { bytesToHex, hexToBytes, numberFlag, requiredFlag } from "./args.js";
+import { signalStoreFor } from "./context.js";
 import type { CliContext, Flags } from "./types.js";
 
 // A tiny.place wallet address is the base58 Solana address (== signer.agentId).
@@ -213,6 +214,7 @@ export async function grindVanityIdentity(
   const client = new TinyPlaceClient({
     baseUrl: ctx.baseUrl,
     signer,
+    encryption: { store: await signalStoreFor(ctx.env, signer) },
     fetch: ctx.fetch,
   });
   return {
