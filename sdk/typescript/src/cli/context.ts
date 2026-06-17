@@ -45,7 +45,15 @@ export async function makeContext(options: TinyPlaceCliOptions): Promise<CliCont
     ...(encryption ? { encryption } : {}),
     fetch: options.fetch,
   });
-  return { client, signer, env, fetch: options.fetch, baseUrl, generated };
+  return {
+    client,
+    signer,
+    env,
+    fetch: options.fetch,
+    baseUrl,
+    generated,
+    ...(seed ? { secretKey: seed } : {}),
+  };
 }
 
 /**

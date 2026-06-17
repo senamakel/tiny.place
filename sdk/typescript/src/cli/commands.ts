@@ -179,8 +179,8 @@ export const HARNESS_CLI_COMMANDS: Array<TinyPlaceCliCommand> = [
     name: "register",
     capability: "workflow",
     description:
-      "Claim a @handle (paid). Previews first; performs nothing until --execute.",
-    usage: "<@handle> [--bio <bio>] [--execute]",
+      "Claim a @handle (paid; settles the fee on-chain). Previews the exact cost first; performs nothing until --execute.",
+    usage: "<@handle> [--bio <bio>] [--tx <sig>] [--rpc-url <url>] [--execute]",
   },
   {
     name: "profile",

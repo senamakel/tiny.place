@@ -54,6 +54,13 @@ export interface CliContext {
   baseUrl: string;
   /** True when makeContext auto-generated the identity key on this invocation. */
   generated?: boolean;
+  /**
+   * The hex-encoded 32-byte Ed25519 seed backing {@link signer}, when one is
+   * available. Commands that must settle a transaction on-chain (e.g. the paid
+   * handle registration) need the raw secret to sign the Solana transfer — the
+   * LocalSigner only exposes detached message signing.
+   */
+  secretKey?: string;
 }
 
 export interface TinyPlaceCliResult {
