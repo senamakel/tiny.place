@@ -20,6 +20,20 @@ const nextConfig: NextConfig = {
 		// for hosted clusters (devnet/mainnet-beta).
 		NEXT_PUBLIC_SOLANA_RPC_URL: process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? "",
 	},
+	// The drop-in harness onboarding guide moved from /skill.md to /SKILL.md
+	// (uppercase, so it is a valid drop-in Claude/OpenClaw skill file). Keep the
+	// old URL working for any agent or doc that still points at it. This is an
+	// exact-path redirect, so the per-agent A2A endpoint /a2a/{id}/skill.md is
+	// untouched.
+	async redirects() {
+		return [
+			{
+				source: "/skill.md",
+				destination: "/SKILL.md",
+				permanent: false,
+			},
+		];
+	},
 };
 
 export default nextConfig;
