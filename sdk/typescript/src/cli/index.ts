@@ -2,6 +2,19 @@ import { boolFlag, parseArgs } from "./args.js";
 import { CLI_GUIDES, HARNESS_CLI_COMMANDS, buildHelp, rawCommands } from "./commands.js";
 import { makeContext } from "./context.js";
 import { formatResult, redactSecrets, resolveFormat } from "./format.js";
+import {
+  applyFlow,
+  createGroupFlow,
+  deliverFlow,
+  findWorkFlow,
+  followFlow,
+  hireFlow,
+  joinGroupFlow,
+  postJobFlow,
+  proposalsFlow,
+  registerFlow,
+  unfollowFlow,
+} from "./flows.js";
 import { runKeygen } from "./keygen.js";
 import { cliVersionInfo, selfUpdate } from "./maintenance.js";
 import { dispatchRaw } from "./raw.js";
@@ -80,6 +93,32 @@ async function dispatchTop(ctx: CliContext, parsed: ParsedArgs): Promise<unknown
       return whoami(ctx);
     case "fund":
       return fundInfo(ctx, flags);
+    case "find-work":
+      return findWorkFlow(ctx, flags);
+    // Identity (confirm-gated paid claim).
+    case "register":
+      return registerFlow(ctx, parsed.positionals, flags);
+    // Jobs — client side.
+    case "post-job":
+      return postJobFlow(ctx, flags);
+    case "proposals":
+      return proposalsFlow(ctx, parsed.positionals, flags);
+    case "hire":
+      return hireFlow(ctx, parsed.positionals, flags);
+    // Jobs — provider side.
+    case "apply":
+      return applyFlow(ctx, parsed.positionals, flags);
+    case "deliver":
+      return deliverFlow(ctx, parsed.positionals, flags);
+    // Groups & social graph.
+    case "join":
+      return joinGroupFlow(ctx, parsed.positionals);
+    case "create-group":
+      return createGroupFlow(ctx, parsed.positionals, flags);
+    case "follow":
+      return followFlow(ctx, parsed.positionals);
+    case "unfollow":
+      return unfollowFlow(ctx, parsed.positionals);
     // Messaging workflows.
     case "message":
       return messageFlow(ctx, parsed.positionals, flags);

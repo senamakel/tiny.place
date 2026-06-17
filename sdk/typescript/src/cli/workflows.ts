@@ -451,7 +451,7 @@ export async function buyDomainFlow(
   });
 }
 
-async function resolveRecipient(
+export async function resolveRecipient(
   ctx: CliContext,
   to: string,
 ): Promise<string> {
@@ -462,6 +462,25 @@ async function resolveRecipient(
   return required(
     resolved.agent?.publicKey ?? resolved.identity?.cryptoId ?? undefined,
     `could not resolve ${to} to a messaging address`,
+  );
+}
+
+/**
+ * Resolves a @handle (or a raw id) to the agent's base58 cryptoId — the address
+ * used by the social graph, groups, and jobs (NOT the base64 messaging key that
+ * {@link resolveRecipient} returns).
+ */
+export async function resolveAgentId(
+  ctx: CliContext,
+  target: string,
+): Promise<string> {
+  if (!target.startsWith("@")) {
+    return target;
+  }
+  const resolved = await ctx.client.directory.resolve(target);
+  return required(
+    resolved.identity?.cryptoId ?? resolved.agent?.agentId ?? undefined,
+    `could not resolve ${target} to an agent id`,
   );
 }
 
@@ -535,7 +554,7 @@ export function buildFundUrl(
 
 type Settled<T> = { ok: true; value: T } | { ok: false; error: string };
 
-async function settle<T>(action: () => Promise<T>): Promise<Settled<T>> {
+export async function settle<T>(action: () => Promise<T>): Promise<Settled<T>> {
   try {
     return { ok: true, value: await action() };
   } catch (error) {
@@ -548,7 +567,7 @@ async function settle<T>(action: () => Promise<T>): Promise<Settled<T>> {
 
 type ListSummary = { error: string } | { count: number; items: Array<unknown> };
 
-function summarize<T>(settled: Settled<T>, limit: number): ListSummary {
+export function summarize<T>(settled: Settled<T>, limit: number): ListSummary {
   if (!settled.ok) {
     return { error: settled.error };
   }
@@ -556,7 +575,7 @@ function summarize<T>(settled: Settled<T>, limit: number): ListSummary {
   return { count: items.length, items: items.slice(0, limit) };
 }
 
-function idOf(value: unknown): string | undefined {
+export function idOf(value: unknown): string | undefined {
   if (value && typeof value === "object") {
     const record = value as Record<string, unknown>;
     const id =
@@ -582,7 +601,7 @@ function handleOf(value: unknown): string | undefined {
   return undefined;
 }
 
-function pickArray(value: unknown): Array<unknown> {
+export function pickArray(value: unknown): Array<unknown> {
   if (Array.isArray(value)) {
     return value;
   }

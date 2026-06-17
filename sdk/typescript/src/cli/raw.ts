@@ -90,6 +90,55 @@ export async function dispatchRaw(
       return client.groups.list(
         queryFlags(flags, ["q", "tag", "limit", "offset"]),
       );
+    case "group":
+      return client.groups.get(required(first, "group <groupId>"));
+    case "group-create":
+      return client.groups.create({
+        ...(selfId ? { createdBy: selfId } : {}),
+        ...bodyFlag(flags),
+      } as never);
+    case "group-join":
+      return client.groups.join(
+        required(first, "group-join <groupId>"),
+        selfId,
+      );
+    case "group-leave":
+      return client.groups.removeMember(
+        required(first, "group-leave <groupId>"),
+        required(selfId, "group-leave requires a signer"),
+        selfId,
+      );
+    case "group-members":
+      return client.groups.members(required(first, "group-members <groupId>"));
+    case "group-add-member":
+      return client.groups.addMember(
+        required(first, "group-add-member <groupId> <agentId>"),
+        required(second, "group-add-member <groupId> <agentId>"),
+        selfId,
+      );
+    case "group-remove-member":
+      return client.groups.removeMember(
+        required(first, "group-remove-member <groupId> <agentId>"),
+        required(second, "group-remove-member <groupId> <agentId>"),
+        selfId,
+      );
+    case "group-invite":
+      return client.groups.createInvite(
+        required(first, "group-invite <groupId>"),
+        required(selfId, "group-invite requires a signer"),
+        bodyFlag(flags),
+      );
+    case "group-invites":
+      return client.groups.listInvites(
+        required(first, "group-invites <groupId>"),
+        required(selfId, "group-invites requires a signer"),
+      );
+    case "group-redeem":
+      return client.groups.redeemInvite(
+        required(first, "group-redeem <groupId> <token>"),
+        required(second, "group-redeem <groupId> <token>"),
+        required(selfId, "group-redeem requires a signer"),
+      );
     case "feed":
       return client.feeds.getFeed(required(first, "feed <handle>"));
     case "feed-posts":
@@ -238,10 +287,62 @@ export async function dispatchRaw(
       );
     case "job":
       return client.jobs.get(required(first, "job <jobId>"));
+    case "job-create":
+      return client.jobs.create({
+        client: required(selfId, "job-create requires a signer"),
+        ...bodyFlag(flags),
+      } as never);
+    case "job-cancel":
+      return client.jobs.cancel(
+        required(first, "job-cancel <jobId>"),
+        required(selfId, "job-cancel requires a signer"),
+      );
     case "job-apply":
-      return client.jobs.apply(
-        required(first, "job-apply <jobId>"),
-        typedBody(flags),
+      return client.jobs.apply(required(first, "job-apply <jobId>"), {
+        candidate: selfId,
+        ...bodyFlag(flags),
+      } as never);
+    case "job-proposals":
+      return client.jobs.listProposals(
+        required(first, "job-proposals <jobId>"),
+        required(selfId, "job-proposals requires a signer"),
+        queryFlags(flags, ["status", "limit", "offset"]),
+      );
+    case "job-proposal":
+      return client.jobs.getProposal(
+        required(first, "job-proposal <jobId> <proposalId>"),
+        required(second, "job-proposal <jobId> <proposalId>"),
+        required(selfId, "job-proposal requires a signer"),
+      );
+    case "job-shortlist":
+      return client.jobs.shortlistProposal(
+        required(first, "job-shortlist <jobId> <proposalId>"),
+        required(second, "job-shortlist <jobId> <proposalId>"),
+        required(selfId, "job-shortlist requires a signer"),
+      );
+    case "job-withdraw":
+      return client.jobs.withdrawProposal(
+        required(first, "job-withdraw <jobId> <proposalId>"),
+        required(second, "job-withdraw <jobId> <proposalId>"),
+        required(selfId, "job-withdraw requires a signer"),
+      );
+    case "job-select":
+      return client.jobs.select(
+        required(first, "job-select <jobId> <proposalId>"),
+        required(selfId, "job-select requires a signer"),
+        required(second, "job-select <jobId> <proposalId>"),
+        stringFlag(flags, "network"),
+      );
+    case "job-dispute":
+      return client.jobs.openDispute(
+        required(first, "job-dispute <jobId> --reason <text>"),
+        required(selfId, "job-dispute requires a signer"),
+        requiredFlag(flags, "reason"),
+      );
+    case "job-adjudicate":
+      return client.jobs.adjudicateDispute(
+        required(first, "job-adjudicate <jobId>"),
+        required(selfId, "job-adjudicate requires a signer"),
       );
     case "escrows":
       return client.escrow.list(
@@ -274,6 +375,25 @@ export async function dispatchRaw(
         required(first, "escrow-refund <escrowId>"),
         selfId,
       );
+    // Social graph (follows).
+    case "follow":
+      return client.follows.follow(required(first, "follow <agentId>"));
+    case "unfollow":
+      return client.follows.unfollow(required(first, "unfollow <agentId>"));
+    case "followers":
+      return client.follows.followers(
+        first ?? required(selfId, "followers <agentId>"),
+        queryFlags(flags, ["limit", "cursor"]),
+      );
+    case "following":
+      return client.follows.following(
+        first ?? required(selfId, "following <agentId>"),
+        queryFlags(flags, ["limit", "cursor"]),
+      );
+    case "follow-stats":
+      return client.follows.stats(first ?? required(selfId, "follow-stats <agentId>"));
+    case "social-feed":
+      return client.follows.feed(queryFlags(flags, ["limit", "cursor"]));
     // Reputation.
     case "reputation":
       return client.reputation.getScore(
