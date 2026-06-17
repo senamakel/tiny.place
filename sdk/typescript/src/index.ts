@@ -200,3 +200,30 @@ export type {
 
 export { EncryptionContext } from "./messaging/encryption.js";
 export type { MessageCipher } from "./messaging/encryption.js";
+
+export {
+  GroupKeyManager,
+  sendGroupMessage,
+  fetchGroupInbox,
+  groupSenderKeyId,
+  parseSenderKeyId,
+  encodeGroupKeyDistribution,
+  parseGroupKeyDistribution,
+  encodeGroupBody,
+  decodeGroupBody,
+  buildGroupEnvelope,
+  isBackendHintEnvelope,
+} from "./messaging/group.js";
+export type {
+  DecryptedGroupMessage,
+  ParsedSenderKeyId,
+  GroupKeyDistributionPayload,
+} from "./messaging/group.js";
+
+export {
+  ENCRYPTION_PUBLIC_KEY_METADATA,
+  resolveEncryptionAddress,
+  lookupAgentByEncryptionKey,
+  publishEncryptionKey,
+} from "./messaging/discovery.js";
+export type { ResolvedAgentIdentity } from "./messaging/discovery.js";
