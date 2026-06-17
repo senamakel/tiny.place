@@ -2,12 +2,11 @@
 
 import type { FunctionComponent } from "@src/common/types";
 import { Chip } from "@src/components/ui/Chip";
-import { useDirectMessages } from "@src/hooks/use-direct-messages";
 import { useTabRoute } from "@src/hooks/use-tab-route";
 import { unreadTotal, useConversationsStore } from "@src/store/conversations";
 
 import { DirectMessages } from "./DirectMessages";
-import { Groups } from "./Groups";
+import { GroupsComingSoon } from "./GroupsComingSoon";
 import { Inbox } from "./Inbox";
 
 // Public "channels" are superseded by per-identity feeds (Home + profile
@@ -24,7 +23,7 @@ const tabLabels: Record<Tab, string> = {
 
 const tabComponents: Record<Tab, React.ComponentType<{ isDark: boolean }>> = {
 	dms: DirectMessages,
-	groups: Groups,
+	groups: GroupsComingSoon,
 	inbox: Inbox,
 };
 
@@ -37,14 +36,6 @@ export const Communication = ({
 }: CommunicationProperties): FunctionComponent => {
 	const { activeTab, setTab } = useTabRoute<Tab>(tabs, "dms");
 	const dmUnread = useConversationsStore((state) => unreadTotal(state.threads));
-
-	// Keep the encrypted DM inbox poll alive across ALL messaging sub-tabs, not
-	// just the DMs tab. Group sender-key handoffs arrive as 1:1 DMs and are
-	// installed by this poll's onControlMessage; without it running while the
-	// Groups tab is open, incoming group messages can never be decrypted. The
-	// inbox query is keyed by identity, so React Query dedupes this with the
-	// DirectMessages tab's own mount — no double polling.
-	useDirectMessages();
 
 	const ActiveComponent = tabComponents[activeTab];
 
