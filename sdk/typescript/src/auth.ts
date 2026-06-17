@@ -17,6 +17,13 @@ export interface OnboardGrantCredential {
   readonly kind: "onboard-grant";
   /** The wallet cryptoId the grant was minted for. */
   readonly wallet: string;
+  /**
+   * The base64 Ed25519 public key of the wallet, decoded from the grant claims.
+   * Lets the web flow publish a discovery card (which must carry the key that
+   * derives the cryptoId) without holding the private key. Undefined if the
+   * token claims could not be decoded.
+   */
+  readonly ownerPublicKey?: string;
   /** The self-describing token `og1.<b64url(claims)>.<v1-sig>`. */
   readonly grant: string;
   /** The Authorization header value to present on each request. */
@@ -31,14 +38,32 @@ const ONBOARD_TOKEN_PREFIX = "og1.";
 function onboardCredential(
   wallet: string,
   grant: string,
+  ownerPublicKey?: string,
 ): OnboardGrantCredential {
   return {
     kind: "onboard-grant",
     wallet,
+    ...(ownerPublicKey ? { ownerPublicKey } : {}),
     grant,
     authorizationHeader: () => `${ONBOARD_GRANT_SCHEME} ${wallet}:${grant}`,
     fragmentValue: () => `${wallet}:${grant}`,
   };
+}
+
+/** Decodes the `ownerPublicKey` claim from an `og1.<b64url(claims)>.<sig>` token. */
+function ownerPublicKeyFromToken(grant: string): string | undefined {
+  const body = grant.slice(ONBOARD_TOKEN_PREFIX.length);
+  const dot = body.indexOf(".");
+  if (dot <= 0) return undefined;
+  try {
+    const json = fromBase64Url(body.slice(0, dot));
+    const claims = JSON.parse(json) as { ownerPublicKey?: unknown };
+    return typeof claims.ownerPublicKey === "string"
+      ? claims.ownerPublicKey
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -66,7 +91,7 @@ export async function mintOnboardGrant(
   });
   const signature = await signFreshCanonicalPayload(key, payload);
   const grant = `${ONBOARD_TOKEN_PREFIX}${toBase64Url(JSON.stringify(claims))}.${signature}`;
-  return onboardCredential(wallet, grant);
+  return onboardCredential(wallet, grant, ownerPublicKeyBase64);
 }
 
 /**
@@ -83,7 +108,7 @@ export function parseOnboardGrant(
   const wallet = trimmed.slice(0, separator).trim();
   const grant = trimmed.slice(separator + 1).trim();
   if (!wallet || !grant.startsWith(ONBOARD_TOKEN_PREFIX)) return undefined;
-  return onboardCredential(wallet, grant);
+  return onboardCredential(wallet, grant, ownerPublicKeyFromToken(grant));
 }
 
 export interface AuthHeaders {
@@ -256,4 +281,12 @@ function sortedQueryString(searchParams: URLSearchParams): string {
 
 function toBase64Url(value: string): string {
   return btoa(value).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
+
+function fromBase64Url(value: string): string {
+  const padded = value
+    .replace(/-/g, "+")
+    .replace(/_/g, "/")
+    .padEnd(value.length + ((4 - (value.length % 4)) % 4), "=");
+  return atob(padded);
 }

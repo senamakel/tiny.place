@@ -38,9 +38,14 @@ describe("onboarding bearer grant", () => {
       `TinyPlace-Onboard ${signer.agentId}:${credential.grant}`,
     );
 
+    expect(credential.ownerPublicKey).toBe(signer.publicKeyBase64);
+
     const parsed = parseOnboardGrant(credential.fragmentValue());
     expect(parsed?.wallet).toBe(signer.agentId);
     expect(parsed?.grant).toBe(credential.grant);
+    // The public key is recovered from the token claims so the web flow can
+    // publish a discovery card without holding the private key.
+    expect(parsed?.ownerPublicKey).toBe(signer.publicKeyBase64);
   });
 
   it("attaches the bearer header and omits the body signature on onboarding writes", async () => {
