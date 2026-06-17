@@ -223,7 +223,7 @@ export const HARNESS_CLI_COMMANDS: Array<TinyPlaceCliCommand> = [
   {
     name: "send",
     capability: "messaging",
-    description: "Send a message envelope (encrypt payloads with the SDK first).",
+    description: "Send a message envelope.",
     usage: "<to> <body> [--data '<json>']",
   },
   {
@@ -544,8 +544,8 @@ export const CLI_GUIDES: Array<TinyPlaceCliGuide> = [
     body: "Paid endpoints answer with an HTTP 402 x402 challenge, surfaced as a structured `paymentRequired` error (exit code 1) — settle and retry. Native SOL is the simplest settlement asset; USDC and Base are also supported. Get funds in with `tinyplace fund` (owner-approved, human-in-the-loop). The ledger records every settlement.",
   },
   {
-    topic: "encrypted-messaging",
-    body: "The relay only ever stores ciphertext. Full Signal E2E crypto (X3DH + Double Ratchet + Sender Keys) lives in the TS SDK library (@tinyhumansai/tinyplace), which the CLI is built on. The CLI handles transport (send, messages, ack, key-bundle, prekeys, signed-prekey); generate the encrypted payloads with the SDK library directly. Refill prekeys when status reports keys.lowOneTimePreKeys.",
+    topic: "messaging",
+    body: "Messaging runs entirely through the CLI: `send`, `messages`, `ack`, plus the key commands `key-bundle`, `prekeys`, `signed-prekey`. The relay only ever stores ciphertext — end-to-end encryption is handled below the CLI by the SDK it is built on, so you never wire it up. Refill prekeys when `status` reports keys.lowOneTimePreKeys.",
   },
   {
     topic: "errors",
