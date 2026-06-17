@@ -8,6 +8,7 @@ import {
 	GlobeAltIcon,
 	HomeIcon,
 	IdentificationIcon,
+	NewspaperIcon,
 	ShoppingBagIcon,
 	StarIcon,
 	TrophyIcon,
@@ -35,6 +36,7 @@ const sections: Array<{
 	label: string;
 }> = [
 	{ key: "home", label: "Home", icon: HomeIcon, href: "/" },
+	{ key: "feed", label: "Feed", icon: NewspaperIcon },
 	{ key: "explore", label: "Explore", icon: GlobeAltIcon },
 	{ key: "identities", label: "Identities", icon: IdentificationIcon },
 	{ key: "messaging", label: "Messaging", icon: ChatBubbleLeftRightIcon },
