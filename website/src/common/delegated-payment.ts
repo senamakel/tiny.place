@@ -22,6 +22,11 @@ export function publicUsdcMint(): string {
 	return process.env["NEXT_PUBLIC_SOLANA_USDC_MINT"] ?? SOLANA_USDC_MINT;
 }
 
+/** The x402 payment-map metadata key carrying the base64 payer-signed transfer
+ * transaction. The backend routes any payment bearing it to the facilitator
+ * (PayAI), which co-signs as fee payer and broadcasts. */
+export const X402_DELEGATED_TX_METADATA_KEY = "delegatedTx";
+
 /**
  * The CASH ($1 stablecoin) mint, from NEXT_PUBLIC_SOLANA_CASH_MINT (a dev mint
  * locally, the real mint in production). Returns "" when unconfigured — CASH is
@@ -363,37 +368,36 @@ export async function buildDelegatedTransferTx(options: {
 }
 
 /**
- * Builds a PayAI-conformant, session-signed delegated transfer. PayAI's "exact"
- * Solana scheme allows ONLY [SetComputeUnitLimit, SetComputeUnitPrice,
- * TransferChecked] (plus optional wallet-added Lighthouse) — no ApproveChecked
- * and no create-ATA. The session key must already be an approved delegate (done
- * once at login via enableDelegatedSpending), and the payee's token account must
- * already exist. The PayAI fee-payer slot is left empty for PayAI to fill.
+ * Builds a standard PayAI x402 "exact" Solana payment: the PAYER signs the
+ * transfer directly (authority = payer = the connected wallet), PayAI is the fee
+ * payer and co-signs/broadcasts at settle time. Instructions are exactly
+ * [SetComputeUnitLimit(≤40k), SetComputeUnitPrice(≤5), TransferChecked] — no
+ * ApproveChecked, no create-ATA (PayAI's scheme forbids them; the payee ATA must
+ * already exist). The wallet partially signs via `signTransaction` (which
+ * Phantom supports, unlike signMessage); the fee-payer slot is left empty for
+ * PayAI. Returns the base64 wire transaction.
  */
-export async function buildPayAiExactTransferTx(options: {
+export async function buildPayAiPayerSignedTransferTx(options: {
 	rpcUrl: string;
-	facilitator: string;
+	feePayer: string;
 	payer: string;
 	payee: string;
 	amount: string;
-	sessionPublicKeyBase64: string;
-	signSession: (message: Uint8Array) => Promise<Uint8Array>;
 	mint: string;
 	decimals: number;
+	signTransaction: (transaction: Transaction) => Promise<Transaction>;
 }): Promise<string> {
-	const facilitator = new PublicKey(options.facilitator);
+	const feePayer = new PublicKey(options.feePayer);
 	const mintKey = new PublicKey(options.mint);
+	const payer = new PublicKey(options.payer);
 	const payerAccount = associatedTokenAddress(options.payer, options.mint);
 	const payeeAccount = associatedTokenAddress(options.payee, options.mint);
-	const sessionKey = new PublicKey(
-		Buffer.from(options.sessionPublicKeyBase64, "base64")
-	);
 
 	const connection = createSolanaConnection(options.rpcUrl);
 	const { blockhash } = await connection.getLatestBlockhash("confirmed");
 
 	const transaction = new Transaction();
-	transaction.feePayer = facilitator;
+	transaction.feePayer = feePayer;
 	transaction.recentBlockhash = blockhash;
 	transaction.add(setComputeUnitLimitInstruction(PAYAI_COMPUTE_UNIT_LIMIT));
 	transaction.add(
@@ -404,17 +408,16 @@ export async function buildPayAiExactTransferTx(options: {
 			source: payerAccount,
 			mint: mintKey,
 			destination: payeeAccount,
-			authority: sessionKey,
+			authority: payer,
 			amount: options.amount,
 			decimals: options.decimals,
 		})
 	);
 
-	const message = transaction.serializeMessage();
-	const sessionSignature = await options.signSession(new Uint8Array(message));
-	transaction.addSignature(sessionKey, Buffer.from(sessionSignature));
-
-	const wire = transaction.serialize({
+	// The wallet partially signs as the transfer authority; PayAI's fee-payer
+	// slot is left empty (filled at settle time).
+	const signed = await options.signTransaction(transaction);
+	const wire = signed.serialize({
 		requireAllSignatures: false,
 		verifySignatures: false,
 	});
