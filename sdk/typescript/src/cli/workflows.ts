@@ -92,6 +92,7 @@ export async function initFlow(
                 ? { attempts: vanity.attempts }
                 : { fallbackRandom: true }),
               seconds: vanity.seconds,
+              workers: vanity.workers,
               note: vanity.matched
                 ? `Ground a wallet starting with "${vanity.prefix}". Back up ~/.tinyplace/config.json — losing it loses the wallet.`
                 : `No "${vanity.prefix}" wallet found in time — saved a random wallet. Back up ~/.tinyplace/config.json — losing it loses the wallet.`,
@@ -138,6 +139,7 @@ async function maybeGrindVanity(
     ctx,
     prefix,
     clampTimeoutSeconds(numberFlag(flags, "vanity-timeout")),
+    numberFlag(flags, "workers"),
   );
 }
 

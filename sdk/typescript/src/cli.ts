@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 // Thin executable entry. All CLI logic lives in the `./cli/` module so it can be
 // split into richer tools over time; this file only wires the bin + re-exports.
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { runTinyPlaceCli } from "./cli/index.js";
 
 export { runTinyPlaceCli } from "./cli/index.js";
@@ -12,7 +15,24 @@ export type {
   TinyPlaceCliResult,
 } from "./cli/types.js";
 
-if (typeof process !== "undefined" && process.argv[1]?.endsWith("cli.js")) {
+// Run the CLI only when this file is the process entry point. We compare the
+// real (symlink-resolved) path of argv[1] against this module's own path so the
+// check holds whether invoked as `node dist/cli.js`, via a globally-installed
+// `bin` symlink (`npm install -g` points bin/tinyplace -> dist/cli.js), or via
+// `npm link` — and stays false when the file is merely imported as a module.
+function isCliEntryPoint(): boolean {
+  const entry = process.argv[1];
+  if (typeof process === "undefined" || !entry) {
+    return false;
+  }
+  try {
+    return realpathSync(entry) === fileURLToPath(import.meta.url);
+  } catch {
+    return false;
+  }
+}
+
+if (isCliEntryPoint()) {
   runTinyPlaceCli(process.argv.slice(2)).then((result) => {
     if (result.stdout) {
       process.stdout.write(result.stdout);

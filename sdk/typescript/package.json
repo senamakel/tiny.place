@@ -22,7 +22,7 @@
     "build": "tsc",
     "lint": "tsc --noEmit",
     "test": "vitest run",
-    "test:staging": "vitest run tests/staging.test.ts"
+    "test:staging": "RUN_STAGING=1 vitest run tests/staging.test.ts"
   },
   "devDependencies": {
     "@types/node": "^24.13.1",

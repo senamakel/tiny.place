@@ -1,6 +1,9 @@
+import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
+import { availableParallelism, homedir } from "node:os";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { Worker } from "node:worker_threads";
 import { ed25519 } from "@noble/curves/ed25519.js";
 import { TinyPlaceClient } from "../client.js";
 import { publicKeyToSolanaAddress } from "../crypto.js";
@@ -84,6 +87,90 @@ export function generateVanityWallet(
   return { seedHex: bytesToHex(seed), address: addressForSeed(seed), attempts: 0, matched: false };
 }
 
+/** How many grind workers to spawn by default — every core, leaving one for the main thread. */
+export function defaultWorkerCount(): number {
+  return Math.max(1, availableParallelism() - 1);
+}
+
+/**
+ * Multi-threaded grind: fans the search across `workers` threads (default: one per
+ * spare CPU core) and returns the first hit, or null when the budget elapses. Falls
+ * back to the single-threaded {@link grindVanity} when only one worker is requested
+ * or the compiled worker file is absent (e.g. under the test runner's source view),
+ * so behaviour is identical — just faster — wherever real workers can't run.
+ */
+export async function grindVanityParallel(
+  prefix: string,
+  options: { timeoutMs: number; workers?: number },
+): Promise<VanityHit | null> {
+  const needle = prefix.toLowerCase();
+  const workerCount = Math.max(1, Math.floor(options.workers ?? defaultWorkerCount()));
+  const workerUrl = new URL("./keygen-worker.js", import.meta.url);
+  if (workerCount === 1 || !existsSync(fileURLToPath(workerUrl))) {
+    return grindVanity(prefix, { timeoutMs: options.timeoutMs, now: () => Date.now() });
+  }
+
+  return new Promise<VanityHit | null>((resolve) => {
+    const workers: Array<Worker> = [];
+    let settled = false;
+    let errored = 0;
+
+    const cleanup = (): void => {
+      for (const worker of workers) {
+        void worker.terminate();
+      }
+    };
+    const settle = (hit: VanityHit | null): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
+      cleanup();
+      resolve(hit);
+    };
+    const timer = setTimeout(() => settle(null), options.timeoutMs);
+
+    for (let index = 0; index < workerCount; index += 1) {
+      let worker: Worker;
+      try {
+        worker = new Worker(workerUrl, {
+          workerData: { needle, prefixLength: prefix.length },
+        });
+      } catch {
+        // Couldn't spawn — if none of them can, drop to the single-threaded grind.
+        errored += 1;
+        if (errored === workerCount && !settled) {
+          settle(grindVanity(prefix, { timeoutMs: options.timeoutMs, now: () => Date.now() }));
+        }
+        continue;
+      }
+      workers.push(worker);
+      worker.on("message", (hit: VanityHit) => settle(hit));
+      worker.on("error", () => {
+        // A dead worker shouldn't abort the others; only give up if all die.
+        errored += 1;
+        if (errored === workerCount && !settled) {
+          settle(grindVanity(prefix, { timeoutMs: options.timeoutMs, now: () => Date.now() }));
+        }
+      });
+    }
+  });
+}
+
+/** Async, multi-threaded counterpart to {@link generateVanityWallet}. */
+export async function generateVanityWalletParallel(
+  prefix: string,
+  options: { timeoutMs: number; workers?: number },
+): Promise<VanityWallet> {
+  const hit = await grindVanityParallel(prefix, options);
+  if (hit) {
+    return { ...hit, matched: true };
+  }
+  const seed = randomSeed();
+  return { seedHex: bytesToHex(seed), address: addressForSeed(seed), attempts: 0, matched: false };
+}
+
 /** Clamps a requested grind budget to the supported [1, 60]s window. */
 export function clampTimeoutSeconds(requested: number | undefined): number {
   return Math.min(MAX_TIMEOUT_SECONDS, Math.max(1, requested ?? MAX_TIMEOUT_SECONDS));
@@ -97,22 +184,29 @@ export interface VanityIdentity {
   matched: boolean;
   attempts: number;
   seconds: number;
+  workers: number;
 }
 
 /**
  * Grinds a vanity wallet (case-insensitive prefix, ≤60s, random fallback on
  * timeout), persists it as the identity key, and returns a signer + client rebuilt
  * around it. Shared by `keygen` and the `init` workflow so both grind identically.
+ * The grind fans out across CPU cores; pass `workers` to override the default.
  */
 export async function grindVanityIdentity(
   ctx: CliContext,
   prefix: string,
   timeoutSeconds: number,
+  workers?: number,
 ): Promise<VanityIdentity> {
   validateVanityPrefix(prefix);
   const timeoutMs = clampTimeoutSeconds(timeoutSeconds) * 1000;
+  const workerCount = Math.max(1, Math.floor(workers ?? defaultWorkerCount()));
   const startedAt = Date.now();
-  const wallet = generateVanityWallet(prefix, { timeoutMs, now: () => Date.now() });
+  const wallet = await generateVanityWalletParallel(prefix, {
+    timeoutMs,
+    workers: workerCount,
+  });
   const seconds = Math.round((Date.now() - startedAt) / 100) / 10;
   await persistSecretKey(ctx.env, wallet.seedHex);
   const signer = await LocalSigner.fromSeed(hexToBytes(wallet.seedHex));
@@ -129,6 +223,7 @@ export async function grindVanityIdentity(
     matched: wallet.matched,
     attempts: wallet.attempts,
     seconds,
+    workers: workerCount,
   };
 }
 
@@ -137,9 +232,10 @@ export async function runKeygen(ctx: CliContext, flags: Flags): Promise<unknown>
   validateVanityPrefix(prefix);
   const timeoutSeconds = clampTimeoutSeconds(numberFlag(flags, "timeout"));
   const timeoutMs = timeoutSeconds * 1000;
+  const workers = Math.max(1, Math.floor(numberFlag(flags, "workers") ?? defaultWorkerCount()));
 
   const startedAt = Date.now();
-  const wallet = generateVanityWallet(prefix, { timeoutMs, now: () => Date.now() });
+  const wallet = await generateVanityWalletParallel(prefix, { timeoutMs, workers });
   const seconds = Math.round((Date.now() - startedAt) / 100) / 10;
 
   await persistSecretKey(ctx.env, wallet.seedHex);
@@ -149,11 +245,12 @@ export async function runKeygen(ctx: CliContext, flags: Flags): Promise<unknown>
     matched: wallet.matched,
     ...(wallet.matched ? { attempts: wallet.attempts } : { fallbackRandom: true }),
     seconds,
+    workers,
     saved: true,
     previousWallet: ctx.signer?.agentId,
     note: wallet.matched
-      ? "Vanity wallet saved as your identity. Back up ~/.tinyplace/config.json — losing it loses the wallet."
-      : `No '${prefix}' wallet found within ${timeoutSeconds}s — saved a random wallet instead. ` +
+      ? `Vanity wallet saved as your identity (ground across ${workers} core(s)). Back up ~/.tinyplace/config.json — losing it loses the wallet.`
+      : `No '${prefix}' wallet found within ${timeoutSeconds}s across ${workers} core(s) — saved a random wallet instead. ` +
         "Back up ~/.tinyplace/config.json — losing it loses the wallet.",
   };
 }

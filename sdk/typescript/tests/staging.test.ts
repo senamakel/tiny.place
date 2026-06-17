@@ -13,6 +13,11 @@ import {
 import type { Signer } from "../src/index.js";
 import { toBase64, ed25519PubToX25519Pub } from "../src/signal/crypto.js";
 
+// The staging suite hits the real https://staging-api.tiny.place server. It is
+// skipped by default (`npm test`) and only runs when explicitly opted in via the
+// RUN_STAGING env var (`npm run test:staging`).
+const describeStaging = process.env.RUN_STAGING ? describe : describe.skip;
+
 const BASE_URL = "https://staging-api.tiny.place";
 const SOLANA_NETWORK = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
 const RATE_LIMIT_RETRY_PADDING_MS = 250;
@@ -71,7 +76,7 @@ function delay(milliseconds: number): Promise<void> {
   });
 }
 
-describe("staging: unauthenticated endpoints", () => {
+describeStaging("staging: unauthenticated endpoints", () => {
   const client = makeClient();
 
   it("healthz returns ok", async () => {
@@ -351,7 +356,7 @@ describe("staging: unauthenticated endpoints", () => {
   });
 });
 
-describe("staging: authenticated flows", () => {
+describeStaging("staging: authenticated flows", () => {
   let signer: LocalSigner;
   let cryptoId: string;
   let publicKeyB64: string;
