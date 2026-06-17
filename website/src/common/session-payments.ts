@@ -71,6 +71,38 @@ function isBase58Address(value: string): boolean {
 	}
 }
 
+type SignTransactionFunction = (
+	transaction: Transaction
+) => Promise<Transaction>;
+
+/**
+ * One-time at login: the wallet (Phantom) approves the browser session key as an
+ * SPL delegate for up to `amount` of the mint (USDC). After this, the session
+ * key can authorize payments up to the cap with no further wallet prompts; the
+ * facilitator fee-pays each one. Returns the approval transaction signature.
+ */
+export async function enableDelegatedSpending(options: {
+	rpcUrl: string;
+	payer: string;
+	delegate: string;
+	amount: string;
+	mint?: string;
+	signTransaction: SignTransactionFunction;
+}): Promise<string> {
+	const transaction = await buildApproveTransaction({
+		rpcUrl: options.rpcUrl,
+		payer: options.payer,
+		delegate: options.delegate,
+		amount: options.amount,
+		mint: options.mint,
+	});
+	const signed = await options.signTransaction(transaction);
+	const connection = createSolanaConnection(options.rpcUrl);
+	const signature = await connection.sendRawTransaction(signed.serialize());
+	await connection.confirmTransaction(signature, "confirmed");
+	return signature;
+}
+
 /**
  * Builds the base64, session-signed delegated transfer for an x402 challenge so
  * the payer's OWN funds move to the recipient (the facilitator only fee-pays),
@@ -111,9 +143,39 @@ export async function buildDelegatedTxForPaymentMap(
 	const sessionPublicKeyBase64 = signer.publicKeyBase64;
 
 	// PayAI's exact scheme forbids ApproveChecked and create-ATA in the payment
-	// transaction, so the session delegate must already be approved (done once at
-	// login) and the payee ATA must exist. Build the strict 3-instruction tx.
+	// transaction. So before the gasless session-signed transfer, ensure the
+	// session key is an approved SPL delegate via a SEPARATE on-chain approval the
+	// wallet signs (Phantom signs transactions via signTransaction, never via
+	// signMessage). Subsequent payments under the cap need no further prompt.
 	if (isPayAiBackend()) {
+		const delegate = new PublicKey(
+			Buffer.from(sessionPublicKeyBase64, "base64")
+		).toBase58();
+		const need = BigInt(fields.amount);
+		const allowance = await readDelegateAllowance({
+			rpcUrl,
+			owner: payer,
+			delegate,
+			mint,
+		});
+		if (allowance < need) {
+			const signTransaction = signer.walletSignTransaction;
+			if (!signTransaction) {
+				throw new Error(
+					"Connect a wallet that can sign transactions to approve delegated spending."
+				);
+			}
+			const allowanceCap =
+				BigInt(SPL_DELEGATE_CAP) >= need ? SPL_DELEGATE_CAP : fields.amount;
+			await enableDelegatedSpending({
+				rpcUrl,
+				payer,
+				delegate,
+				amount: allowanceCap,
+				mint,
+				signTransaction,
+			});
+		}
 		return buildPayAiExactTransferTx({
 			rpcUrl,
 			facilitator,
@@ -162,38 +224,6 @@ export async function buildDelegatedTxForPaymentMap(
 		decimals,
 		approve,
 	});
-}
-
-type SignTransactionFunction = (
-	transaction: Transaction
-) => Promise<Transaction>;
-
-/**
- * One-time at login: the wallet (Phantom) approves the browser session key as an
- * SPL delegate for up to `amount` of the mint (USDC). After this, the session
- * key can authorize payments up to the cap with no further wallet prompts; the
- * facilitator fee-pays each one. Returns the approval transaction signature.
- */
-export async function enableDelegatedSpending(options: {
-	rpcUrl: string;
-	payer: string;
-	delegate: string;
-	amount: string;
-	mint?: string;
-	signTransaction: SignTransactionFunction;
-}): Promise<string> {
-	const transaction = await buildApproveTransaction({
-		rpcUrl: options.rpcUrl,
-		payer: options.payer,
-		delegate: options.delegate,
-		amount: options.amount,
-		mint: options.mint,
-	});
-	const signed = await options.signTransaction(transaction);
-	const connection = createSolanaConnection(options.rpcUrl);
-	const signature = await connection.sendRawTransaction(signed.serialize());
-	await connection.confirmTransaction(signature, "confirmed");
-	return signature;
 }
 
 export interface SessionPaymentOptions {
