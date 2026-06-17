@@ -296,6 +296,73 @@ describe("tinyplace CLI", () => {
       command: "pnpm add -g @tinyhumansai/tinyplace@latest",
     });
   });
+
+  it("routes `raw <command>` like the bare command and lists raw commands alone", async () => {
+    const requests: Array<Request> = [];
+    const routed = await runTinyPlaceCli(["raw", "profile", "@agent"], {
+      env: { TINYPLACE_ENDPOINT: "https://example.test" },
+      fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+        requests.push(new Request(input, init));
+        return Response.json({ ok: true });
+      },
+    });
+    expect(JSON.parse(routed.stdout)).toEqual({ ok: true });
+    expect(requests[0].url).toBe("https://example.test/registry/names/%40agent");
+
+    const list = await runTinyPlaceCli(["raw"], {
+      env: { TINYPLACE_ENDPOINT: "https://example.test" },
+      fetch: async () => Response.json({}),
+    });
+    const commands = JSON.parse(list.stdout).commands as Array<{ name: string }>;
+    expect(commands.find((command) => command.name === "channels")).toBeTruthy();
+    expect(commands.find((command) => command.name === "status")).toBeFalsy();
+  });
+
+  it("aggregates the steady-state snapshot with `status`", async () => {
+    const env = { TINYPLACE_ENDPOINT: "https://example.test", TINYPLACE_SECRET_KEY: "01".repeat(32) };
+    const result = await runTinyPlaceCli(["status"], {
+      env,
+      fetch: async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.includes("/inbox/counts")) return Response.json({ unread: 2 });
+        if (url.includes("/inbox")) return Response.json({ items: [{ id: "i1" }] });
+        if (url.includes("/escrow")) return Response.json({ escrows: [{ id: "e1" }] });
+        if (url.includes("/jobs")) return Response.json({ jobs: [{ id: "j1" }] });
+        if (url.includes("/keys/")) return Response.json({ lowOneTimePreKeys: true });
+        return Response.json({ messages: [{ id: "m1" }] });
+      },
+    });
+    expect(result.code).toBe(0);
+    const snapshot = JSON.parse(result.stdout);
+    expect(snapshot.counts.unread).toBe(2);
+    expect(snapshot.escrows.count).toBe(1);
+    expect(snapshot.attention).toEqual(expect.arrayContaining([expect.stringContaining("unread")]));
+  });
+
+  it("aggregates discovery sources with `discover`", async () => {
+    const result = await runTinyPlaceCli(["discover"], {
+      env: { TINYPLACE_ENDPOINT: "https://example.test" },
+      fetch: async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.includes("/groups")) return Response.json({ groups: [{ id: "g1" }] });
+        if (url.includes("/channels")) return Response.json({ channels: [{ id: "c1" }] });
+        return Response.json({ agents: [{ id: "a1" }] });
+      },
+    });
+    expect(result.code).toBe(0);
+    const discover = JSON.parse(result.stdout);
+    expect(discover.groups.count).toBe(1);
+    expect(discover.channels.count).toBe(1);
+    expect(discover.agents.count).toBe(1);
+  });
+
+  it("help separates workflows from raw commands", async () => {
+    const help = await runTinyPlaceCli([], {});
+    expect(help.code).toBe(0);
+    expect(help.stdout).toContain("Workflows");
+    expect(help.stdout).toContain("tinyplace raw <command>");
+    expect(help.stdout).toContain("status");
+  });
 });
 
 function toBase64Url(value: string): string {
