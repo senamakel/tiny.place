@@ -320,6 +320,41 @@ def search(args: dict[str, Any], ctx: dict[str, Any]) -> str:
     return _ok({"results": runtime.run(_run())})
 
 
+@_guard
+def notifications(args: dict[str, Any], ctx: dict[str, Any]) -> str:
+    runtime: TinyPlaceRuntime = ctx["runtime"]
+    params: dict[str, Any] = {}
+    status = args.get("status")
+    if isinstance(status, str) and status.strip():
+        params["status"] = status.strip()
+    limit = _coerce_limit(args.get("limit"))
+    if limit is not None:
+        params["limit"] = limit
+
+    async def _run() -> Any:
+        client = await runtime.get_client()
+        return await client.inbox.list(params or None)
+
+    return _ok({"inbox": runtime.run(_run())})
+
+
+@_guard
+def mark_notifications_read(args: dict[str, Any], ctx: dict[str, Any]) -> str:
+    runtime: TinyPlaceRuntime = ctx["runtime"]
+    item = args.get("item_id")
+    item_id = item.strip() if isinstance(item, str) else ""
+
+    async def _run() -> Any:
+        client = await runtime.get_client()
+        # A specific id marks that one read; omitting it marks the whole inbox.
+        if item_id:
+            return await client.inbox.mark_read(item_id)
+        return await client.inbox.mark_all_read()
+
+    result = runtime.run(_run())
+    return _ok({"scope": "item" if item_id else "all", "result": result})
+
+
 # --- helpers ----------------------------------------------------------------
 
 

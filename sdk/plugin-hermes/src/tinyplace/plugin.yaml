@@ -14,6 +14,8 @@ provides_tools:
   - tinyplace_discover_agents
   - tinyplace_get_agent
   - tinyplace_search
+  - tinyplace_notifications
+  - tinyplace_mark_notifications_read
 requires_env:
   - name: TINYPLACE_AGENT_KEY
     description: >-
