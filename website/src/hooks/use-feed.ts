@@ -8,6 +8,8 @@ import {
 import type {
 	Comment,
 	FeedQueryParams,
+	GqlComment,
+	GqlHomeFeedResult,
 	HomeFeedParams,
 	HomeFeedResult,
 	LikeResult,
@@ -72,6 +74,43 @@ export function usePostComments(
 	});
 }
 
+/**
+ * GraphQL-gateway home feed: one batched request returns posts with their
+ * author + verified status embedded, so the feed no longer fans out one
+ * profile + one attestations fetch per author (the 429 source).
+ */
+export function useHomeFeedGql(
+	parameters?: HomeFeedParams,
+	enabled = true
+): UseQueryResult<GqlHomeFeedResult> {
+	const client = useApiClient();
+	return useQuery({
+		queryKey: queryKeys.gql.home(parameters),
+		queryFn: (): Promise<GqlHomeFeedResult> =>
+			client.graphql.homeFeed(parameters),
+		enabled,
+	});
+}
+
+/**
+ * GraphQL-gateway comments: authors (and their verified status) arrive embedded,
+ * so the comment list issues a single request instead of one attestations fetch
+ * per commenter.
+ */
+export function usePostCommentsGql(
+	postId: string,
+	enabled: boolean
+): UseQueryResult<{ comments: Array<GqlComment> }> {
+	const client = useApiClient();
+	return useQuery({
+		queryKey: queryKeys.gql.comments(postId),
+		queryFn: async (): Promise<{ comments: Array<GqlComment> }> => ({
+			comments: await client.graphql.postComments(postId),
+		}),
+		enabled: enabled && Boolean(postId),
+	});
+}
+
 export function useCreatePost(
 	handle: string
 ): UseMutationResult<Post, Error, { body: string }> {
@@ -85,6 +124,7 @@ export function useCreatePost(
 				queryKey: ["feeds", "user", handle],
 			});
 			void queryClient.invalidateQueries({ queryKey: ["feeds", "home"] });
+			void queryClient.invalidateQueries({ queryKey: ["gql", "home-feed"] });
 		},
 	});
 }
@@ -102,6 +142,7 @@ export function useDeletePost(
 				queryKey: ["feeds", "user", handle],
 			});
 			void queryClient.invalidateQueries({ queryKey: ["feeds", "home"] });
+			void queryClient.invalidateQueries({ queryKey: ["gql", "home-feed"] });
 		},
 	});
 }
@@ -120,6 +161,9 @@ export function useAddComment(
 		onSuccess: (): void => {
 			void queryClient.invalidateQueries({
 				queryKey: queryKeys.feeds.comments(handle, postId),
+			});
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.gql.comments(postId),
 			});
 			void queryClient.invalidateQueries({
 				queryKey: ["feeds", "user", handle],
@@ -166,6 +210,9 @@ export function useDeleteComment(
 		onSuccess: (): void => {
 			void queryClient.invalidateQueries({
 				queryKey: queryKeys.feeds.comments(handle, postId),
+			});
+			void queryClient.invalidateQueries({
+				queryKey: queryKeys.gql.comments(postId),
 			});
 		},
 	});

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Post } from "@tinyhumansai/tinyplace";
+import type { FeedAuthor, Post } from "@tinyhumansai/tinyplace";
 
 import type { FunctionComponent } from "@src/common/types";
 import { CommentList } from "@src/components/feed/CommentList";
@@ -21,13 +21,20 @@ export function PostCard(props: {
 	post: Post;
 	/** The feed handle these posts belong to (for comment routing). */
 	handle: string;
+	/**
+	 * Author hydrated by the GraphQL gateway (display name + verified embedded).
+	 * When provided, the verified badge renders from this flag and issues NO
+	 * per-author attestations request; when omitted, the badge self-fetches.
+	 */
+	author?: FeedAuthor;
 	/** Whether the connected viewer owns this feed (enables delete). */
 	canDelete?: boolean;
 	reason?: string;
 	/** Start with the comment thread expanded (used on the permalink page). */
 	defaultCommentsOpen?: boolean;
 }): FunctionComponent {
-	const { post, handle, canDelete, reason, defaultCommentsOpen } = props;
+	const { post, handle, author, canDelete, reason, defaultCommentsOpen } =
+		props;
 	const { t } = useTranslation();
 	const [showComments, setShowComments] = useState(
 		Boolean(defaultCommentsOpen)
@@ -73,7 +80,11 @@ export function PostCard(props: {
 									{actor.name}
 								</span>
 							)}
-							<TwitterVerifiedBadge agentId={post.author} />
+							{author ? (
+								<TwitterVerifiedBadge verified={author.verified} />
+							) : (
+								<TwitterVerifiedBadge agentId={post.author} />
+							)}
 							{actor.actorType ? <ActorTypeTag type={actor.actorType} /> : null}
 						</div>
 						<div className="flex items-center gap-1.5 text-[11px] text-muted">
