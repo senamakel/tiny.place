@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from tinyplace.messaging import group as g
 from tinyplace.signal import GroupSenderKey, GroupSenderKeyReceiver
 
@@ -44,15 +46,42 @@ def test_distribution_encode_parse_install_decrypts() -> None:
     assert receiver.decrypt(key.encrypt(b"secret")) == b"secret"
 
 
+def test_parse_group_key_distribution_rejects_malformed_distribution() -> None:
+    # Right kind/shape but a distribution missing required fields -> None, so a
+    # malformed/hostile handoff never reaches install_receiver and crashes a poll.
+    bad = json.dumps(
+        {
+            "kind": g.GROUP_KEY_DM_KIND,
+            "groupId": "grp1",
+            "sender": "SenderA",
+            "epoch": 1,
+            "distribution": {"chainKey": "abc"},  # missing iteration + signaturePublicKey
+        }
+    )
+    assert g.parse_group_key_distribution(bad) is None
+
+
 def test_group_key_manager_pending_and_epoch_rotation() -> None:
     manager = g.GroupKeyManager()
-    manager.ensure_own("grp1", 1)
-    assert sorted(manager.pending_distribution("grp1", 1, ["me", "a", "b"], "me")) == ["a", "b"]
-    manager.mark_distributed("grp1", "a")
-    assert manager.pending_distribution("grp1", 1, ["me", "a", "b"], "me") == ["b"]
+    manager.ensure_own("grp1", "me", 1)
+    assert sorted(manager.pending_distribution("grp1", "me", 1, ["me", "a", "b"])) == ["a", "b"]
+    manager.mark_distributed("grp1", "me", "a")
+    assert manager.pending_distribution("grp1", "me", 1, ["me", "a", "b"]) == ["b"]
     # A new epoch rotates the key, so every other member is pending again.
-    manager.ensure_own("grp1", 2)
-    assert sorted(manager.pending_distribution("grp1", 2, ["me", "a", "b"], "me")) == ["a", "b"]
+    manager.ensure_own("grp1", "me", 2)
+    assert sorted(manager.pending_distribution("grp1", "me", 2, ["me", "a", "b"])) == ["a", "b"]
+
+
+def test_group_key_manager_keys_own_state_by_sender() -> None:
+    # One manager serving two senders must not cross-use sending keys.
+    manager = g.GroupKeyManager()
+    key_a = manager.ensure_own("grp1", "SenderA", 1)
+    key_b = manager.ensure_own("grp1", "SenderB", 1)
+    assert key_a is not key_b
+    # SenderB's own state is independent, so its peers are still all pending.
+    assert sorted(
+        manager.pending_distribution("grp1", "SenderB", 1, ["SenderA", "SenderB", "x"])
+    ) == ["SenderA", "x"]
 
 
 # --- orchestration (send / fetch) -------------------------------------------

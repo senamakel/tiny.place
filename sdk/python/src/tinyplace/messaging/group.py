@@ -120,11 +120,17 @@ def parse_group_key_distribution(text: str) -> dict[str, Any] | None:
         return None
     if not isinstance(parsed, dict) or parsed.get("kind") != GROUP_KEY_DM_KIND:
         return None
+    distribution = parsed.get("distribution")
     if (
         not isinstance(parsed.get("groupId"), str)
         or not isinstance(parsed.get("sender"), str)
         or not isinstance(parsed.get("epoch"), int)
-        or not isinstance(parsed.get("distribution"), dict)
+        or not isinstance(distribution, dict)
+        # Validate the distribution fields too, so a malformed/hostile handoff is
+        # rejected here rather than blowing up later in install_receiver.
+        or not isinstance(distribution.get("chainKey"), str)
+        or not isinstance(distribution.get("iteration"), int)
+        or not isinstance(distribution.get("signaturePublicKey"), str)
     ):
         return None
     return parsed
@@ -208,36 +214,43 @@ class GroupKeyManager:
     """
 
     def __init__(self) -> None:
-        # group_id -> {"epoch": int, "key": GroupSenderKey, "distributed_to": set[str]}
+        # (group_id, sender) -> {"epoch": int, "key": GroupSenderKey,
+        #                        "distributed_to": set[str]}. Keyed by sender too,
+        # so one manager can serve multiple identities without cross-using keys.
         self._own: dict[str, dict[str, Any]] = {}
         self._receivers: dict[str, GroupSenderKeyReceiver] = {}
+
+    @staticmethod
+    def _own_key(group_id: str, sender: str) -> str:
+        return f"{group_id}|{sender}"
 
     @staticmethod
     def _receiver_key(group_id: str, sender: str, epoch: int) -> str:
         return f"{group_id}|{sender}|{epoch}"
 
-    def ensure_own(self, group_id: str, epoch: int) -> GroupSenderKey:
-        """This client's sending key for a group, rotating it on a new epoch."""
-        existing = self._own.get(group_id)
+    def ensure_own(self, group_id: str, sender: str, epoch: int) -> GroupSenderKey:
+        """This sender's sending key for a group, rotating it on a new epoch."""
+        own_key = self._own_key(group_id, sender)
+        existing = self._own.get(own_key)
         if existing is not None and existing["epoch"] == epoch:
             return existing["key"]
         key = GroupSenderKey.create()
-        self._own[group_id] = {"epoch": epoch, "key": key, "distributed_to": set()}
+        self._own[own_key] = {"epoch": epoch, "key": key, "distributed_to": set()}
         return key
 
     def pending_distribution(
-        self, group_id: str, epoch: int, members: list[str], self_id: str
+        self, group_id: str, sender: str, epoch: int, members: list[str]
     ) -> list[str]:
-        """Active members (excluding self) who don't yet have the current key."""
-        entry = self._own.get(group_id)
+        """Members (excluding the sender) who don't yet have the current key."""
+        entry = self._own.get(self._own_key(group_id, sender))
         if entry is None or entry["epoch"] != epoch:
-            return [m for m in members if m != self_id]
+            return [m for m in members if m != sender]
         return [
-            m for m in members if m != self_id and m not in entry["distributed_to"]
+            m for m in members if m != sender and m not in entry["distributed_to"]
         ]
 
-    def mark_distributed(self, group_id: str, member: str) -> None:
-        entry = self._own.get(group_id)
+    def mark_distributed(self, group_id: str, sender: str, member: str) -> None:
+        entry = self._own.get(self._own_key(group_id, sender))
         if entry is not None:
             entry["distributed_to"].add(member)
 
@@ -254,8 +267,8 @@ class GroupKeyManager:
     ) -> GroupSenderKeyReceiver | None:
         return self._receivers.get(self._receiver_key(group_id, sender, epoch))
 
-    def reset_own(self, group_id: str) -> None:
-        self._own.pop(group_id, None)
+    def reset_own(self, group_id: str, sender: str) -> None:
+        self._own.pop(self._own_key(group_id, sender), None)
 
     def reset(self) -> None:
         self._own.clear()
@@ -296,8 +309,8 @@ async def send_group_message(
     relay never sees the key. Then encrypts the text with the sender key and fans
     the envelope out via ``groups.fanout_message``.
     """
-    sender_key = group_keys.ensure_own(group_id, epoch)
-    pending = group_keys.pending_distribution(group_id, epoch, members, sender)
+    sender_key = group_keys.ensure_own(group_id, sender, epoch)
+    pending = group_keys.pending_distribution(group_id, sender, epoch, members)
     body = encode_group_key_distribution(group_id, sender, epoch, sender_key.distribution())
 
     for member in pending:
@@ -307,7 +320,7 @@ async def send_group_message(
             await client.messages.send_encrypted(
                 session, enc_address, address, body.encode("utf-8")
             )
-            group_keys.mark_distributed(group_id, member)
+            group_keys.mark_distributed(group_id, sender, member)
         except Exception:  # noqa: BLE001 - a member without a key bundle is skipped, not fatal
             continue
 
