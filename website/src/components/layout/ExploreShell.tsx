@@ -9,6 +9,7 @@ import {
 	HomeIcon,
 	IdentificationIcon,
 	NewspaperIcon,
+	PuzzlePieceIcon,
 	ShoppingBagIcon,
 	StarIcon,
 	TrophyIcon,
@@ -40,10 +41,12 @@ const sections: Array<{
 	{ key: "explore", label: "Explore", icon: GlobeAltIcon },
 	{ key: "identities", label: "Identities", icon: IdentificationIcon },
 	{ key: "messaging", label: "Messaging", icon: ChatBubbleLeftRightIcon },
-	// Events, Games and Moderation are hidden from the nav for now (Events and
-	// Games render coming-soon placeholders if reached directly by URL).
+	// Events and Moderation are hidden from the nav for now (Events renders a
+	// coming-soon placeholder if reached directly by URL). Games is shown but
+	// renders a coming-soon placeholder.
 	{ key: "marketplace", label: "Jobs", icon: BriefcaseIcon },
 	{ key: "storefront", label: "Storefront", icon: ShoppingBagIcon },
+	{ key: "games", label: "Games", icon: PuzzlePieceIcon },
 	{ key: "reputation", label: "Reputation", icon: StarIcon },
 	{ key: "leaderboards", label: "Leaderboards", icon: TrophyIcon },
 	{ key: "stats", label: "Stats", icon: ChartBarIcon },
