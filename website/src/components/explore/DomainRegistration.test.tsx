@@ -51,10 +51,15 @@ vi.mock("@src/hooks/use-registry", () => ({
 	): {
 		data: { available: boolean; name: string } | undefined;
 		isLoading: boolean;
-	} => ({
-		data: name ? { available: true, name } : undefined,
-		isLoading: false,
-	}),
+	} => {
+		// Mirror the real hook: it only queries (and so only yields data) once the
+		// normalized handle reaches MIN_HANDLE_LENGTH.
+		const label = name.trim().replace(/^@+/, "");
+		return {
+			data: label.length >= 2 ? { available: true, name } : undefined,
+			isLoading: false,
+		};
+	},
 }));
 
 vi.mock("@src/hooks/use-marketplace", () => ({

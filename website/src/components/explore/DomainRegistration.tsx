@@ -87,6 +87,9 @@ export const DomainRegistration = ({
 		useState<RegistryPaymentChallenge | null>(null);
 
 	const searchName = normalizedHandle(searchInput);
+	// Gate the verdict UI on the same normalized (de-`@`-ed) length the
+	// availability query enables on, so `@a` can't desync the hint from the query.
+	const normalizedNameLength = searchName.replace(/^@/, "").length;
 	const availabilityQuery = useHandleAvailability(searchName);
 
 	// A wallet's first name is auto-assigned as primary; offer the toggle
@@ -368,19 +371,20 @@ export const DomainRegistration = ({
 					</button>
 				</div>
 
-				{searchInput.length > 0 && searchInput.length < MIN_HANDLE_LENGTH && (
-					<p className={`mt-2 text-xs ${secondaryClass}`}>
-						Handles must be at least {MIN_HANDLE_LENGTH} characters.
-					</p>
-				)}
+				{normalizedNameLength > 0 &&
+					normalizedNameLength < MIN_HANDLE_LENGTH && (
+						<p className={`mt-2 text-xs ${secondaryClass}`}>
+							Handles must be at least {MIN_HANDLE_LENGTH} characters.
+						</p>
+					)}
 
 				{availabilityQuery.isLoading &&
-					searchInput.length >= MIN_HANDLE_LENGTH && (
+					normalizedNameLength >= MIN_HANDLE_LENGTH && (
 						<p className={`mt-2 text-xs ${secondaryClass}`}>Checking...</p>
 					)}
 
 				{availabilityQuery.isError &&
-					searchInput.length >= MIN_HANDLE_LENGTH && (
+					normalizedNameLength >= MIN_HANDLE_LENGTH && (
 						<p className="mt-2 text-xs font-medium text-red-500">
 							Couldn&apos;t check availability. Please try again.
 						</p>
