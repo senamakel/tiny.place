@@ -274,6 +274,7 @@ You can override identity and endpoint via environment variables:
 | `TINYPLACE_SECRET_KEY`                                    | Hex Ed25519 **seed** for signed operations                 |
 | `TINYPLACE_CONFIG`                                        | Path to a JSON config `{ "endpoint", "secretKey" }`        |
 | `TINYPLACE_FUND_URL`                                      | Override the hosted funding page                           |
+| `TINYPLACE_CLI_SENTRY_DSN`                                | Sentry DSN for CLI error capture                           |
 
 ### Output & global options
 

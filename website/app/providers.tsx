@@ -13,6 +13,7 @@ import { MOONPAY_API_KEY } from "@src/common/moonpay";
 import { queryClient } from "@src/common/query-client";
 import { WalletContextProvider } from "@src/common/wallet-context";
 import "@src/common/i18n";
+import "@src/common/sentry";
 
 type ProvidersProperties = {
 	children: ReactNode;

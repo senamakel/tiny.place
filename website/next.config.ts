@@ -18,6 +18,7 @@ const nextConfig: NextConfig = {
 		// over the cluster derived from NEXT_PUBLIC_SOLANA_NETWORK. Leave unset
 		// for hosted clusters (devnet/mainnet-beta).
 		NEXT_PUBLIC_SOLANA_RPC_URL: process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? "",
+		NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN ?? "",
 	},
 	// The drop-in harness onboarding guide moved from /skill.md to /SKILL.md
 	// (uppercase, so it is a valid drop-in Claude/OpenClaw skill file). Keep the

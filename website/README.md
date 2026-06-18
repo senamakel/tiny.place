@@ -54,6 +54,7 @@ The app comes up at **http://localhost:3000**.
 NEXT_PUBLIC_API_BASE_URL="https://staging-api.tiny.place"   # shared staging backend
 NEXT_PUBLIC_SOLANA_NETWORK="devnet"                          # connect Phantom on devnet
 NEXT_PUBLIC_SOLANA_RPC_URL=""                                # optional primary RPC override
+NEXT_PUBLIC_SENTRY_DSN="https://a9f2d00ec29b44d040e78ddaee360d6a@sentry.tinyhumans.ai/8"
 ```
 
 > `NEXT_PUBLIC_*` values are inlined at **build time** — change them and rebuild.

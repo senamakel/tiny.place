@@ -1,5 +1,10 @@
 import { boolFlag, parseArgs } from "./args.js";
-import { CLI_GUIDES, HARNESS_CLI_COMMANDS, buildHelp, rawCommands } from "./commands.js";
+import {
+  CLI_GUIDES,
+  HARNESS_CLI_COMMANDS,
+  buildHelp,
+  rawCommands,
+} from "./commands.js";
 import { makeContext } from "./context.js";
 import { formatResult, redactSecrets, resolveFormat } from "./format.js";
 import {
@@ -18,7 +23,17 @@ import {
 import { runKeygen } from "./keygen.js";
 import { cliVersionInfo, readCliVersion, selfUpdate } from "./maintenance.js";
 import { dispatchRaw } from "./raw.js";
-import type { CliContext, ParsedArgs, TinyPlaceCliOptions, TinyPlaceCliResult } from "./types.js";
+import {
+  captureCliException,
+  flushCliSentry,
+  initCliSentry,
+} from "./sentry.js";
+import type {
+  CliContext,
+  ParsedArgs,
+  TinyPlaceCliOptions,
+  TinyPlaceCliResult,
+} from "./types.js";
 import {
   balanceFlow,
   buyDomainFlow,
@@ -48,6 +63,8 @@ export async function runTinyPlaceCli(
   options: TinyPlaceCliOptions = {},
 ): Promise<TinyPlaceCliResult> {
   const parsed = parseArgs(argv);
+  const env = options.env ?? process.env;
+  initCliSentry(env);
   // `--version` / `-v` short-circuit BEFORE makeContext so a plain version probe
   // never auto-generates a wallet key as a side effect. Use `version --check` for
   // the update comparison (it needs network + the resolved context).
@@ -62,7 +79,11 @@ export async function runTinyPlaceCli(
       stderr: "",
     };
   }
-  if (!parsed.command || parsed.command === "help" || parsed.command === "--help") {
+  if (
+    !parsed.command ||
+    parsed.command === "help" ||
+    parsed.command === "--help"
+  ) {
     return { code: 0, stdout: HELP, stderr: "" };
   }
 
@@ -73,21 +94,36 @@ export async function runTinyPlaceCli(
     const raw = boolFlag(parsed.flags, "raw");
     return { code: 0, stdout: formatResult(result, format, raw), stderr: "" };
   } catch (error) {
-    const detail = error as { status?: number; body?: unknown; paymentRequired?: unknown };
+    captureCliException(error, parsed.command);
+    await flushCliSentry();
+    const detail = error as {
+      status?: number;
+      body?: unknown;
+      paymentRequired?: unknown;
+    };
     return {
       code: 1,
       stdout: "",
-      stderr: `${JSON.stringify(redactSecrets({
-        error: error instanceof Error ? error.message : String(error),
-        ...(detail.status ? { status: detail.status } : {}),
-        ...(detail.body !== undefined ? { body: detail.body } : {}),
-        ...(detail.paymentRequired ? { paymentRequired: detail.paymentRequired } : {}),
-      }), null, 2)}\n`,
+      stderr: `${JSON.stringify(
+        redactSecrets({
+          error: error instanceof Error ? error.message : String(error),
+          ...(detail.status ? { status: detail.status } : {}),
+          ...(detail.body !== undefined ? { body: detail.body } : {}),
+          ...(detail.paymentRequired
+            ? { paymentRequired: detail.paymentRequired }
+            : {}),
+        }),
+        null,
+        2,
+      )}\n`,
     };
   }
 }
 
-async function dispatchTop(ctx: CliContext, parsed: ParsedArgs): Promise<unknown> {
+async function dispatchTop(
+  ctx: CliContext,
+  parsed: ParsedArgs,
+): Promise<unknown> {
   const flags = parsed.flags;
   switch (parsed.command) {
     case "raw": {
