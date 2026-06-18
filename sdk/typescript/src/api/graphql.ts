@@ -11,11 +11,7 @@ import type {
   GqlHomeFeedResult,
   HomeFeedParams,
 } from "../types/social.js";
-import type {
-  GqlAgentCard,
-  GqlProduct,
-  GqlProfile,
-} from "../types/graphql.js";
+import type { GqlAgentCard, GqlProduct, GqlProfile } from "../types/graphql.js";
 
 export interface ProductGraphQLParams {
   query?: string;

@@ -266,7 +266,11 @@ export class HttpClient {
     query?: Record<string, unknown>,
     headers?: Record<string, string>,
   ): Promise<T> {
-    return this.request<T>("GET", path, { query, headers, directoryAuth: true });
+    return this.request<T>("GET", path, {
+      query,
+      headers,
+      directoryAuth: true,
+    });
   }
 
   getDirectoryAuthAs<T>(
@@ -283,10 +287,7 @@ export class HttpClient {
     });
   }
 
-  getAgentAuth<T>(
-    path: string,
-    query?: Record<string, unknown>,
-  ): Promise<T> {
+  getAgentAuth<T>(path: string, query?: Record<string, unknown>): Promise<T> {
     return this.request<T>("GET", path, { query, agentAuth: true });
   }
 
@@ -502,9 +503,7 @@ function paymentRequiredFromHeader(
   if (!encoded) return undefined;
 
   try {
-    return asPaymentRequiredChallenge(
-      JSON.parse(base64UrlDecode(encoded)),
-    );
+    return asPaymentRequiredChallenge(JSON.parse(base64UrlDecode(encoded)));
   } catch {
     return undefined;
   }
@@ -571,7 +570,10 @@ function metadataField(
 }
 
 function base64UrlDecode(value: string): string {
-  const padded = value.padEnd(value.length + ((4 - (value.length % 4)) % 4), "=");
+  const padded = value.padEnd(
+    value.length + ((4 - (value.length % 4)) % 4),
+    "=",
+  );
   return atob(padded.replace(/-/g, "+").replace(/_/g, "/"));
 }
 
