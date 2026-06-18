@@ -4,7 +4,7 @@ import base64
 
 from nacl.signing import VerifyKey
 
-from tinyplace import LocalSigner, TinyPlaceClient, canonical_payload
+from tinyplace import LocalSigner, SOLANA_MAINNET_NETWORK, TinyPlaceClient, canonical_payload
 
 from .helpers import FakeResponse, FakeSession
 
@@ -101,6 +101,59 @@ async def test_delete_subname_uses_public_delete_with_ownership_signature() -> N
     assert request["url"].endswith("/registry/names/%40agent/subnames/bot")
     assert request["headers"]["X-TinyPlace-Public-Key"] == signer.public_key_base64
     assert request["headers"]["X-TinyPlace-Signature"].startswith("v1:")
+
+
+async def test_register_with_solana_payment_settles_then_retries(monkeypatch) -> None:
+    signer = LocalSigner.from_seed(bytes([22]) * 32)
+    challenge = {
+        "amount": "10000000",
+        "to": "Recipient1111111111111111111111111111111111",
+        "network": SOLANA_MAINNET_NETWORK,
+        "asset": "USDC",
+        "nonce": "n1",
+        "expiresAt": "2026-06-13T00:00:00Z",
+        "metadata": {"feeQuoteId": "q1"},
+    }
+    session = FakeSession(
+        [
+            FakeResponse(402, {"error": "payment required", "payment": challenge}),
+            FakeResponse(200, {"username": "@agent", "cryptoId": signer.agent_id}),
+        ]
+    )
+    client = TinyPlaceClient(
+        base_url="https://api.example.test",
+        signer=signer,
+        session=session,  # type: ignore[arg-type]
+    )
+
+    captured: dict = {}
+
+    async def fake_execute(**kwargs):
+        captured.update(kwargs)
+        return {
+            "signature": "onchain-sig",
+            "payment": {"scheme": "exact", "amount": kwargs["payment"]["amount"], "signature": "sig"},
+        }
+
+    monkeypatch.setattr("tinyplace.api.registry.execute_solana_x402_payment", fake_execute)
+
+    result = await client.register_domain_with_solana_payment(
+        "agent",
+        rpc_url="https://rpc.example",
+        secret_key=bytes([22]) * 32,
+        network=SOLANA_MAINNET_NETWORK,
+    )
+
+    # Paid the challenge's exact amount to its recipient, tagged for registration.
+    assert captured["payment"]["amount"] == "10000000"
+    assert captured["payment"]["to"] == challenge["to"]
+    assert captured["payment"]["metadata"]["purpose"] == "registration"
+    assert captured["payment"]["metadata"]["identity"] == "@agent"
+    # The retried registration carried the signed payment map.
+    retry_body = json_body_at(session, 1)
+    assert retry_body["payment"]["signature"] == "sig"
+    assert retry_body["username"] == "@agent"
+    assert result["onChainTx"] == "onchain-sig"
 
 
 def json_body(session: FakeSession) -> dict:
