@@ -121,7 +121,8 @@ async def test_buy_product_with_solana_payment_settles_then_buys(monkeypatch) ->
                 200,
                 {
                     "productId": "prod1",
-                    "seller": "SellerId",
+                    "seller": "@seller",
+                    "sellerCryptoId": "SellerWallet111",
                     "price": {"network": "solana:x", "asset": "USDC", "amount": "5"},
                 },
             ),
@@ -140,14 +141,28 @@ async def test_buy_product_with_solana_payment_settles_then_buys(monkeypatch) ->
     out = await client.marketplace.buy_product_with_solana_payment(
         "prod1", {"buyer": "BuyerId"}, rpc_url="https://rpc.example", secret_key=bytes([86]) * 32
     )
-    # Paid the product's exact price to the seller, USDC mint defaulted.
+    # Paid the product's exact price; payee is the seller's cryptoId (NOT @handle),
+    # so the on-chain token-account lookup resolves; USDC mint defaulted.
     assert captured["payment"]["amount"] == "5"
-    assert captured["payment"]["to"] == "SellerId" and captured["payment"]["from"] == "BuyerId"
+    assert captured["payment"]["to"] == "SellerWallet111" and captured["payment"]["from"] == "BuyerId"
     assert captured["mint"]
     # The buy POST carried the signed payment map.
     buy_body = json.loads(session.requests[1]["data"])
     assert buy_body["payment"]["signature"] == "s"
     assert out["purchase"]["purchaseId"] == "pur1" and out["payment"]["signature"] == "sig"
+
+
+async def test_buy_product_with_solana_payment_requires_buyer() -> None:
+    import pytest
+
+    signer = LocalSigner.from_seed(bytes([88]) * 32)
+    session = FakeSession([])
+    client = _client(signer, session)
+    with pytest.raises(ValueError, match="requires a buyer"):
+        await client.marketplace.buy_product_with_solana_payment(
+            "prod1", {}, rpc_url="https://rpc.example", secret_key=bytes([88]) * 32
+        )
+    assert session.requests == []  # no get_product / no on-chain call
 
 
 async def test_place_bid_with_solana_payment_attaches_upto_authorization() -> None:

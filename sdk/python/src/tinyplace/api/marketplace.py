@@ -92,6 +92,8 @@ class MarketplaceApi:
         """
         if self._signer is None:
             raise ValueError("buy_product_with_solana_payment requires a signer")
+        if not request.get("buyer"):
+            raise ValueError("buy_product_with_solana_payment requires a buyer")
         product = await self.get_product(product_id)
         price = _price(product)
         execution = await execute_solana_x402_payment(
@@ -106,7 +108,9 @@ class MarketplaceApi:
                 "asset": price["asset"],
                 "amount": price["amount"],
                 "from": request.get("buyer"),
-                "to": product.get("seller") if isinstance(product, dict) else None,
+                # On-chain payee must be the seller's cryptoId/wallet, not their
+                # @handle (the SPL token-account lookup is by owner address).
+                "to": _seller_payee(product),
                 "nonce": nonce or _marketplace_nonce("product", product_id),
                 "expiresAt": expires_at,
                 "metadata": {"productId": product_id, "kind": "product", **(metadata or {})},
@@ -194,6 +198,8 @@ class MarketplaceApi:
         """Buy an identity listing, settling its USDC price on chain (exact x402)."""
         if self._signer is None:
             raise ValueError("buy_identity_listing_with_solana_payment requires a signer")
+        if not request.get("buyer"):
+            raise ValueError("buy_identity_listing_with_solana_payment requires a buyer")
         listing = await self._find_identity_listing(listing_id)
         price = _price(listing)
         execution = await execute_solana_x402_payment(
@@ -208,7 +214,8 @@ class MarketplaceApi:
                 "asset": price["asset"],
                 "amount": price["amount"],
                 "from": request.get("buyer"),
-                "to": listing.get("seller"),
+                # On-chain payee = seller's cryptoId/wallet, not their @handle.
+                "to": _seller_payee(listing),
                 "nonce": nonce or _marketplace_nonce("identity", listing_id),
                 "expiresAt": expires_at,
                 "metadata": {
@@ -446,6 +453,15 @@ def _price(obj: Any) -> dict[str, Any]:
     if not isinstance(price, dict):
         raise ValueError("missing price object (expected network/asset/amount)")
     return price
+
+
+def _seller_payee(obj: Any) -> Any:
+    """The on-chain payee for a product/listing: the seller's cryptoId, falling
+    back to ``seller`` (the SPL token-account lookup needs a wallet address, not
+    an @handle)."""
+    if not isinstance(obj, dict):
+        return None
+    return obj.get("sellerCryptoId") or obj.get("seller")
 
 
 # Canonical signature payloads — must byte-match the backend / TS SDK exactly.
