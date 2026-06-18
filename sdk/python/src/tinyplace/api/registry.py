@@ -7,7 +7,12 @@ from ..auth import sign_fresh_canonical_payload
 from ..crypto import canonical_payload
 from ..http import HttpClient, TinyPlaceError, encode
 from ..signer import Signer
-from ..solana import SOLANA_MAINNET_NETWORK, USDC_DECIMALS, execute_solana_x402_payment
+from ..solana import (
+    SOLANA_MAINNET_NETWORK,
+    SOLANA_USDC_MINT,
+    USDC_DECIMALS,
+    execute_solana_x402_payment,
+)
 from ..types import Json, JsonDict
 
 DEFAULT_REGISTRATION_ATTEMPTS = 30
@@ -62,7 +67,11 @@ class RegistryApi:
             signer=self._signer,
             rpc_url=rpc_url,
             secret_key=secret_key,
-            mint=mint,
+            # The registration fee is USDC: default to the USDC mint so a
+            # challenge that names the asset by its SPL mint address (rather than
+            # the literal "USDC" symbol) still settles. Callers override for
+            # devnet / custom deployments.
+            mint=mint or SOLANA_USDC_MINT,
             decimals=decimals,
             payment={
                 "scheme": challenge.get("scheme", "exact"),
@@ -81,14 +90,38 @@ class RegistryApi:
                 "publicKeyBase64": normalized.get("publicKey"),
             },
         )
-        identity = await self._register_retrying_payment(
-            {**normalized, "payment": execution["payment"]}, attempts, interval_ms
-        )
+        try:
+            identity = await self._register_retrying_payment(
+                {**normalized, "payment": execution["payment"]}, attempts, interval_ms
+            )
+        except TinyPlaceError as exc:
+            # The payment is already on chain. A 5xx can still come back after
+            # the identity was persisted, so check whether the handle now exists
+            # before failing — re-driving the flow would otherwise risk paying
+            # twice. Re-raise (with the payment attached) only if it truly wasn't
+            # created.
+            identity = await self._recover_registered_identity(normalized["username"], exc)
+            if identity is None:
+                raise
         return {
             "identity": identity,
             "payment": execution["payment"],
             "onChainTx": execution["signature"],
         }
+
+    async def _recover_registered_identity(
+        self, username: str, exc: TinyPlaceError
+    ) -> Json | None:
+        """Return the identity if a post-payment 5xx still created the handle."""
+        if exc.status < 500:
+            return None
+        try:
+            result = await self.get(username)
+        except TinyPlaceError:
+            return None
+        if isinstance(result, dict) and result.get("available") is False:
+            return result.get("identity")
+        return None
 
     async def _registration_payment_challenge(self, request: JsonDict) -> dict[str, Any]:
         try:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable
@@ -264,10 +265,24 @@ def _payment_required_from_header(headers: Headers) -> PaymentRequiredChallenge 
     value = headers.get("X-Payment-Required") or headers.get("x-payment-required")
     if not value:
         return None
-    try:
-        parsed = json.loads(value)
-    except json.JSONDecodeError:
-        return None
+    parsed = _decode_payment_header(value)
     if isinstance(parsed, dict) and isinstance(parsed.get("payment"), dict):
         return PaymentRequiredChallenge(error=parsed.get("error"), payment=parsed["payment"])
     return None
+
+
+def _decode_payment_header(value: str) -> Any:
+    """Decode an ``X-Payment-Required`` header to its JSON object.
+
+    The backend sends base64url-encoded JSON (matching the TS SDK's
+    ``base64UrlDecode`` + ``JSON.parse``); fall back to raw JSON for resilience.
+    """
+    try:
+        padded = value + "=" * (-len(value) % 4)
+        return json.loads(base64.urlsafe_b64decode(padded))
+    except (ValueError, json.JSONDecodeError):
+        pass
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError:
+        return None
