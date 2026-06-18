@@ -11,12 +11,12 @@ import type { Direction } from "@src/engine/types";
 
 // Number of mascots to scatter across the band. Kept in the 10-15 range so the
 // strip feels populated without the autonomy paths fighting over tiles.
-const MASCOT_COUNT = 13;
+const MASCOT_COUNT = 15;
 
 // Floor band geometry (see createBannerRoom). SPAN is the half-width in screen
 // tiles (±11 → ~700px wide); THICKNESS is the screen-depth in rows, kept small
 // so the band stays short enough to fit the 200px banner.
-const BAND_SPAN = 11;
+const BAND_SPAN = 14;
 const BAND_THICKNESS = 4;
 
 // Nudge the camera so the mascots (which extend ~70px above their tile) sit
@@ -96,7 +96,7 @@ export const MascotBanner = (): FunctionComponent => {
 		<div
 			ref={containerRef}
 			aria-hidden
-			className="h-[200px] w-full max-w-[700px] overflow-hidden"
+			className="h-[200px] w-full max-w-[900px] overflow-hidden"
 		/>
 	);
 };
