@@ -47,9 +47,13 @@ export default class GameEngine {
 			},
 		};
 
-		this.game = new Phaser.Game(config);
-		this.game.events.once("ready", () => {
-			this.scene = this.game!.scene.getScene("RoomScene") as RoomScene;
+		const game = new Phaser.Game(config);
+		this.game = game;
+		game.events.once("ready", () => {
+			// In React StrictMode the engine can be destroyed (this.game === null)
+			// before Phaser emits "ready"; bail rather than touch a torn-down game.
+			if (this.game !== game) return;
+			this.scene = game.scene.getScene("RoomScene") as RoomScene;
 			this.resolveReady();
 		});
 	}
