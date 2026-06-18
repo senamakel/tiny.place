@@ -152,6 +152,41 @@ async def test_buy_product_with_solana_payment_settles_then_buys(monkeypatch) ->
     assert out["purchase"]["purchaseId"] == "pur1" and out["payment"]["signature"] == "sig"
 
 
+async def test_buy_product_retries_through_confirmation_lag(monkeypatch) -> None:
+    signer = LocalSigner.from_seed(bytes([91]) * 32)
+    session = FakeSession(
+        [
+            FakeResponse(
+                200,
+                {
+                    "productId": "prod1",
+                    "sellerCryptoId": "SellerWallet111",
+                    "price": {"network": "solana:x", "asset": "USDC", "amount": "5"},
+                },
+            ),
+            FakeResponse(402, {"error": "transaction not found"}),  # buy: not confirmed yet
+            FakeResponse(200, {"purchaseId": "pur1"}),  # buy: confirmed
+        ]
+    )
+    client = _client(signer, session)
+
+    async def fake_exec(**kwargs):
+        return {"signature": "sig", "payment": {"signature": "s"}}
+
+    monkeypatch.setattr("tinyplace.api.marketplace.execute_solana_x402_payment", fake_exec)
+
+    out = await client.marketplace.buy_product_with_solana_payment(
+        "prod1",
+        {"buyer": "BuyerId"},
+        rpc_url="https://rpc.example",
+        secret_key=bytes([91]) * 32,
+        interval_ms=0,  # no real sleep in the test
+    )
+    # Probe + two buy attempts (the first 402 "transaction not found" is retried).
+    assert len(session.requests) == 3
+    assert out["purchase"]["purchaseId"] == "pur1" and out["payment"]["signature"] == "sig"
+
+
 async def test_buy_product_with_solana_payment_requires_buyer() -> None:
     import pytest
 
