@@ -3,11 +3,29 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { graphqlFeedEnabled } from "@src/common/feature-flags";
 import type { FunctionComponent } from "@src/common/types";
 import { formatTimestamp } from "@src/components/feed/format";
 import { useEffectiveActor } from "@src/components/feed/use-actor";
 import { TwitterVerifiedBadge } from "@src/components/profile/TwitterVerifiedBadge";
-import { useAddComment, usePostComments } from "@src/hooks/use-feed";
+import {
+	useAddComment,
+	usePostComments,
+	usePostCommentsGql,
+} from "@src/hooks/use-feed";
+
+/** A comment normalized across the REST and GraphQL shapes for rendering. */
+type CommentRow = {
+	commentId: string;
+	/** The author @handle (always present). */
+	authorHandle: string;
+	/** Display label (display name when known, else handle). */
+	authorLabel: string;
+	/** Verified status when embedded (GraphQL); undefined → self-fetch badge. */
+	verified?: boolean;
+	createdAt: string;
+	body: string;
+};
 
 export function CommentList(props: {
 	handle: string;
@@ -15,10 +33,36 @@ export function CommentList(props: {
 }): FunctionComponent {
 	const { handle, postId } = props;
 	const { t } = useTranslation();
-	const comments = usePostComments(handle, postId, true);
+	// Both hooks declared (rules of hooks); the inactive one is disabled. The
+	// GraphQL path embeds the author + verified status, so it makes no per-author
+	// attestations request.
+	const restComments = usePostComments(handle, postId, !graphqlFeedEnabled);
+	const gqlComments = usePostCommentsGql(postId, graphqlFeedEnabled);
 	const actor = useEffectiveActor();
 	const addComment = useAddComment(handle, postId);
 	const [draft, setDraft] = useState("");
+
+	const isLoading = graphqlFeedEnabled
+		? gqlComments.isLoading
+		: restComments.isLoading;
+	const rows: Array<CommentRow> = graphqlFeedEnabled
+		? (gqlComments.data?.comments ?? []).map((comment) => ({
+				commentId: comment.commentId,
+				authorHandle: comment.author.handle,
+				authorLabel:
+					comment.author.displayName?.trim() || comment.author.handle,
+				verified: comment.author.verified,
+				createdAt: comment.createdAt,
+				body: comment.body,
+			}))
+		: (restComments.data?.comments ?? []).map((comment) => ({
+				commentId: comment.commentId,
+				authorHandle: comment.author,
+				authorLabel: comment.author,
+				verified: undefined,
+				createdAt: comment.createdAt,
+				body: comment.body,
+			}));
 
 	const submit = (): void => {
 		const body = draft.trim();
@@ -35,17 +79,21 @@ export function CommentList(props: {
 
 	return (
 		<div className="mt-3 border-t border-border pt-3">
-			{comments.isLoading ? (
+			{isLoading ? (
 				<p className="text-xs text-muted">{t("feed.loadingComments")}</p>
-			) : (comments.data?.comments.length ?? 0) === 0 ? (
+			) : rows.length === 0 ? (
 				<p className="text-xs text-muted">{t("feed.noComments")}</p>
 			) : (
 				<ul className="space-y-2">
-					{comments.data?.comments.map((comment) => (
+					{rows.map((comment) => (
 						<li key={comment.commentId} className="text-sm">
 							<span className="inline-flex items-center gap-1 font-medium text-front">
-								{comment.author}
-								<TwitterVerifiedBadge agentId={comment.author} />
+								{comment.authorLabel}
+								{comment.verified === undefined ? (
+									<TwitterVerifiedBadge agentId={comment.authorHandle} />
+								) : (
+									<TwitterVerifiedBadge verified={comment.verified} />
+								)}
 							</span>
 							<span className="ml-2 text-[10px] text-muted">
 								{formatTimestamp(comment.createdAt)}

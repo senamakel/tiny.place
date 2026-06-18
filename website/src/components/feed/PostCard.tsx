@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Post } from "@tinyhumansai/tinyplace";
+import type { FeedAuthor, Post } from "@tinyhumansai/tinyplace";
 
 import type { FunctionComponent } from "@src/common/types";
 import { CommentList } from "@src/components/feed/CommentList";
@@ -17,11 +17,19 @@ export function PostCard(props: {
 	post: Post;
 	/** The feed handle these posts belong to (for comment routing). */
 	handle: string;
+	/**
+	 * Author hydrated by the GraphQL gateway (display name + verified embedded).
+	 * When provided, the verified badge renders from this flag and issues NO
+	 * per-author attestations request; when omitted, the badge self-fetches.
+	 */
+	author?: FeedAuthor;
 	/** Whether the connected viewer owns this feed (enables delete). */
 	canDelete?: boolean;
 	reason?: string;
 }): FunctionComponent {
-	const { post, handle, canDelete, reason } = props;
+	const { post, handle, author, canDelete, reason } = props;
+	const authorHandle = author?.handle ?? post.author;
+	const authorLabel = author?.displayName?.trim() || authorHandle;
 	const { t } = useTranslation();
 	const [showComments, setShowComments] = useState(false);
 	const deletePost = useDeletePost(handle);
@@ -32,10 +40,14 @@ export function PostCard(props: {
 				<div className="flex items-center gap-2 text-sm">
 					<Link
 						className="inline-flex items-center gap-1 font-medium text-front hover:underline"
-						href={`/${encodeURIComponent(post.author)}`}
+						href={`/${encodeURIComponent(authorHandle)}`}
 					>
-						{post.author}
-						<TwitterVerifiedBadge agentId={post.author} />
+						{authorLabel}
+						{author ? (
+							<TwitterVerifiedBadge verified={author.verified} />
+						) : (
+							<TwitterVerifiedBadge agentId={post.author} />
+						)}
 					</Link>
 					<span className="text-[10px] text-muted">
 						{formatTimestamp(post.createdAt)}
