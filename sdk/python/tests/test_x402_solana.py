@@ -8,6 +8,7 @@ from nacl.signing import VerifyKey
 from tinyplace import (
     LocalSigner,
     SOLANA_MAINNET_NETWORK,
+    SOLANA_USDC_MINT,
     build_canonical_message,
     build_x402_payment_map,
     execute_solana_payment,
@@ -123,6 +124,65 @@ async def test_execute_solana_x402_payment_adds_transaction_references() -> None
     assert result["payment"]["tx"] == "sig"
 
 
+async def test_execute_solana_payment_usdc_spl_transfer() -> None:
+    signer = LocalSigner.from_seed(bytes([34]) * 32)
+    calls: list[str] = []
+    # Distinct valid base58 pubkeys stand in for the recipient wallet and the
+    # two associated token accounts. The payer is the signer's own address.
+    recipient = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+    source_ata = SOLANA_USDC_MINT
+    dest_ata = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+
+    async def rpc_request(method: str, params: list) -> dict | str:
+        calls.append(method)
+        if method == "getTokenAccountsByOwner":
+            owner = params[0]
+            pubkey = source_ata if owner == signer.agent_id else dest_ata
+            return {
+                "value": [
+                    {
+                        "pubkey": pubkey,
+                        "account": {
+                            "data": {"parsed": {"info": {"tokenAmount": {"amount": "5000000"}}}}
+                        },
+                    }
+                ]
+            }
+        if method == "getLatestBlockhash":
+            return {"value": {"blockhash": "11111111111111111111111111111111"}}
+        if method == "sendTransaction":
+            assert isinstance(params[0], str)
+            return "usdc-sig"
+        if method == "getSignatureStatuses":
+            return {"value": [{"confirmationStatus": "confirmed", "err": None}]}
+        raise AssertionError(method)
+
+    result = await execute_solana_payment(
+        rpc_url="https://solana.example.test",
+        secret_key=bytes([34]) * 32,
+        payment={
+            "network": SOLANA_MAINNET_NETWORK,
+            "asset": "USDC",
+            "amount": "1000000",
+            "to": recipient,
+        },
+        rpc_request=rpc_request,
+    )
+
+    assert result["signature"] == "usdc-sig"
+    assert result["mint"] == SOLANA_USDC_MINT
+    assert result["sourceTokenAccount"] == source_ata
+    assert result["destinationTokenAccount"] == dest_ata
+    # Token-account lookups precede the blockhash fetch (matches the TS SDK order).
+    assert calls == [
+        "getTokenAccountsByOwner",
+        "getTokenAccountsByOwner",
+        "getLatestBlockhash",
+        "sendTransaction",
+        "getSignatureStatuses",
+    ]
+
+
 async def test_execute_solana_payment_rejects_bad_inputs() -> None:
     with pytest.raises(ValueError, match="Unsupported Solana network"):
         await execute_solana_payment(
@@ -130,11 +190,12 @@ async def test_execute_solana_payment_rejects_bad_inputs() -> None:
             secret_key=b"0" * 32,
             payment={"network": "base", "asset": "SOL", "amount": "1", "to": "x"},
         )
+    # An unknown token without an explicit mint is still rejected.
     with pytest.raises(ValueError, match="Unsupported Solana asset"):
         await execute_solana_payment(
             rpc_url="x",
             secret_key=b"0" * 32,
-            payment={"network": SOLANA_MAINNET_NETWORK, "asset": "USDC", "amount": "1", "to": "x"},
+            payment={"network": SOLANA_MAINNET_NETWORK, "asset": "DOGE", "amount": "1", "to": "x"},
         )
     with pytest.raises(ValueError, match="32 or 64 bytes"):
         await execute_solana_payment(

@@ -82,11 +82,42 @@ class TinyPlaceClient:
         Extra registration fields (``actorType``, ``paymentMethods``, ...) may
         be passed as keyword arguments.
         """
+        return await self.registry.register(self._registration_request(domain, **fields))
+
+    async def register_domain_with_solana_payment(
+        self,
+        domain: str,
+        *,
+        rpc_url: str,
+        secret_key: str | bytes,
+        mint: str | None = None,
+        decimals: int = 6,
+        network: str | None = None,
+        **fields: Any,
+    ) -> Json:
+        """Register a ``@handle`` and settle its x402 fee on Solana automatically.
+
+        Reads the registration's 402 payment challenge, pays the fee on chain
+        (USDC by default, or native SOL) and retries the registration with the
+        signed payment attached. ``rpc_url`` is the Solana RPC endpoint and
+        ``secret_key`` the agent's Solana keypair (32-byte seed or 64-byte
+        secret). ``mint`` overrides the USDC mint (e.g. on devnet).
+        """
+        return await self.registry.register_with_solana_payment(
+            self._registration_request(domain, **fields),
+            rpc_url=rpc_url,
+            secret_key=secret_key,
+            mint=mint,
+            decimals=decimals,
+            network=network,
+        )
+
+    def _registration_request(self, domain: str, **fields: Any) -> JsonDict:
         request: JsonDict = {**fields, "username": domain}
         if self._signer is not None:
             request.setdefault("cryptoId", self._signer.agent_id)
             request.setdefault("publicKey", self._signer.public_key_base64)
-        return await self.registry.register(request)
+        return request
 
     async def get_identity(self) -> Json:
         """Resolve the signing agent's own directory identity (reverse lookup)."""

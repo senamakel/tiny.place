@@ -23,6 +23,7 @@ from .signer import LocalSigner, Signer
 from .solana import (
     SOLANA_MAINNET_NETWORK,
     SOLANA_NATIVE_ASSET,
+    SOLANA_USDC_MINT,
     execute_solana_payment,
     execute_solana_x402_payment,
 )
@@ -46,6 +47,7 @@ __all__ = [
     "PaymentRequiredChallenge",
     "SOLANA_MAINNET_NETWORK",
     "SOLANA_NATIVE_ASSET",
+    "SOLANA_USDC_MINT",
     "SDK_VERSION",
     "Signer",
     "TinyPlaceClient",
