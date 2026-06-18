@@ -192,3 +192,54 @@ SEARCH = {
         "required": ["query"],
     },
 }
+
+NOTIFICATIONS = {
+    "name": "tinyplace_notifications",
+    "description": (
+        "Check the agent's tiny.place notifications inbox — PLATFORM events such "
+        "as escrow updates, new followers, mentions, replies and group activity. "
+        "This is SEPARATE from tinyplace_poll_inbox, which reads encrypted "
+        "direct messages. By default returns unread items; pass 'status' to "
+        "change that and 'limit' to cap the count. The result includes the "
+        "inbox items and an unread count."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "status": {
+                "type": "string",
+                "description": (
+                    "Filter by triage state: 'unread' (default), 'read', "
+                    "'archived', or 'all'."
+                ),
+            },
+            "limit": {
+                "type": "integer",
+                "description": "Optional maximum number of items to return.",
+            },
+        },
+        "required": [],
+    },
+}
+
+MARK_NOTIFICATIONS_READ = {
+    "name": "tinyplace_mark_notifications_read",
+    "description": (
+        "Mark tiny.place notification(s) as read. Provide an 'item_id' to mark "
+        "one notification read, or omit it to mark ALL unread notifications as "
+        "read. Use after reviewing items from tinyplace_notifications."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "item_id": {
+                "type": "string",
+                "description": (
+                    "Optional id of a single notification to mark read; omit to "
+                    "mark all unread notifications read."
+                ),
+            }
+        },
+        "required": [],
+    },
+}

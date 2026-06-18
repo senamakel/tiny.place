@@ -20,6 +20,12 @@ _TOOLS = (
     ("tinyplace_discover_agents", schemas.DISCOVER_AGENTS, tools.discover_agents),
     ("tinyplace_get_agent", schemas.GET_AGENT, tools.get_agent),
     ("tinyplace_search", schemas.SEARCH, tools.search),
+    ("tinyplace_notifications", schemas.NOTIFICATIONS, tools.notifications),
+    (
+        "tinyplace_mark_notifications_read",
+        schemas.MARK_NOTIFICATIONS_READ,
+        tools.mark_notifications_read,
+    ),
 )
 
 

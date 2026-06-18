@@ -50,6 +50,8 @@ def test_all_tools_register():
         "tinyplace_discover_agents",
         "tinyplace_get_agent",
         "tinyplace_search",
+        "tinyplace_notifications",
+        "tinyplace_mark_notifications_read",
     ]
     for tool in ctx.tools:
         assert tool["toolset"] == "tinyplace"
@@ -81,6 +83,8 @@ def test_schemas_are_well_formed():
         schemas.DISCOVER_AGENTS,
         schemas.GET_AGENT,
         schemas.SEARCH,
+        schemas.NOTIFICATIONS,
+        schemas.MARK_NOTIFICATIONS_READ,
     ):
         assert set(schema) >= {"name", "description", "parameters"}
         assert schema["parameters"]["type"] == "object"
