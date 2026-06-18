@@ -134,6 +134,26 @@ export function createDefaultRoom(): RoomModel {
 	return new RoomModel(10, 10, 1, 1, heightMap);
 }
 
+// A wide, shallow floor strip used by the embedded mascot banner. The room is
+// far longer (along X) than it is deep (along Y) so, once centered in a short
+// canvas, it reads as a horizontal band of floor the mascots wander across.
+// `length`/`depth` are the interior tile counts; a 0-border is added around it.
+export function createBannerRoom(length = 30, depth = 6): RoomModel {
+	const maxX = length + 2;
+	const maxY = depth + 2;
+	const heightMap: Array<Array<number>> = [];
+	for (let x = 0; x < maxX; x++) {
+		const column = new Array<number>(maxY).fill(0);
+		if (x >= 1 && x <= length) {
+			for (let y = 1; y <= depth; y++) column[y] = 1;
+		}
+		heightMap.push(column);
+	}
+	const doorX = Math.floor(maxX / 2);
+	const doorY = Math.floor(maxY / 2);
+	return new RoomModel(maxX, maxY, doorX, doorY, heightMap);
+}
+
 export function createLShapedRoom(): RoomModel {
 	const heightMap = [
 		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],

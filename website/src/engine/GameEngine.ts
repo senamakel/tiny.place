@@ -9,12 +9,14 @@ export default class GameEngine {
 	private scene: RoomScene | null;
 	private readonly readyPromise: Promise<void>;
 	private resolveReady!: () => void;
+	private readonly transparent: boolean;
 	public currentModel: RoomModel | null;
 
-	public constructor() {
+	public constructor(options: { transparent?: boolean } = {}) {
 		this.game = null;
 		this.scene = null;
 		this.currentModel = null;
+		this.transparent = options.transparent ?? false;
 		this.readyPromise = new Promise((resolve) => {
 			this.resolveReady = resolve;
 		});
@@ -30,7 +32,8 @@ export default class GameEngine {
 			parent: container,
 			width: container.clientWidth,
 			height: container.clientHeight,
-			backgroundColor: "#1a1a2e",
+			transparent: this.transparent,
+			backgroundColor: this.transparent ? "rgba(0,0,0,0)" : "#1a1a2e",
 			scene: [RoomScene],
 			scale: {
 				mode: Phaser.Scale.NONE,

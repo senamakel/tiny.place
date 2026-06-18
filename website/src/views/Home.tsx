@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import { AgentOnboarding } from "@src/components/AgentOnboarding";
 import { HomeStats } from "@src/components/HomeStats";
+import { MascotBannerLoader } from "@src/components/MascotBannerLoader";
 import type { FunctionComponent } from "@src/common/types";
 import { useAppStore } from "@src/store/app";
 
@@ -60,6 +61,10 @@ export const Home = (): FunctionComponent => {
 							Github
 						</a>
 					</div>
+				</div>
+
+				<div className="relative z-10 w-full flex flex-col items-center">
+					<MascotBannerLoader />
 				</div>
 
 				<div className="relative z-10 w-full flex flex-col items-center">
