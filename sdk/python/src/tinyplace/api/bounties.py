@@ -46,6 +46,102 @@ class BountiesApi:
             "/bounties", str(request.get("creator") or ""), request
         )
 
+    async def create_with_solana_payment(
+        self,
+        request: JsonDict,
+        *,
+        rpc_url: str,
+        secret_key: str | bytes,
+        mint: str | None = None,
+        decimals: int = 6,
+        network: str | None = None,
+        attempts: int = DEFAULT_FUND_ATTEMPTS,
+        interval_ms: int = DEFAULT_FUND_INTERVAL_MS,
+    ) -> dict[str, Any]:
+        """Create AND fund a bounty in one x402 flow, settling the reward on chain.
+
+        When the backend has bounty funding configured, ``POST /bounties`` is a
+        combined create+fund: probe it for the 402 challenge, pay the reward into
+        the escrow wallet on chain, then re-create with the signed payment
+        attached — the bounty is returned already open for submissions. Mirrors
+        ``fund_with_solana_payment`` / ``registry.register_with_solana_payment``.
+
+        When the backend has funding **disabled**, the paymentless probe creates
+        an unfunded draft outright; that draft is returned with ``payment: None``
+        rather than discarded as an error.
+        """
+        if self._signer is None:
+            raise ValueError("create_with_solana_payment requires a signer")
+        creator = str(request.get("creator") or "")
+        if not creator:
+            raise ValueError("create_with_solana_payment requires 'creator' in request")
+        draft, challenge = await self._probe_create(request)
+        if challenge is None:
+            # Funding disabled: the probe already created an unfunded draft.
+            return {"bounty": draft, "payment": None}
+        amount = challenge.get("amount")
+        recipient = challenge.get("to")
+        if not amount or not recipient:
+            raise ValueError("bounty create challenge is missing amount or recipient")
+        execution = await execute_solana_x402_payment(
+            signer=self._signer,
+            rpc_url=rpc_url,
+            secret_key=secret_key,
+            mint=mint or SOLANA_USDC_MINT,
+            decimals=decimals,
+            payment={
+                "scheme": challenge.get("scheme", "exact"),
+                "network": challenge.get("network") or network or SOLANA_MAINNET_NETWORK,
+                "asset": challenge.get("asset") or "USDC",
+                "amount": amount,
+                "from": creator,
+                "to": recipient,
+                "nonce": challenge.get("nonce"),
+                "expiresAt": challenge.get("expiresAt"),
+                "metadata": {
+                    **(challenge.get("metadata") or {}),
+                    "kind": "bounty-fund",
+                },
+            },
+        )
+        bounty = await self._create_retrying(
+            {**request, "payment": execution["payment"]}, attempts, interval_ms
+        )
+        return {"bounty": bounty, "payment": execution}
+
+    async def _probe_create(self, request: JsonDict) -> tuple[Json | None, dict[str, Any] | None]:
+        """Probe ``POST /bounties`` once to discover the funding mode.
+
+        Returns ``(None, challenge)`` when funding is enabled (the paymentless
+        create is rejected with a 402 funding challenge, no bounty made), or
+        ``(draft, None)`` when funding is disabled (the create succeeds and an
+        unfunded draft is returned). The draft is surfaced rather than discarded
+        so a funding-disabled backend doesn't look like an error.
+        """
+        try:
+            draft = await self.create(request)
+        except TinyPlaceError as exc:
+            if exc.status == 402 and exc.payment_required is not None:
+                return None, exc.payment_required.payment
+            raise
+        return draft, None
+
+    async def _create_retrying(self, request: JsonDict, attempts: int, interval_ms: int) -> Json:
+        # The payment is already on chain; retry create (same signed payment map)
+        # only through confirmation lag. Unlike fund, do NOT recover-on-5xx: each
+        # create mints a fresh bountyId, so blind retries could double-create —
+        # the per-payer nonce replay protection guards the on-chain transfer.
+        attempts = max(1, attempts)
+        for attempt in range(attempts):
+            try:
+                return await self.create(request)
+            except TinyPlaceError as exc:
+                if attempt == attempts - 1 or not _should_retry_fund(exc):
+                    raise
+            if interval_ms > 0:
+                await asyncio.sleep(interval_ms / 1000)
+        raise RuntimeError("unreachable: bounty create retry loop exhausted")
+
     async def fund(self, bounty_id: str, creator: str, payment: JsonDict | None = None) -> Json:
         # Call without a payment to receive the 402 challenge; re-call with the
         # signed payment map to fund the escrow.
