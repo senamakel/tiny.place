@@ -17,11 +17,11 @@ const MASCOT_COUNT = 15;
 // tiles (±11 → ~700px wide); THICKNESS is the screen-depth in rows, kept small
 // so the band stays short enough to fit the 200px banner.
 const BAND_SPAN = 14;
-const BAND_THICKNESS = 4;
+const BAND_THICKNESS = 6;
 
-// Nudge the camera so the mascots (which extend ~70px above their tile) sit
-// vertically centred in the short banner rather than running off the top.
-const CAMERA_OFFSET_Y = -10;
+// The door sits at the band's middle row, so only a small nudge is needed to
+// account for the mascots extending ~70px above their tile (up) vs ~40px below.
+const CAMERA_OFFSET_Y = -15;
 
 // Transparent variant of the default theme: the canvas background and the walls
 // are fully transparent so only the floor + mascots show, blending into the page.

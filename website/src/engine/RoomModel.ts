@@ -168,9 +168,13 @@ export function createBannerRoom(span = 11, thickness = 4): RoomModel {
 	}
 	for (const { x, y } of cells) heightMap[x]![y] = 1;
 
-	// Door at (x-y)=0 so the camera centres the band horizontally; pick the
-	// first even depth so x === y lands on a real floor tile.
-	const doorS = sMin % 2 === 0 ? sMin : sMin + 1;
+	// Door at (x-y)=0 and the MIDDLE depth row, so the camera centres the band
+	// both horizontally and vertically — thickening it then expands evenly up
+	// and down instead of running off the bottom. Snap to an even depth so
+	// x === y lands on a real floor tile.
+	const midS = Math.floor((sMin + sMax) / 2);
+	let doorS = midS;
+	if (doorS % 2 !== 0) doorS = doorS + 1 <= sMax ? doorS + 1 : doorS - 1;
 	const doorX = doorS / 2;
 	const doorY = doorS / 2;
 	return new RoomModel(maxX, maxY, doorX, doorY, heightMap);
