@@ -41,7 +41,6 @@ class _FakeDirectory:
             ]
         }
         self.get_calls: list[str] = []
-        self.resolve_calls: list[str] = []
 
     async def list_agents(self, params=None):
         self.list_params = params
@@ -55,17 +54,6 @@ class _FakeDirectory:
             "username": "@bob",
             "name": "Bob",
             "publicKey": "BOB_PUBKEY==",
-        }
-
-    async def resolve(self, name):
-        self.resolve_calls.append(name)
-        return {
-            "identity": {"username": f"@{name}"},
-            "agentCard": {
-                "agentId": "agent-9",
-                "username": f"@{name}",
-                "metadata": {"encryptionPublicKey": "RESOLVED_ADDR=="},
-            },
         }
 
 
@@ -83,6 +71,20 @@ class _FakeClient:
     def __init__(self) -> None:
         self.directory = _FakeDirectory()
         self.search = _FakeSearch()
+        self.resolve_user_calls: list[str] = []
+
+    async def resolve_user(self, handle):
+        # Mirrors the SDK convenience method get_agent delegates handle lookups
+        # to; the real one normalizes the handle (adds a leading '@').
+        self.resolve_user_calls.append(handle)
+        return {
+            "identity": {"username": handle},
+            "agentCard": {
+                "agentId": "agent-9",
+                "username": handle,
+                "metadata": {"encryptionPublicKey": "RESOLVED_ADDR=="},
+            },
+        }
 
 
 def _make_runtime(tmp_path: Path, monkeypatch) -> "runtime_mod.TinyPlaceRuntime":
@@ -140,7 +142,7 @@ def test_get_agent_by_crypto_id_uses_get_agent(tmp_path, monkeypatch):
     out = json.loads(tools.get_agent({"agent": rt.address}, runtime=rt))
     assert out["ok"] is True
     assert rt._client.directory.get_calls == [rt.address]
-    assert rt._client.directory.resolve_calls == []
+    assert rt._client.resolve_user_calls == []
     assert out["messaging_address"] == "BOB_PUBKEY=="
 
 
@@ -148,10 +150,21 @@ def test_get_agent_by_handle_resolves(tmp_path, monkeypatch):
     rt = _make_runtime(tmp_path, monkeypatch)
     out = json.loads(tools.get_agent({"agent": "@alice"}, runtime=rt))
     assert out["ok"] is True
-    # A @handle is resolved through the directory (leading '@' stripped).
-    assert rt._client.directory.resolve_calls == ["alice"]
+    # A @handle is resolved via resolve_user (which normalizes the handle),
+    # passed through verbatim — NOT stripped of its leading '@'.
+    assert rt._client.resolve_user_calls == ["@alice"]
     assert rt._client.directory.get_calls == []
     assert out["messaging_address"] == "RESOLVED_ADDR=="
+
+
+def test_get_agent_bare_username_resolves(tmp_path, monkeypatch):
+    rt = _make_runtime(tmp_path, monkeypatch)
+    out = json.loads(tools.get_agent({"agent": "bob"}, runtime=rt))
+    assert out["ok"] is True
+    # A bare username is not a messaging address, so it also routes through
+    # resolve_user (the SDK adds the leading '@').
+    assert rt._client.resolve_user_calls == ["bob"]
+    assert rt._client.directory.get_calls == []
 
 
 def test_get_agent_validation(tmp_path, monkeypatch):

@@ -260,16 +260,16 @@ def get_agent(args: dict[str, Any], ctx: dict[str, Any]) -> str:
     agent = str(args.get("agent") or "").strip()
     if not agent:
         return _error("'agent' is required (a @handle, username or cryptoId)")
-    identifier = agent[1:] if agent.startswith("@") else agent
 
     async def _run() -> Any:
         client = await runtime.get_client()
-        # A raw cryptoId addresses the agent card directly; anything else (a
-        # @handle or bare username) is resolved through the directory, which
-        # returns the identity record together with the agent card.
+        # A raw cryptoId addresses the agent card directly; a @handle or bare
+        # username goes through resolve_user, which normalizes the handle (adds
+        # the leading '@' the directory's /directory/resolve/{name} route
+        # expects) and returns the identity record together with the agent card.
         if _is_messaging_address(agent):
-            return await client.directory.get_agent(identifier)
-        return await client.directory.resolve(identifier)
+            return await client.directory.get_agent(agent)
+        return await client.resolve_user(agent)
 
     result = runtime.run(_run())
     card = _agent_card(result)
