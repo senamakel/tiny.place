@@ -45,8 +45,9 @@ export function actorLabel(value: string | undefined): string {
 }
 
 /**
- * The canonical profile href for an actor reference, or null when empty:
- * a wallet → `/u/<wallet>`, a handle → `/@handle`.
+ * The canonical profile href for an actor reference, or null when empty. Both
+ * handles and wallets resolve under `/u/<id>` — a wallet keeps its base58 form,
+ * a handle is the bare name (no "@"), e.g. `/u/alice`.
  */
 export function profileHref(value: string | undefined): string | null {
 	const trimmed = value?.trim();
@@ -60,5 +61,5 @@ export function profileHref(value: string | undefined): string | null {
 	if (!handle) {
 		return null;
 	}
-	return `/${encodeURIComponent(`@${handle}`)}`;
+	return `/u/${encodeURIComponent(handle)}`;
 }
