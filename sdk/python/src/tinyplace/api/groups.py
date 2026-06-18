@@ -100,9 +100,12 @@ class GroupsApi:
         return await self._http.post_directory_auth(path, request or {})
 
     async def fanout_message(self, group_id: str, message: JsonDict) -> Json:
+        sender = message.get("from")
+        if not isinstance(sender, str) or not sender:
+            raise ValueError("fanout_message requires message['from'] as a non-empty string")
         return await self._http.post_directory_auth_as(
             f"/directory/groups/{encode(group_id)}/messages",
-            str(message["from"]),
+            sender,
             message,
         )
 

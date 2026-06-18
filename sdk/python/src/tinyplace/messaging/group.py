@@ -249,9 +249,11 @@ class GroupKeyManager:
             m for m in members if m != sender and m not in entry["distributed_to"]
         ]
 
-    def mark_distributed(self, group_id: str, sender: str, member: str) -> None:
+    def mark_distributed(self, group_id: str, sender: str, epoch: int, member: str) -> None:
         entry = self._own.get(self._own_key(group_id, sender))
-        if entry is not None:
+        # Guard the epoch: if the key rotated between awaits, an old-epoch send
+        # must not mark members distributed against the new epoch's key.
+        if entry is not None and entry["epoch"] == epoch:
             entry["distributed_to"].add(member)
 
     def install_receiver(self, payload: dict[str, Any]) -> None:
@@ -320,7 +322,7 @@ async def send_group_message(
             await client.messages.send_encrypted(
                 session, enc_address, address, body.encode("utf-8")
             )
-            group_keys.mark_distributed(group_id, sender, member)
+            group_keys.mark_distributed(group_id, sender, epoch, member)
         except Exception:  # noqa: BLE001 - a member without a key bundle is skipped, not fatal
             continue
 
@@ -361,22 +363,28 @@ async def fetch_group_inbox(
         parsed = parse_sender_key_id(str(sender_key_id))
         if parsed is None:
             continue
+        try:
+            iteration_int = int(iteration)
+        except (TypeError, ValueError):
+            # A malformed/hostile envelope must not abort the whole poll.
+            continue
         receiver = group_keys.get_receiver(parsed.group_id, parsed.sender, parsed.epoch)
-        message = decode_group_body(str(envelope.get("body", "")), int(iteration))
+        message = decode_group_body(str(envelope.get("body", "")), iteration_int)
         if receiver is None or message is None:
             # No key yet (or malformed) — leave it for a later poll once the
             # sender's key handoff has been processed off the 1:1 channel.
             continue
         try:
             plaintext = receiver.decrypt(message)
-        except Exception:  # noqa: BLE001
+            text = plaintext.decode("utf-8")
+        except Exception:  # noqa: BLE001 - skip undecryptable / non-utf8 bodies
             continue
         decrypted.append(
             DecryptedGroupMessage(
                 id=str(envelope["id"]),
                 group_id=parsed.group_id,
                 sender=parsed.sender,
-                text=plaintext.decode("utf-8"),
+                text=text,
                 at=envelope.get("timestamp"),
             )
         )

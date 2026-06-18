@@ -65,7 +65,10 @@ def test_group_key_manager_pending_and_epoch_rotation() -> None:
     manager = g.GroupKeyManager()
     manager.ensure_own("grp1", "me", 1)
     assert sorted(manager.pending_distribution("grp1", "me", 1, ["me", "a", "b"])) == ["a", "b"]
-    manager.mark_distributed("grp1", "me", "a")
+    manager.mark_distributed("grp1", "me", 1, "a")
+    assert manager.pending_distribution("grp1", "me", 1, ["me", "a", "b"]) == ["b"]
+    # Marking against a stale epoch is ignored (no cross-epoch corruption).
+    manager.mark_distributed("grp1", "me", 99, "b")
     assert manager.pending_distribution("grp1", "me", 1, ["me", "a", "b"]) == ["b"]
     # A new epoch rotates the key, so every other member is pending again.
     manager.ensure_own("grp1", "me", 2)
