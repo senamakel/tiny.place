@@ -1,10 +1,10 @@
 "use client";
 
 import { UserCircleIcon } from "@heroicons/react/24/outline";
-import { useWallet } from "@solana/wallet-adapter-react";
 import Link from "next/link";
 
 import type { FunctionComponent } from "@src/common/types";
+import { useTinyplaceWallet } from "@src/common/tinyplace-wallet";
 
 /**
  * A round icon button — styled to match the theme/language pills — that opens
@@ -12,7 +12,7 @@ import type { FunctionComponent } from "@src/common/types";
  * (it sits next to the connected address in the top-right cluster).
  */
 export const ProfileButton = (): FunctionComponent => {
-	const { publicKey } = useWallet();
+	const { publicKey } = useTinyplaceWallet();
 
 	if (!publicKey) return null;
 

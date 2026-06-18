@@ -1,12 +1,15 @@
 "use client";
 
 import {
-	ConnectionProvider,
-	WalletProvider,
-	useWallet,
-} from "@solana/wallet-adapter-react";
-import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
-import type { Adapter } from "@solana/wallet-adapter-base";
+	AddressType,
+	PhantomProvider,
+	darkTheme,
+	useDisconnect,
+	useModal,
+	usePhantom,
+	useSolana,
+} from "@phantom/react-sdk";
+import { Connection, PublicKey, type Transaction } from "@solana/web3.js";
 import {
 	useCallback,
 	useEffect,
@@ -28,12 +31,16 @@ import {
 	primarySolanaRpcUrl,
 	solanaConnectionConfig,
 } from "@src/common/solana-rpc";
+import type { WalletSignTransaction } from "@src/common/session-wallet";
+import {
+	ConnectionContext,
+	WalletStateContext,
+	type SignMessageFunction,
+	type TinyplaceWalletState,
+	useTinyplaceWallet,
+} from "@src/common/tinyplace-wallet";
 import { useAuthStore } from "@src/store/auth";
 import { useAppStore } from "@src/store/app";
-
-import "@solana/wallet-adapter-react-ui/styles.css";
-
-type SignMessageFunction = (message: Uint8Array) => Promise<Uint8Array>;
 
 type PendingLoginSignature = {
 	data: Uint8Array;
@@ -41,6 +48,82 @@ type PendingLoginSignature = {
 	reject: (error: unknown) => void;
 	resolve: (signature: Uint8Array) => void;
 };
+
+const PHANTOM_APP_ID = "e1221f9a-0ce0-42c9-885c-3dc401153734";
+const PHANTOM_APP_ICON =
+	"https://phantom-portal20240925173430423400000001.s3.ca-central-1.amazonaws.com/icons/0f849962-bb31-41ba-a2d2-ad476edc70ce.png";
+
+function phantomRedirectUrl(): string | undefined {
+	if (typeof window === "undefined") {
+		return undefined;
+	}
+	return `${window.location.origin}/auth/callback`;
+}
+
+function PhantomWalletBridge({
+	children,
+}: {
+	children: ReactNode;
+}): FunctionComponent {
+	const { isConnected, isConnecting } = usePhantom();
+	const { disconnect } = useDisconnect();
+	const { open } = useModal();
+	const { isAvailable, solana } = useSolana();
+	const publicKey = useMemo(() => {
+		if (!(isConnected && isAvailable && solana.publicKey)) {
+			return null;
+		}
+		try {
+			return new PublicKey(solana.publicKey);
+		} catch {
+			return null;
+		}
+	}, [isAvailable, isConnected, solana.publicKey]);
+	const signMessage = useMemo<SignMessageFunction | undefined>(() => {
+		if (!(isConnected && isAvailable && publicKey)) {
+			return undefined;
+		}
+		return async (message): Promise<Uint8Array> => {
+			const result = await solana.signMessage(message);
+			return result.signature;
+		};
+	}, [isAvailable, isConnected, publicKey, solana]);
+	const signTransaction = useMemo<WalletSignTransaction | undefined>(() => {
+		if (!(isConnected && isAvailable && publicKey)) {
+			return undefined;
+		}
+		return async (transaction: Transaction): Promise<Transaction> => {
+			const signed = await solana.signTransaction(transaction);
+			return signed as Transaction;
+		};
+	}, [isAvailable, isConnected, publicKey, solana]);
+	const value = useMemo<TinyplaceWalletState>(
+		() => ({
+			connected: Boolean(isConnected && publicKey),
+			connecting: isConnecting,
+			disconnect,
+			openConnectModal: open,
+			publicKey,
+			signMessage,
+			signTransaction,
+		}),
+		[
+			disconnect,
+			isConnected,
+			isConnecting,
+			open,
+			publicKey,
+			signMessage,
+			signTransaction,
+		]
+	);
+
+	return (
+		<WalletStateContext.Provider value={value}>
+			{children}
+		</WalletStateContext.Provider>
+	);
+}
 
 function decodeSignatureMessage(data: Uint8Array): string {
 	try {
@@ -192,7 +275,8 @@ function LoginSignatureDialog({
 }
 
 const WalletAuthSync = (): FunctionComponent => {
-	const { connected, publicKey, signMessage, signTransaction } = useWallet();
+	const { connected, publicKey, signMessage, signTransaction } =
+		useTinyplaceWallet();
 	const clearSession = useAuthStore((state) => state.clearSession);
 	const isDark = useAppStore((state) => state.theme === "dark");
 	const [loginSignature, setLoginSignature] =
@@ -353,19 +437,34 @@ export const WalletContextProvider = ({
 }: WalletContextProviderProperties): FunctionComponent => {
 	const endpoint = useMemo(() => primarySolanaRpcUrl(), []);
 	const connectionConfig = useMemo(() => solanaConnectionConfig(), []);
-	// Phantom (and other modern wallets) register themselves as Standard Wallets
-	// and are auto-detected, so no explicit adapter is needed — passing one makes
-	// the adapter warn that it can be removed.
-	const wallets = useMemo<Array<Adapter>>(() => [], []);
+	const connection = useMemo(
+		() => new Connection(endpoint, connectionConfig),
+		[connectionConfig, endpoint]
+	);
+	const redirectUrl = useMemo(() => phantomRedirectUrl(), []);
 
 	return (
-		<ConnectionProvider config={connectionConfig} endpoint={endpoint}>
-			<WalletProvider autoConnect wallets={wallets}>
-				<WalletModalProvider>
+		<PhantomProvider
+			appIcon={PHANTOM_APP_ICON}
+			appName="TinyPlace"
+			theme={darkTheme}
+			config={{
+				addressTypes: [
+					AddressType.ethereum,
+					AddressType.solana,
+					AddressType.sui,
+				],
+				appId: PHANTOM_APP_ID,
+				authOptions: redirectUrl ? { redirectUrl } : undefined,
+				providers: ["google", "apple", "injected"],
+			}}
+		>
+			<ConnectionContext.Provider value={connection}>
+				<PhantomWalletBridge>
 					<WalletAuthSync />
 					{children}
-				</WalletModalProvider>
-			</WalletProvider>
-		</ConnectionProvider>
+				</PhantomWalletBridge>
+			</ConnectionContext.Provider>
+		</PhantomProvider>
 	);
 };

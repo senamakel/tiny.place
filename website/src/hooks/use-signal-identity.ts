@@ -1,6 +1,5 @@
 "use client";
 
-import { useWallet } from "@solana/wallet-adapter-react";
 import { useCallback, useEffect } from "react";
 
 import { useApiClient } from "@src/common/api-context";
@@ -13,6 +12,7 @@ import {
 	publishKeyBundle,
 	verifyKeyBundlePublished,
 } from "@src/common/signal-messaging";
+import { useTinyplaceWallet } from "@src/common/tinyplace-wallet";
 import { useAuthStore } from "@src/store/auth";
 import { useConversationsStore } from "@src/store/conversations";
 import { useGroupConversationsStore } from "@src/store/group-conversations";
@@ -40,7 +40,7 @@ type UseSignalIdentityResult = {
  * auth signer). Resets the identity automatically when the wallet disconnects.
  */
 export function useSignalIdentity(): UseSignalIdentityResult {
-	const { connected, signMessage } = useWallet();
+	const { connected, signMessage } = useTinyplaceWallet();
 	const walletClient = useApiClient();
 	const agentId = useAuthStore((state) => state.agentId);
 	const status = useSignalStore((state) => state.status);

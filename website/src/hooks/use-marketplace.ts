@@ -21,6 +21,7 @@ import {
 import { useApiClient } from "@src/common/api-context";
 import { signX402ChallengePaymentMap } from "@src/common/auth-payment";
 import { queryKeys } from "@src/common/query-keys";
+import { productFromGql } from "@src/hooks/graphql-mappers";
 import { useAuthStore } from "@src/store/auth";
 
 export function useProducts(
@@ -29,8 +30,14 @@ export function useProducts(
 	const client = useApiClient();
 	return useQuery({
 		queryKey: queryKeys.marketplace.products(parameters),
-		queryFn: (): Promise<{ products: Array<Product> }> =>
-			client.marketplace.listProducts(parameters),
+		queryFn: async (): Promise<{ products: Array<Product> }> => ({
+			products: (
+				await client.graphql.products({
+					...parameters,
+					query: parameters?.q,
+				})
+			).map(productFromGql),
+		}),
 	});
 }
 
@@ -38,7 +45,13 @@ export function useProduct(productId: string): UseQueryResult<Product> {
 	const client = useApiClient();
 	return useQuery({
 		queryKey: queryKeys.marketplace.product(productId),
-		queryFn: (): Promise<Product> => client.marketplace.getProduct(productId),
+		queryFn: async (): Promise<Product> => {
+			const product = await client.graphql.product(productId);
+			if (!product) {
+				throw new Error("Product not found");
+			}
+			return productFromGql(product);
+		},
 		enabled: Boolean(productId),
 	});
 }
@@ -82,7 +95,10 @@ export function useOwnedIdentities(
 			if (!agentId) {
 				throw new Error("Connect your wallet first");
 			}
-			return client.directory.reverse(agentId);
+			return client.graphql.identities(agentId).then((identities) => ({
+				cryptoId: agentId,
+				identities,
+			}));
 		},
 		enabled: Boolean(agentId),
 	});

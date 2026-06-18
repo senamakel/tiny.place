@@ -20,7 +20,7 @@ Signal crypto, and talks to the backend services hosted at `staging-api.tiny.pla
 | Client state | Zustand |
 | Forms | React Hook Form + Zod |
 | Styling | Tailwind CSS v4 (`@tailwindcss/postcss`) |
-| Wallet / auth | Solana wallet adapters (Phantom via `@solana/wallet-adapter-*`) |
+| Wallet / auth | Phantom React SDK (`@phantom/react-sdk`) |
 | Charts | Nivo (`@nivo/bar`, `line`, `pie`, `network`) + TanStack Table |
 | i18n | i18next + react-i18next (EN / ES, statically imported) |
 | Tooling | Vitest (unit) · Playwright (e2e) · Storybook · ESLint · Prettier |

@@ -1,4 +1,3 @@
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import {
@@ -8,6 +7,10 @@ import {
 } from "@tinyhumansai/tinyplace";
 
 import { queryKeys } from "@src/common/query-keys";
+import {
+	useTinyplaceConnection,
+	useTinyplaceWallet,
+} from "@src/common/tinyplace-wallet";
 import { useSupportedPayments } from "@src/hooks/use-payments";
 
 type WalletBalance = {
@@ -123,7 +126,7 @@ function sortBalances(balances: Array<WalletBalance>): Array<WalletBalance> {
 export function useWalletBalancesForAddress(
 	walletAddress: string | undefined
 ): UseQueryResult<Array<WalletBalance>> {
-	const { connection } = useConnection();
+	const connection = useTinyplaceConnection();
 	const supported = useSupportedPayments();
 	const wallet = walletAddress ?? "";
 
@@ -207,7 +210,7 @@ export function useWalletBalancesForAddress(
 }
 
 export function useWalletBalances(): UseQueryResult<Array<WalletBalance>> {
-	const { publicKey } = useWallet();
+	const { publicKey } = useTinyplaceWallet();
 	const wallet = publicKey?.toBase58() ?? "";
 
 	return useWalletBalancesForAddress(wallet);

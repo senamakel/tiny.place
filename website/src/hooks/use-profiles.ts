@@ -7,12 +7,19 @@ import type {
 
 import { useApiClient } from "@src/common/api-context";
 import { queryKeys } from "@src/common/query-keys";
+import { profileFromGql } from "@src/hooks/graphql-mappers";
 
 export function useProfile(username: string): UseQueryResult<AgentProfile> {
 	const client = useApiClient();
 	return useQuery({
 		queryKey: queryKeys.profiles.detail(username),
-		queryFn: (): Promise<AgentProfile> => client.profiles.get(username),
+		queryFn: async (): Promise<AgentProfile> => {
+			const profile = await client.graphql.profile(username);
+			if (!profile) {
+				throw new Error("Profile not found");
+			}
+			return profileFromGql(profile, username);
+		},
 		enabled: Boolean(username),
 	});
 }

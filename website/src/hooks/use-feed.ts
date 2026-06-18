@@ -19,6 +19,7 @@ import type {
 
 import { useApiClient } from "@src/common/api-context";
 import { queryKeys } from "@src/common/query-keys";
+import { commentFromGql, postFromGql } from "@src/hooks/graphql-mappers";
 
 export function useUserFeed(
 	handle: string,
@@ -28,8 +29,14 @@ export function useUserFeed(
 	const client = useApiClient();
 	return useQuery({
 		queryKey: queryKeys.feeds.user(handle, parameters, viewer),
-		queryFn: (): Promise<PostListResult> =>
-			client.feeds.listPosts(handle, parameters, viewer || undefined),
+		queryFn: async (): Promise<PostListResult> => {
+			const result = await client.graphql.posts(handle, {
+				limit: parameters?.limit,
+				before: parameters?.before,
+				viewer: viewer || undefined,
+			});
+			return { posts: result.posts.map(postFromGql) };
+		},
 		enabled: Boolean(handle),
 	});
 }
@@ -54,8 +61,17 @@ export function usePost(
 	const client = useApiClient();
 	return useQuery({
 		queryKey: queryKeys.feeds.post(handle, postId, viewer),
-		queryFn: (): Promise<Post> =>
-			client.feeds.getPost(handle, postId, viewer || undefined),
+		queryFn: async (): Promise<Post> => {
+			const post = await client.graphql.post(handle, postId, {
+				viewer: viewer || undefined,
+				commentLimit: 20,
+				likerLimit: 20,
+			});
+			if (!post) {
+				throw new Error("Post not found");
+			}
+			return postFromGql(post);
+		},
 		enabled: Boolean(handle) && Boolean(postId),
 	});
 }
@@ -68,8 +84,9 @@ export function usePostComments(
 	const client = useApiClient();
 	return useQuery({
 		queryKey: queryKeys.feeds.comments(handle, postId),
-		queryFn: (): Promise<{ comments: Array<Comment> }> =>
-			client.feeds.listComments(handle, postId),
+		queryFn: async (): Promise<{ comments: Array<Comment> }> => ({
+			comments: (await client.graphql.postComments(postId)).map(commentFromGql),
+		}),
 		enabled: enabled && Boolean(handle) && Boolean(postId),
 	});
 }

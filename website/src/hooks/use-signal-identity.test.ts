@@ -17,8 +17,8 @@ const mocks = vi.hoisted(() => ({
 	publishEncryptionKey: vi.fn(),
 }));
 
-vi.mock("@solana/wallet-adapter-react", () => ({
-	useWallet: (): unknown => ({
+vi.mock("@src/common/tinyplace-wallet", () => ({
+	useTinyplaceWallet: (): unknown => ({
 		connected: true,
 		signMessage: mocks.signMessage,
 	}),

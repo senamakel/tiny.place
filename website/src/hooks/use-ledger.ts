@@ -5,6 +5,7 @@ import type {
 } from "@tinyhumansai/tinyplace";
 
 import { useApiClient } from "@src/common/api-context";
+import { ledgerTransactionFromGql } from "@src/hooks/graphql-mappers";
 
 export function useLedgerTransactions(
 	parameters?: LedgerListParams
@@ -12,8 +13,12 @@ export function useLedgerTransactions(
 	const client = useApiClient();
 	return useQuery({
 		queryKey: ["ledger", "transactions", parameters] as const,
-		queryFn: (): Promise<{ transactions: Array<LedgerTransaction> }> =>
-			client.ledger.list(parameters),
+		queryFn: async (): Promise<{ transactions: Array<LedgerTransaction> }> => {
+			const result = await client.graphql.ledgerTransactions(parameters);
+			return {
+				transactions: result.transactions.map(ledgerTransactionFromGql),
+			};
+		},
 	});
 }
 
@@ -23,7 +28,13 @@ export function useLedgerTransaction(
 	const client = useApiClient();
 	return useQuery({
 		queryKey: ["ledger", "transaction", transactionId] as const,
-		queryFn: (): Promise<LedgerTransaction> => client.ledger.get(transactionId),
+		queryFn: async (): Promise<LedgerTransaction> => {
+			const transaction = await client.graphql.ledgerTransaction(transactionId);
+			if (!transaction) {
+				throw new Error("Transaction not found");
+			}
+			return ledgerTransactionFromGql(transaction);
+		},
 		enabled: Boolean(transactionId),
 	});
 }

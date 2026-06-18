@@ -1,8 +1,6 @@
 "use client";
 
-import { useWallet } from "@solana/wallet-adapter-react";
-import { useWalletModal } from "@solana/wallet-adapter-react-ui";
-
+import { useTinyplaceWallet } from "@src/common/tinyplace-wallet";
 import { useAppStore } from "@src/store/app";
 import type { FunctionComponent } from "@src/common/types";
 
@@ -14,15 +12,11 @@ function truncateAddress(address: string): string {
 
 /**
  * A wallet connect/disconnect button styled to match the theme + language pills.
- * The Solana wallet adapter handles only the web3 side: `useWalletModal` opens
- * the wallet picker, `useWallet` exposes connection state and disconnect. We
- * render our own uniform UI instead of the adapter's `WalletMultiButton`.
+ * Phantom SDK handles the web3 side; we render our own uniform UI instead of
+ * Phantom's stock `ConnectButton`.
  */
 export const ConnectWalletButton = (): FunctionComponent => {
-	// Keep the wallet object (rather than destructuring `disconnect`) so the
-	// method stays bound to it when invoked.
-	const wallet = useWallet();
-	const { setVisible } = useWalletModal();
+	const wallet = useTinyplaceWallet();
 	const isDark = useAppStore((state) => state.theme === "dark");
 
 	const address = wallet.publicKey?.toBase58();
@@ -36,7 +30,7 @@ export const ConnectWalletButton = (): FunctionComponent => {
 		if (wallet.connected) {
 			void wallet.disconnect();
 		} else {
-			setVisible(true);
+			wallet.openConnectModal();
 		}
 	};
 

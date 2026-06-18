@@ -24,8 +24,10 @@ export function useJobs(
 	const client = useApiClient();
 	return useQuery({
 		queryKey: queryKeys.jobs.list(parameters),
-		queryFn: (): Promise<{ jobs: Array<JobPosting> }> =>
-			client.jobs.list(parameters),
+		queryFn: async (): Promise<{ jobs: Array<JobPosting> }> => {
+			const result = await client.graphql.jobs(parameters);
+			return { jobs: result.jobs };
+		},
 	});
 }
 
@@ -33,7 +35,13 @@ export function useJob(jobId: string): UseQueryResult<JobPosting> {
 	const client = useApiClient();
 	return useQuery({
 		queryKey: queryKeys.jobs.detail(jobId),
-		queryFn: (): Promise<JobPosting> => client.jobs.get(jobId),
+		queryFn: async (): Promise<JobPosting> => {
+			const job = await client.graphql.job(jobId);
+			if (!job) {
+				throw new Error("Bounty not found");
+			}
+			return job;
+		},
 		enabled: Boolean(jobId),
 	});
 }

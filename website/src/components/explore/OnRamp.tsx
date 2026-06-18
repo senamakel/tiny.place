@@ -1,7 +1,6 @@
 "use client";
 
 import { MoonPaySellWidget } from "@moonpay/moonpay-react";
-import { useWallet } from "@solana/wallet-adapter-react";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
@@ -18,6 +17,7 @@ import {
 	MOONPAY_USDC_SOLANA_CURRENCY_CODE,
 } from "@src/common/moonpay";
 import { normalizeSolanaAddress } from "@src/common/solana-address";
+import { useTinyplaceWallet } from "@src/common/tinyplace-wallet";
 import { Chip } from "@src/components/ui/Chip";
 import { useTabRoute } from "@src/hooks/use-tab-route";
 
@@ -212,7 +212,7 @@ type OnRampProperties = {
 };
 
 export const OnRamp = ({ isDark }: OnRampProperties): FunctionComponent => {
-	const { publicKey } = useWallet();
+	const { publicKey } = useTinyplaceWallet();
 	const searchParameters = useSearchParams();
 	const { activeTab, setTab } = useTabRoute<Tab>(tabs, "onramp");
 	const [fundingMethod, setFundingMethod] = useState<FundingMethod>("card");

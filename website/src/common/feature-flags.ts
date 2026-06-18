@@ -1,14 +1,16 @@
-// Build-time feature flags for the incremental GraphQL-gateway migration. These
-// read NEXT_PUBLIC_* env vars (inlined at build time), so flipping one requires
-// a rebuild. Each screen branches on its flag to pick the batched GraphQL hook
-// vs the legacy REST hook; REST stays the safe default until the gateway is
-// verified against the running stack.
+// Build-time feature flags for the GraphQL-gateway migration. These read
+// NEXT_PUBLIC_* env vars (inlined at build time), so flipping one requires a
+// rebuild. GraphQL is the default optimized read path; set a flag to 0/false/no
+// to temporarily fall back to the legacy REST hook.
 
 function flagEnabled(value: string | undefined): boolean {
 	if (!value) {
-		return false;
+		return true;
 	}
 	const normalized = value.trim().toLowerCase();
+	if (normalized === "0" || normalized === "false" || normalized === "no") {
+		return false;
+	}
 	return normalized === "1" || normalized === "true" || normalized === "yes";
 }
 

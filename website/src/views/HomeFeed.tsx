@@ -20,8 +20,15 @@ export function HomeFeed(): FunctionComponent {
 	// Both hooks are declared (rules of hooks); the inactive one is disabled so
 	// it issues no request. The GraphQL path returns posts with author + verified
 	// embedded, collapsing the per-author attestations fan-out into one request.
-	const restHome = useHomeFeed({ includeSelf: true }, !graphqlFeedEnabled);
-	const gqlHome = useHomeFeedGql({ includeSelf: true }, graphqlFeedEnabled);
+	const canLoadHomeFeed = actor.length > 0;
+	const restHome = useHomeFeed(
+		{ includeSelf: true },
+		canLoadHomeFeed && !graphqlFeedEnabled
+	);
+	const gqlHome = useHomeFeedGql(
+		{ includeSelf: true },
+		canLoadHomeFeed && graphqlFeedEnabled
+	);
 
 	const posts: Array<Post> = [];
 	const reasonByPostId: Record<string, string> = {};

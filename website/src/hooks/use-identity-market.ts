@@ -23,6 +23,12 @@ import { useApiClient } from "@src/common/api-context";
 import { confirmAndSettleX402 } from "@src/common/x402-settle";
 import { queryKeys } from "@src/common/query-keys";
 import {
+	identityBidFromGql,
+	identityListingFromGql,
+	identityOfferFromGql,
+	identitySaleFromGql,
+} from "@src/hooks/graphql-mappers";
+import {
 	useOptionalX402Confirm,
 	type X402ConfirmContextValue,
 	type X402ConfirmRequest,
@@ -38,10 +44,10 @@ export function useIdentityListings(): UseQueryResult<{
 	return useQuery({
 		queryKey: queryKeys.marketplace.identityListings(),
 		queryFn: async (): Promise<{ listings: Array<IdentityListing> }> => {
-			const result = await client.marketplace.listIdentities({
-				status: "active",
+			const result = await client.graphql.identityListings({
+				limit: 100,
 			});
-			return { listings: result.identities };
+			return { listings: result.listings.map(identityListingFromGql) };
 		},
 	});
 }
@@ -54,10 +60,11 @@ export function useIdentityListingForName(
 	return useQuery({
 		queryKey: [...queryKeys.marketplace.identityListings(), normalized],
 		queryFn: async (): Promise<IdentityListing | undefined> => {
-			const result = await client.marketplace.listIdentities({
-				status: "active",
+			const result = await client.graphql.identityListings({
+				query: normalized,
+				limit: 100,
 			});
-			return result.identities.find(
+			return result.listings.map(identityListingFromGql).find(
 				(listing) =>
 					listing.name.trim().replace(/^@+/, "").toLowerCase() === normalized
 			);
@@ -88,10 +95,10 @@ export function useIdentitySaleHistory(
 	return useQuery({
 		queryKey: queryKeys.marketplace.identityHistory(normalized),
 		queryFn: async (): Promise<{ history: Array<IdentitySale> }> => {
-			const result = await client.marketplace.identitySaleHistory(
-				`@${normalized}`
-			);
-			return { history: result.history ?? [] };
+			const result = await client.graphql.identitySales(`@${normalized}`, {
+				limit: 100,
+			});
+			return { history: result.sales.map(identitySaleFromGql) };
 		},
 		enabled: normalized.length > 0,
 	});
@@ -115,8 +122,12 @@ export function useIdentityBids(
 	const client = useApiClient();
 	return useQuery({
 		queryKey: queryKeys.marketplace.identityBids(listingId),
-		queryFn: (): Promise<{ bids: Array<IdentityBid> }> =>
-			client.marketplace.listBids(listingId),
+		queryFn: async (): Promise<{ bids: Array<IdentityBid> }> => {
+			const result = await client.graphql.identityBids(listingId, {
+				limit: 100,
+			});
+			return { bids: result.bids.map(identityBidFromGql) };
+		},
 		enabled: listingId.trim().length > 0,
 	});
 }
@@ -140,8 +151,14 @@ export function useIdentityOffers(parameters?: {
 			name ?? "",
 			buyer ?? "",
 		],
-		queryFn: (): Promise<{ offers: Array<IdentityOffer> }> =>
-			client.marketplace.listOffers({ buyer, name }),
+		queryFn: async (): Promise<{ offers: Array<IdentityOffer> }> => {
+			const result = await client.graphql.identityOffers({
+				buyer,
+				name,
+				limit: 100,
+			});
+			return { offers: result.offers.map(identityOfferFromGql) };
+		},
 		enabled: Boolean(name ?? buyer),
 	});
 }
