@@ -1,11 +1,22 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from ..http import HttpClient, TinyPlaceError, encode
 from ..signer import Signer
 from ..solana import SOLANA_MAINNET_NETWORK, SOLANA_USDC_MINT, execute_solana_x402_payment
 from ..types import Json, JsonDict, Query
+
+DEFAULT_FUND_ATTEMPTS = 30
+DEFAULT_FUND_INTERVAL_MS = 3000
+_FUND_RETRY_ERRORS = ["transaction not found", "insufficient confirmations"]
+
+
+def _should_retry_fund(exc: TinyPlaceError) -> bool:
+    """True when a fund failed only because the on-chain payment isn't confirmed yet."""
+    haystack = f"{exc} {exc.body}".lower()
+    return any(error in haystack for error in _FUND_RETRY_ERRORS)
 
 
 class BountiesApi:
@@ -54,11 +65,16 @@ class BountiesApi:
         mint: str | None = None,
         decimals: int = 6,
         network: str | None = None,
+        attempts: int = DEFAULT_FUND_ATTEMPTS,
+        interval_ms: int = DEFAULT_FUND_INTERVAL_MS,
     ) -> dict[str, Any]:
         """Fund a bounty, settling the reward into escrow on chain (exact x402).
 
         Probes ``fund`` for the 402 challenge, pays it on chain, then re-funds
-        with the signed payment map. Mirrors ``registry.register_with_solana_payment``.
+        with the signed payment map — polling through the unconfirmed window and
+        recovering if a post-payment 5xx already funded it, so a transient error
+        never causes a second on-chain transfer. Mirrors
+        ``registry.register_with_solana_payment``.
         """
         if self._signer is None:
             raise ValueError("fund_with_solana_payment requires a signer")
@@ -89,8 +105,42 @@ class BountiesApi:
                 },
             },
         )
-        bounty = await self.fund(bounty_id, creator, execution["payment"])
+        bounty = await self._fund_retrying(
+            bounty_id, creator, execution["payment"], attempts, interval_ms
+        )
         return {"bounty": bounty, "payment": execution}
+
+    async def _fund_retrying(
+        self, bounty_id: str, creator: str, payment: JsonDict, attempts: int, interval_ms: int
+    ) -> Json:
+        # The payment is already on chain; retry the SAME fund call (same payment
+        # map — no new transfer) through confirmation lag, and recover if a 5xx
+        # actually funded the bounty, so the creator never pays twice.
+        attempts = max(1, attempts)
+        for attempt in range(attempts):
+            try:
+                return await self.fund(bounty_id, creator, payment)
+            except TinyPlaceError as exc:
+                if attempt == attempts - 1 or not _should_retry_fund(exc):
+                    recovered = await self._recover_funded_bounty(bounty_id, exc)
+                    if recovered is not None:
+                        return recovered
+                    raise
+            if interval_ms > 0:
+                await asyncio.sleep(interval_ms / 1000)
+        raise RuntimeError("unreachable: bounty fund retry loop exhausted")
+
+    async def _recover_funded_bounty(self, bounty_id: str, exc: TinyPlaceError) -> Json | None:
+        """Return the bounty if a post-payment 5xx still funded it (has fundingTxSig)."""
+        if exc.status < 500:
+            return None
+        try:
+            bounty = await self.get(bounty_id)
+        except TinyPlaceError:
+            return None
+        if isinstance(bounty, dict) and bounty.get("fundingTxSig"):
+            return bounty
+        return None
 
     async def cancel(self, bounty_id: str, creator: str) -> Json:
         return await self._http.post_directory_auth_as(
