@@ -3,10 +3,21 @@ import { NextResponse, type NextRequest } from "next/server";
 const PASSWORD = "atinyplace";
 const REALM = "tiny.place";
 
+function isStaging(): boolean {
+	const apiBase = process.env["NEXT_PUBLIC_API_BASE_URL"] ?? "";
+	return apiBase.includes("staging-api.tiny.place");
+}
+
 function basicAuthEnabled(): boolean {
 	const configured = process.env["TINYPLACE_BASIC_AUTH_ENABLED"];
 	if (configured !== undefined) {
 		return configured.toLowerCase() !== "false";
+	}
+
+	// Staging points at the staging API and is meant to be openly accessible —
+	// skip the password gate there. Real production stays gated.
+	if (isStaging()) {
+		return false;
 	}
 
 	return process.env.NODE_ENV === "production";
