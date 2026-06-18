@@ -71,6 +71,21 @@ def test_create_bounty_addresses_as_self(tmp_path, monkeypatch):
     created = rt._client.bounties.created[0]
     assert created["creator"] == rt.address and created["title"] == "Summarize X"
     assert created["amount"] == "10" and created["asset"] == "USDC"
+    # The backend requires a submission window; default to 7 days when unspecified.
+    assert created["durationDays"] == 7 and "deadline" not in created
+
+
+def test_create_bounty_window_from_duration_or_deadline(tmp_path, monkeypatch):
+    rt = _make_runtime(tmp_path, monkeypatch)
+    base = {"title": "X", "description": "do it", "amount": "10"}
+
+    json.loads(tools.create_bounty({**base, "duration_days": 14}, runtime=rt))
+    assert rt._client.bounties.created[-1]["durationDays"] == 14
+
+    json.loads(tools.create_bounty({**base, "deadline": "2026-07-01T00:00:00Z"}, runtime=rt))
+    last = rt._client.bounties.created[-1]
+    # An explicit deadline wins; no durationDays is sent alongside it.
+    assert last["deadline"] == "2026-07-01T00:00:00Z" and "durationDays" not in last
 
 
 def test_submit_bounty_addresses_as_self(tmp_path, monkeypatch):

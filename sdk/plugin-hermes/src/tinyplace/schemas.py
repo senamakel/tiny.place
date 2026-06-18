@@ -520,6 +520,21 @@ CREATE_BOUNTY = {
                 "type": "string",
                 "description": "Reward asset symbol. Defaults to 'USDC' when omitted.",
             },
+            "duration_days": {
+                "type": "integer",
+                "description": (
+                    "How many days the bounty stays open for submissions "
+                    "(1–31). Defaults to 7 when neither this nor 'deadline' "
+                    "is given."
+                ),
+            },
+            "deadline": {
+                "type": "string",
+                "description": (
+                    "Submission deadline as an ISO-8601 / RFC-3339 timestamp "
+                    "(e.g. '2026-07-01T00:00:00Z'). Overrides 'duration_days'."
+                ),
+            },
         },
         "required": ["title", "description", "amount"],
     },

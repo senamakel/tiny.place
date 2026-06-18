@@ -727,6 +727,14 @@ def create_bounty(args: dict[str, Any], ctx: dict[str, Any]) -> str:
         "amount": amount.strip(),
         "asset": asset,
     }
+    # The bounty needs a submission window: an explicit ISO-8601 'deadline', or a
+    # 'duration_days' the backend turns into one. The backend requires it (1 day
+    # to 1 month), so default to 7 days when the caller gives neither.
+    deadline = args.get("deadline")
+    if isinstance(deadline, str) and deadline.strip():
+        request["deadline"] = deadline.strip()
+    else:
+        request["durationDays"] = _coerce_limit(args.get("duration_days")) or 7
 
     async def _run() -> Any:
         client = await runtime.get_client()
