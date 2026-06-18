@@ -48,5 +48,10 @@ export interface GqlProduct {
   salesCount: number;
   rating: number;
   createdAt: string;
-  seller: { cryptoId: string; displayName: string; verified: boolean };
+  seller: {
+    handle: string;
+    cryptoId: string;
+    displayName: string;
+    verified: boolean;
+  };
 }

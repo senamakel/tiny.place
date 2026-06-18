@@ -4,6 +4,7 @@
 // REST call per author/seller (the source of the 429s).
 
 const AUTHOR_FIELDS = `
+  handle
   cryptoId
   displayName
   verified
@@ -42,7 +43,6 @@ export const POST_COMMENTS_QUERY = `
       body
       createdAt
       moderationState
-      verified
       author { ${AUTHOR_FIELDS} }
     }
   }

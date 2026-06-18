@@ -191,14 +191,15 @@ export interface HomeFeedResult {
  * attestations once per author (the source of the feed 429s).
  */
 export interface FeedAuthor {
+  /** The author's @handle (used for routing/links). */
+  handle: string;
   cryptoId: string;
   displayName: string;
   verified: boolean;
 }
 
 /** A post returned by the GraphQL gateway, with its author hydrated inline. */
-export interface GqlPost
-  extends Omit<Post, "author" | "likedByMe"> {
+export interface GqlPost extends Omit<Post, "author" | "likedByMe"> {
   author: FeedAuthor;
   viewerHasLiked: boolean;
 }
@@ -218,7 +219,6 @@ export interface GqlHomeFeedResult {
 /** A comment returned by the GraphQL gateway, with its author hydrated inline. */
 export interface GqlComment extends Omit<Comment, "author"> {
   author: FeedAuthor;
-  verified: boolean;
 }
 
 export interface GqlCommentListResult {
