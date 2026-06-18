@@ -121,7 +121,7 @@ function FeedbackCard({
 			) : null}
 			<div className="mt-4 grid grid-cols-2 gap-2 sm:flex">
 				<button
-					className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
+					className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-front disabled:cursor-not-allowed disabled:opacity-50"
 					disabled={voting || !canVote}
 					type="button"
 					onClick={(): void => {
@@ -249,7 +249,7 @@ export const Feedback = ({ isDark }: FeedbackProperties): FunctionComponent => {
 				/>
 				<div className="mt-3 flex items-center gap-3">
 					<button
-						className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
+						className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-front disabled:cursor-not-allowed disabled:opacity-50"
 						type="submit"
 						disabled={
 							!agentId ||
@@ -362,7 +362,7 @@ export const Feedback = ({ isDark }: FeedbackProperties): FunctionComponent => {
 									</p>
 								</div>
 								<button
-									className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
+									className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-front disabled:cursor-not-allowed disabled:opacity-50"
 									disabled={updateStatus.isPending}
 									type="button"
 									onClick={(): void => {

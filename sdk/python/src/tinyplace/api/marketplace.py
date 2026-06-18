@@ -1,16 +1,46 @@
 from __future__ import annotations
 
+import asyncio
 import secrets
 import time
-from typing import Any
+from typing import Any, Awaitable, Callable
 
 from ..auth import sign_fresh_canonical_payload
 from ..crypto import canonical_payload
-from ..http import HttpClient, encode
+from ..http import HttpClient, TinyPlaceError, encode
 from ..signer import Signer
 from ..solana import SOLANA_USDC_MINT, execute_solana_x402_payment
 from ..types import Json, JsonDict, Query
 from ..x402 import build_x402_payment_map
+
+# After an `exact` on-chain settlement the backend may not yet see the transfer,
+# returning 402 "transaction not found" / "insufficient confirmations". Retry the
+# (idempotent — same payment map, no new transfer) POST through that window, as
+# registry.register_with_solana_payment and bounties.fund_with_solana_payment do.
+DEFAULT_SETTLEMENT_ATTEMPTS = 30
+DEFAULT_SETTLEMENT_INTERVAL_MS = 3000
+_SETTLEMENT_RETRY_ERRORS = ("transaction not found", "insufficient confirmations")
+
+
+def _should_retry_settlement(exc: TinyPlaceError) -> bool:
+    haystack = f"{exc} {exc.body}".lower()
+    return any(error in haystack for error in _SETTLEMENT_RETRY_ERRORS)
+
+
+async def _retry_settled(
+    action: Callable[[], Awaitable[Json]], attempts: int, interval_ms: int
+) -> Json:
+    """Retry ``action`` (the post-settlement POST) while the chain confirms."""
+    attempts = max(1, attempts)
+    for attempt in range(attempts):
+        try:
+            return await action()
+        except TinyPlaceError as exc:
+            if attempt == attempts - 1 or not _should_retry_settlement(exc):
+                raise
+        if interval_ms > 0:
+            await asyncio.sleep(interval_ms / 1000)
+    raise RuntimeError("unreachable: settlement retry loop exhausted")
 
 
 class MarketplaceApi:
@@ -86,6 +116,8 @@ class MarketplaceApi:
         nonce: str | None = None,
         expires_at: str | None = None,
         metadata: dict[str, Any] | None = None,
+        attempts: int = DEFAULT_SETTLEMENT_ATTEMPTS,
+        interval_ms: int = DEFAULT_SETTLEMENT_INTERVAL_MS,
     ) -> dict[str, Any]:
         """Buy a product, settling its USDC price on chain (exact x402), then retrying
         the buy with the signed payment map. Mirrors the TS ``buyProductWithSolanaPayment``.
@@ -116,8 +148,10 @@ class MarketplaceApi:
                 "metadata": {"productId": product_id, "kind": "product", **(metadata or {})},
             },
         )
-        purchase = await self.buy_product(
-            product_id, {**request, "payment": execution["payment"]}
+        purchase = await _retry_settled(
+            lambda: self.buy_product(product_id, {**request, "payment": execution["payment"]}),
+            attempts,
+            interval_ms,
         )
         return {"product": product, "purchase": purchase, "payment": execution}
 
@@ -194,6 +228,8 @@ class MarketplaceApi:
         nonce: str | None = None,
         expires_at: str | None = None,
         metadata: dict[str, Any] | None = None,
+        attempts: int = DEFAULT_SETTLEMENT_ATTEMPTS,
+        interval_ms: int = DEFAULT_SETTLEMENT_INTERVAL_MS,
     ) -> dict[str, Any]:
         """Buy an identity listing, settling its USDC price on chain (exact x402)."""
         if self._signer is None:
@@ -226,8 +262,10 @@ class MarketplaceApi:
                 },
             },
         )
-        sale = await self.buy_identity_listing(
-            listing_id, {**request, "payment": execution["payment"]}
+        sale = await _retry_settled(
+            lambda: self.buy_identity_listing(listing_id, {**request, "payment": execution["payment"]}),
+            attempts,
+            interval_ms,
         )
         return {"listing": listing, "sale": sale, "payment": execution}
 
