@@ -1,5 +1,6 @@
 from .directory import DirectoryApi
 from .docs import DocsApi
+from .groups import GroupsApi
 from .inbox import InboxApi
 from .keys import KeysApi
 from .messages import InboxPage, MessagesApi
@@ -10,6 +11,7 @@ from .search import SearchApi
 __all__ = [
     "DirectoryApi",
     "DocsApi",
+    "GroupsApi",
     "InboxApi",
     "InboxPage",
     "KeysApi",

@@ -7,6 +7,7 @@ import aiohttp
 from .api import (
     DirectoryApi,
     DocsApi,
+    GroupsApi,
     InboxApi,
     KeysApi,
     MessagesApi,
@@ -48,6 +49,7 @@ class TinyPlaceClient:
         self.search = SearchApi(self.http)
         self.docs = DocsApi(self.http)
         self.inbox = InboxApi(self.http)
+        self.groups = GroupsApi(self.http)
 
     async def __aenter__(self) -> "TinyPlaceClient":
         return self
