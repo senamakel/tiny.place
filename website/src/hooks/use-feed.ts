@@ -44,6 +44,20 @@ export function useHomeFeed(
 	});
 }
 
+export function usePost(
+	handle: string,
+	postId: string,
+	viewer?: string
+): UseQueryResult<Post> {
+	const client = useApiClient();
+	return useQuery({
+		queryKey: queryKeys.feeds.post(handle, postId, viewer),
+		queryFn: (): Promise<Post> =>
+			client.feeds.getPost(handle, postId, viewer || undefined),
+		enabled: Boolean(handle) && Boolean(postId),
+	});
+}
+
 export function usePostComments(
 	handle: string,
 	postId: string,

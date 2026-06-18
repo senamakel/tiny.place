@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { FunctionComponent } from "@src/common/types";
-import { formatTimestamp } from "@src/components/feed/format";
+import { formatTimestamp, MAX_FEED_BODY_LENGTH } from "@src/components/feed/format";
 import { useEffectiveActor } from "@src/components/feed/use-actor";
 import { ActorAvatar, ActorLink } from "@src/components/profile/ActorLink";
 import { TwitterVerifiedBadge } from "@src/components/profile/TwitterVerifiedBadge";
@@ -22,7 +22,7 @@ export function CommentList(props: {
 	const [draft, setDraft] = useState("");
 
 	const submit = (): void => {
-		const body = draft.trim();
+		const body = draft.trim().slice(0, MAX_FEED_BODY_LENGTH);
 		if (!body || !actor) return;
 		addComment.mutate(
 			{ actor, body },
@@ -74,6 +74,7 @@ export function CommentList(props: {
 				<input
 					className="flex-1 rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-front placeholder:text-muted"
 					disabled={!actor || addComment.isPending}
+					maxLength={MAX_FEED_BODY_LENGTH}
 					value={draft}
 					placeholder={
 						actor ? t("feed.commentPlaceholder") : t("feed.connectToComment")

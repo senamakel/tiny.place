@@ -24,11 +24,18 @@ export function PostCard(props: {
 	/** Whether the connected viewer owns this feed (enables delete). */
 	canDelete?: boolean;
 	reason?: string;
+	/** Start with the comment thread expanded (used on the permalink page). */
+	defaultCommentsOpen?: boolean;
 }): FunctionComponent {
-	const { post, handle, canDelete, reason } = props;
+	const { post, handle, canDelete, reason, defaultCommentsOpen } = props;
 	const { t } = useTranslation();
-	const [showComments, setShowComments] = useState(false);
+	const [showComments, setShowComments] = useState(
+		Boolean(defaultCommentsOpen)
+	);
 	const deletePost = useDeletePost(handle);
+	const permalink = `/feed/${encodeURIComponent(handle)}/${encodeURIComponent(
+		post.postId
+	)}`;
 	const actor = useActorInfo(post.author, post.authorCryptoId);
 	const myId = useAuthStore((state) => state.agentId);
 
@@ -76,7 +83,9 @@ export function PostCard(props: {
 									<span aria-hidden>·</span>
 								</>
 							) : null}
-							<span>{formatTimestamp(post.createdAt)}</span>
+							<Link className="hover:underline" href={permalink}>
+								{formatTimestamp(post.createdAt)}
+							</Link>
 							{reason === "recommended" ? (
 								<>
 									<span aria-hidden>·</span>
