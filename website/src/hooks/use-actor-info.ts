@@ -29,8 +29,8 @@ function primaryUsername(
 	if (!identities || identities.length === 0) {
 		return undefined;
 	}
-	const primary = identities.find((identity) => identity.primary);
-	return stripHandle((primary ?? identities[0]).username) || undefined;
+	const chosen = identities.find((identity) => identity.primary) ?? identities[0];
+	return chosen ? stripHandle(chosen.username) || undefined : undefined;
 }
 
 /**
