@@ -3,23 +3,31 @@ import { useMemo } from "react";
 import { PLANET_RADIUS, TERRAIN_AMPLITUDE } from "./constants";
 import { obstacleQuaternion } from "./obstacles";
 import { terrainNoise } from "./terrain";
+import { getFacade } from "./textures";
 import type { Building } from "./types";
 
 interface BuildingsProps {
 	buildings: ReadonlyArray<Building>;
 }
 
-/** A single procedural building: walls, a roof, and a door. */
+/** A single procedural building: textured walls, a roof, and a door. */
 function BuildingMesh({ b }: { b: Building }): React.ReactElement {
 	const roofRadius = Math.hypot(b.footprint, b.depth);
 	const roofHeight = b.kind === 1 ? 1.2 : roofRadius * 0.7;
 	const isTower = b.kind === 1;
+	const facade = useMemo(() => getFacade(b.kind, b.color), [b.kind, b.color]);
 	return (
 		<group>
-			{/* Walls */}
+			{/* Walls — procedural facade with windows; lit windows glow */}
 			<mesh castShadow receiveShadow position={[0, b.height / 2, 0]}>
 				<boxGeometry args={[b.footprint * 2, b.height, b.depth * 2]} />
-				<meshStandardMaterial color={b.color} roughness={0.85} />
+				<meshStandardMaterial
+					emissive="#ffd98a"
+					emissiveIntensity={1.1}
+					emissiveMap={facade.emissiveMap}
+					map={facade.map}
+					roughness={0.82}
+				/>
 			</mesh>
 			{/* Roof — flat parapet for towers, pitched pyramid otherwise */}
 			{isTower ? (

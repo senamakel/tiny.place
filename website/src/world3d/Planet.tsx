@@ -1,10 +1,11 @@
-import { useEffect, useMemo, type RefObject } from "react";
+import { useEffect, useMemo, useRef, type RefObject } from "react";
 import {
 	BufferAttribute,
 	Color,
 	IcosahedronGeometry,
 	type BufferGeometry,
 	type Mesh,
+	type MeshStandardMaterial,
 	Vector3,
 } from "three";
 
@@ -14,6 +15,8 @@ import {
 	TERRAIN_AMPLITUDE,
 } from "./constants";
 import { terrainNoise } from "./terrain";
+import { getDetailNoise } from "./textures";
+import { applyTriplanarDetail } from "./triplanar";
 
 interface PlanetProps {
 	meshRef: RefObject<Mesh | null>;
@@ -66,6 +69,8 @@ export function Planet({ meshRef, seed = 1337 }: PlanetProps): React.ReactElemen
 		return geo;
 	}, [seed]);
 
+	const materialRef = useRef<MeshStandardMaterial>(null);
+
 	useEffect(() => {
 		return (): void => {
 			geometry.disposeBoundsTree?.();
@@ -73,9 +78,25 @@ export function Planet({ meshRef, seed = 1337 }: PlanetProps): React.ReactElemen
 		};
 	}, [geometry]);
 
+	useEffect(() => {
+		const detail = getDetailNoise();
+		if (materialRef.current && detail) {
+			applyTriplanarDetail(materialRef.current, {
+				map: detail,
+				scale: 0.09,
+				strength: 0.5,
+			});
+		}
+	}, []);
+
 	return (
 		<mesh ref={meshRef} castShadow receiveShadow geometry={geometry}>
-			<meshStandardMaterial vertexColors metalness={0} roughness={0.92} />
+			<meshStandardMaterial
+				ref={materialRef}
+				vertexColors
+				metalness={0}
+				roughness={0.95}
+			/>
 		</mesh>
 	);
 }

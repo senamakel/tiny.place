@@ -1,6 +1,7 @@
 import { PLANET_RADIUS, TERRAIN_AMPLITUDE } from "./constants";
 import { obstacleQuaternion } from "./obstacles";
 import { terrainNoise } from "./terrain";
+import { getDetailNoise } from "./textures";
 import type { Obstacle } from "./types";
 
 interface ScatterProps {
@@ -9,11 +10,13 @@ interface ScatterProps {
 
 /**
  * Renders the obstacles as placeholder rocks (dodecahedra) and trees
- * (trunk + foliage cone), each sat on the terrain and oriented to local up.
- * Swap these meshes for glTF models (Houdini/Blender/Substance) later — the
- * collider data is owned by the parent scene and is independent of the visuals.
+ * (trunk + foliage cone), each sat on the terrain and oriented to local up. A
+ * shared procedural noise drives a bump map so the surfaces aren't flat. Swap
+ * these meshes for glTF models (Houdini/Blender/Substance) later — the collider
+ * data is owned by the parent scene and is independent of the visuals.
  */
 export function Scatter({ obstacles }: ScatterProps): React.ReactElement {
+	const bump = getDetailNoise();
 	return (
 		<group>
 			{obstacles.map((o, index) => {
@@ -30,20 +33,44 @@ export function Scatter({ obstacles }: ScatterProps): React.ReactElement {
 					>
 						{o.kind === 0 ? (
 							<mesh castShadow receiveShadow position={[0, o.height * 0.4, 0]}>
-								<dodecahedronGeometry args={[o.radius, 0]} />
-								<meshStandardMaterial flatShading color="#6b6f76" roughness={1} />
+								<dodecahedronGeometry args={[o.radius, 1]} />
+								<meshStandardMaterial
+									bumpMap={bump}
+									bumpScale={0.6}
+									color="#777b82"
+									roughness={1}
+								/>
 							</mesh>
 						) : (
 							<group>
 								<mesh castShadow position={[0, o.height * 0.3, 0]}>
 									<cylinderGeometry
-										args={[o.radius * 0.2, o.radius * 0.28, o.height * 0.6, 6]}
+										args={[o.radius * 0.2, o.radius * 0.28, o.height * 0.6, 8]}
 									/>
-									<meshStandardMaterial color="#6b4f2a" roughness={1} />
+									<meshStandardMaterial
+										bumpMap={bump}
+										bumpScale={0.4}
+										color="#6b4f2a"
+										roughness={1}
+									/>
 								</mesh>
-								<mesh castShadow position={[0, o.height * 0.75, 0]}>
-									<coneGeometry args={[o.radius, o.height * 0.8, 7]} />
-									<meshStandardMaterial flatShading color="#3f7d43" roughness={1} />
+								<mesh castShadow position={[0, o.height * 0.78, 0]}>
+									<coneGeometry args={[o.radius, o.height * 0.85, 9]} />
+									<meshStandardMaterial
+										bumpMap={bump}
+										bumpScale={0.5}
+										color="#3f7d43"
+										roughness={0.95}
+									/>
+								</mesh>
+								<mesh castShadow position={[0, o.height * 1.05, 0]}>
+									<coneGeometry args={[o.radius * 0.7, o.height * 0.55, 9]} />
+									<meshStandardMaterial
+										bumpMap={bump}
+										bumpScale={0.5}
+										color="#4a9150"
+										roughness={0.95}
+									/>
 								</mesh>
 							</group>
 						)}
