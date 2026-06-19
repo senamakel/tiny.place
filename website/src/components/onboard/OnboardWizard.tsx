@@ -12,13 +12,28 @@ import {
 
 import { createClient, createOnboardClient } from "@src/common/api-client";
 import type { FunctionComponent } from "@src/common/types";
+import { TwitterVerificationCard } from "@src/components/profile/TwitterVerificationCard";
 
-type StepKey = "email" | "profile" | "handle" | "fund" | "done";
+type StepKey = "email" | "profile" | "handle" | "twitter" | "fund" | "done";
 
-const STEPS: Array<{ key: StepKey; title: string }> = [
+type Step = { key: StepKey; title: string };
+
+// The grant-driven CLI onboarding is keyless, so it omits the "Verify X" step:
+// a Twitter/X attestation needs a wallet signature the bearer grant cannot
+// produce. Wallet-connected web onboarding (WEB_STEPS) includes it.
+const STEPS: Array<Step> = [
 	{ key: "email", title: "Verify email" },
 	{ key: "profile", title: "Your profile" },
 	{ key: "handle", title: "Claim handle" },
+	{ key: "fund", title: "Fund wallet" },
+	{ key: "done", title: "All set" },
+];
+
+const WEB_STEPS: Array<Step> = [
+	{ key: "email", title: "Verify email" },
+	{ key: "profile", title: "Your profile" },
+	{ key: "handle", title: "Claim handle" },
+	{ key: "twitter", title: "Verify X" },
 	{ key: "fund", title: "Fund wallet" },
 	{ key: "done", title: "All set" },
 ];
@@ -128,18 +143,19 @@ function MissingGrant(): ReactElement {
 function Stepper({
 	current,
 	done,
+	steps,
 }: {
 	current: StepKey;
-	done: { email: boolean; handle: boolean; profile: boolean };
+	done: Partial<Record<StepKey, boolean>>;
+	steps: Array<Step>;
 }): ReactElement {
 	return (
 		<ol className="flex items-center gap-2 text-xs">
-			{STEPS.map((entry) => {
+			{steps.map((entry) => {
 				const complete =
-					(entry.key === "email" && done.email) ||
-					(entry.key === "profile" && done.profile) ||
-					(entry.key === "handle" && done.handle) ||
-					(entry.key === "done" && current === "done");
+					entry.key === "done"
+						? current === "done"
+						: Boolean(done[entry.key]);
 				const active = entry.key === current;
 				return (
 					<li
@@ -398,6 +414,41 @@ function HandleStep({
 	);
 }
 
+function TwitterStep({
+	agent,
+	agentCryptoId,
+	onDone,
+	onVerified,
+}: {
+	agent: string;
+	agentCryptoId: string;
+	onDone: () => void;
+	onVerified: () => void;
+}): ReactElement {
+	const [verified, setVerified] = useState(false);
+	return (
+		<div className="flex flex-col gap-3">
+			<TwitterVerificationCard
+				agent={agent}
+				agentCryptoId={agentCryptoId}
+				onVerified={() => {
+					setVerified(true);
+					onVerified();
+				}}
+			/>
+			<div className="flex items-center gap-2">
+				<button
+					className={verified ? primaryButtonClass : ghostButtonClass}
+					type="button"
+					onClick={onDone}
+				>
+					{verified ? "Continue" : "Skip for now"}
+				</button>
+			</div>
+		</div>
+	);
+}
+
 function FundStep({
 	wallet,
 	onDone,
@@ -434,10 +485,13 @@ function DoneStep({
 	emailDone,
 	handleDone,
 	profileDone,
+	twitterDone,
 }: {
 	emailDone: boolean;
 	handleDone: boolean;
 	profileDone: boolean;
+	/** Omitted by the CLI wizard (no X step); set by the web wizard. */
+	twitterDone?: boolean;
 }): ReactElement {
 	return (
 		<section className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
@@ -446,6 +500,9 @@ function DoneStep({
 				<li>{emailDone ? "Complete" : "Skipped"}: Email verified</li>
 				<li>{profileDone ? "Complete" : "Skipped"}: Profile saved</li>
 				<li>{handleDone ? "Complete" : "Skipped"}: Active handle</li>
+				{twitterDone !== undefined ? (
+					<li>{twitterDone ? "Complete" : "Skipped"}: X account verified</li>
+				) : null}
 			</ul>
 			<p className="text-xs text-muted">
 				You can return to tiny.place now. If you skipped a handle, claim one
@@ -503,6 +560,7 @@ export function OnboardWizard(): FunctionComponent {
 
 			<Stepper
 				current={step}
+				steps={STEPS}
 				done={{
 					email: emailDone,
 					handle: handleDone,
@@ -608,20 +666,29 @@ export function WebOnboardWizard({
 	);
 	const [emailCompleted, setEmailCompleted] = useState(false);
 	const [profileCompleted, setProfileCompleted] = useState(false);
+	const [twitterDone, setTwitterDone] = useState(false);
 	const emailDone = hasVerifiedEmail(user) || emailCompleted;
 	const profileDone = hasProfile(user) || profileCompleted;
 	const handleDone = hasActiveIdentity(activeIdentities);
 
+	// The attestation's `agent` mirrors the profile card: the active @handle when
+	// claimed, otherwise the wallet cryptoId (resolved server-side via the agent
+	// card published in the profile step). `wallet` is the base58 cryptoId.
+	const activeHandle = activeIdentities?.find(
+		(identity) => identity.status === "active"
+	)?.username;
+	const twitterAgent = activeHandle ?? wallet;
+
 	const advance = (from: StepKey): void => {
-		const index = STEPS.findIndex((entry) => entry.key === from);
-		const remaining = STEPS.slice(index + 1);
+		const index = WEB_STEPS.findIndex((entry) => entry.key === from);
+		const remaining = WEB_STEPS.slice(index + 1);
 		const next =
 			remaining.find((entry) => {
 				if (entry.key === "email") return !emailDone;
 				if (entry.key === "profile") return !profileDone;
 				if (entry.key === "handle") return !handleDone;
 				return true;
-			}) ?? STEPS[STEPS.length - 1];
+			}) ?? WEB_STEPS[WEB_STEPS.length - 1];
 		setStep(next?.key ?? "done");
 	};
 
@@ -639,10 +706,12 @@ export function WebOnboardWizard({
 
 			<Stepper
 				current={step}
+				steps={WEB_STEPS}
 				done={{
 					email: emailDone,
 					handle: handleDone,
 					profile: profileDone,
+					twitter: twitterDone,
 				}}
 			/>
 
@@ -677,6 +746,19 @@ export function WebOnboardWizard({
 				/>
 			) : null}
 
+			{step === "twitter" ? (
+				<TwitterStep
+					agent={twitterAgent}
+					agentCryptoId={wallet}
+					onDone={() => {
+						advance("twitter");
+					}}
+					onVerified={() => {
+						setTwitterDone(true);
+					}}
+				/>
+			) : null}
+
 			{step === "fund" ? (
 				<FundStep
 					wallet={wallet}
@@ -691,6 +773,7 @@ export function WebOnboardWizard({
 					emailDone={emailDone}
 					handleDone={handleDone}
 					profileDone={profileDone}
+					twitterDone={twitterDone}
 				/>
 			) : null}
 		</main>
