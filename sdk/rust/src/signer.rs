@@ -2,10 +2,16 @@
 //! [`Signer`] trait lets you plug in remote wallets, HSMs, or API-based signers.
 
 use async_trait::async_trait;
+use chrono::{Duration, SecondsFormat, Utc};
 use ed25519_dalek::{Signer as _, SigningKey as DalekSigningKey, VerifyingKey};
 
-use crate::crypto::{decode_base58, derive_crypto_id, public_key_to_base64};
+use crate::crypto::{
+    decode_base58, derive_crypto_id, public_key_to_base64, to_base64, to_base64_url,
+};
 use crate::error::{Error, Result};
+
+const SIWS_NETWORK: &str = "solana:mainnet";
+const SIWS_ORIGIN: &str = "https://tiny.place";
 
 /// Abstract signing strategy. Implementors authorize requests by producing an
 /// Ed25519 signature over a payload and identifying themselves by `agent_id`
