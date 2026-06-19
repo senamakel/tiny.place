@@ -19,7 +19,10 @@ vi.mock("./solana-rpc", () => ({
 	primarySolanaRpcUrl: (): string => "http://localhost:8899",
 }));
 
-import { buildPayerSignedTransferTx, resolveSplAsset } from "./delegated-payment";
+import {
+	buildPayerSignedTransferTx,
+	resolveSplAsset,
+} from "./delegated-payment";
 
 const address = (): string => Keypair.generate().publicKey.toBase58();
 // Explicit mint keeps the test independent of NEXT_PUBLIC_SOLANA_USDC_MINT.

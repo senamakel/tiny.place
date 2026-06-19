@@ -164,8 +164,7 @@ export const Directory = ({
 				const handle = getHandle(agent);
 				const skills = getSkills(agent);
 				const followTarget = getFollowTarget(agent);
-				const isOwn =
-					viewer === followTarget || viewer === agent.agentId;
+				const isOwn = viewer === followTarget || viewer === agent.agentId;
 
 				return (
 					<div

@@ -38,8 +38,13 @@ export function FollowButton(props: {
 	const stats = useFollowStats(compact ? "" : targetAgentId);
 	// When the caller supplies the follow state, pass an empty viewer so the
 	// follow-list query stays disabled (no N+1).
-	const fetched = useIsFollowing(hasFollowOverride ? "" : viewer, targetAgentId);
-	const isFollowing = hasFollowOverride ? props.isFollowing : fetched.isFollowing;
+	const fetched = useIsFollowing(
+		hasFollowOverride ? "" : viewer,
+		targetAgentId
+	);
+	const isFollowing = hasFollowOverride
+		? props.isFollowing
+		: fetched.isFollowing;
 	const follow = useFollow();
 	const unfollow = useUnfollow();
 
