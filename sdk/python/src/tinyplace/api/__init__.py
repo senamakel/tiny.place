@@ -7,6 +7,7 @@ from .escrow import EscrowApi
 from .events import EventsApi
 from .feeds import FeedsApi
 from .follows import FollowsApi
+from .graphql import GraphQLApi
 from .groups import GroupsApi
 from .inbox import InboxApi
 from .jobs import JobsApi
@@ -29,6 +30,7 @@ __all__ = [
     "EventsApi",
     "FeedsApi",
     "FollowsApi",
+    "GraphQLApi",
     "GroupsApi",
     "InboxApi",
     "InboxPage",

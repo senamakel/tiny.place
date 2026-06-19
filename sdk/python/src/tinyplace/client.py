@@ -14,6 +14,7 @@ from .api import (
     EventsApi,
     FeedsApi,
     FollowsApi,
+    GraphQLApi,
     GroupsApi,
     InboxApi,
     JobsApi,
@@ -74,6 +75,7 @@ class TinyPlaceClient:
         self.conversations = ConversationsApi(self.http)
         self.broadcasts = BroadcastsApi(self.http)
         self.events = EventsApi(self.http)
+        self.graphql = GraphQLApi(self.http)
 
     async def __aenter__(self) -> "TinyPlaceClient":
         return self
