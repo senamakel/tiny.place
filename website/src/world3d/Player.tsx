@@ -1,6 +1,6 @@
 import { useRef, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Group, Vector3, type Mesh } from "three";
+import { Vector3, type Group, type Mesh } from "three";
 
 import {
 	PLAYER_COLLIDER_RADIUS,
@@ -21,7 +21,7 @@ import type { Obstacle } from "./types";
 interface PlayerProps {
 	stateRef: RefObject<SurfaceState>;
 	planetRef: RefObject<Mesh | null>;
-	obstaclesRef: RefObject<Obstacle[]>;
+	obstaclesRef: RefObject<Array<Obstacle>>;
 	avatarRef: RefObject<Group | null>;
 	input: RefObject<InputState>;
 }
@@ -37,22 +37,28 @@ export function Player({
 	avatarRef,
 	input,
 }: PlayerProps): React.ReactElement {
-	const tmpUp = useRef(new Vector3());
+	const temporaryUp = useRef(new Vector3());
 
 	useFrame((_, rawDelta) => {
 		const delta = Math.min(rawDelta, 0.05); // clamp big tab-out frames
-		const i = input.current;
+		const keys = input.current;
 		let state = stateRef.current;
 
 		// Turn (A/D).
-		const turnDir = (i.left ? 1 : 0) - (i.right ? 1 : 0);
-		if (turnDir !== 0) state = turn(state, turnDir * TURN_SPEED * delta);
+		const turnDirection = (keys.left ? 1 : 0) - (keys.right ? 1 : 0);
+		if (turnDirection !== 0) {
+			state = turn(state, turnDirection * TURN_SPEED * delta);
+		}
 
 		// Walk (W/S) along the great circle, blocked by obstacles.
-		const moveDir = (i.forward ? 1 : 0) - (i.back ? 1 : 0);
-		if (moveDir !== 0) {
-			const speed = WALK_SPEED * (i.run ? 1.7 : 1);
-			const proposed = stepForward(state, moveDir * speed * delta, stateRef.current.position.length());
+		const moveDirection = (keys.forward ? 1 : 0) - (keys.back ? 1 : 0);
+		if (moveDirection !== 0) {
+			const speed = WALK_SPEED * (keys.run ? 1.7 : 1);
+			const proposed = stepForward(
+				state,
+				moveDirection * speed * delta,
+				stateRef.current.position.length()
+			);
 			if (!isBlocked(proposed.position, obstaclesRef.current ?? [], PLAYER_COLLIDER_RADIUS)) {
 				state = { position: proposed.position, forward: proposed.forward };
 			} else {
@@ -67,7 +73,7 @@ export function Player({
 		const avatar = avatarRef.current;
 		const planet = planetRef.current;
 		if (avatar) {
-			const up = tmpUp.current.copy(state.position).normalize();
+			const up = temporaryUp.current.copy(state.position).normalize();
 			const ground = planet ? groundPoint(planet, state.position) : null;
 			const foot = ground ?? state.position.clone();
 			avatar.position
@@ -80,12 +86,12 @@ export function Player({
 	return (
 		<group ref={avatarRef}>
 			{/* Body */}
-			<mesh position={[0, 0, 0]} castShadow>
+			<mesh castShadow position={[0, 0, 0]}>
 				<capsuleGeometry args={[0.5, 1, 6, 12]} />
 				<meshStandardMaterial color="#ff6b9d" roughness={0.6} />
 			</mesh>
 			{/* Facing indicator (points along +Z = forward) */}
-			<mesh position={[0, 0.2, 0.55]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+			<mesh castShadow position={[0, 0.2, 0.55]} rotation={[Math.PI / 2, 0, 0]}>
 				<coneGeometry args={[0.18, 0.5, 8]} />
 				<meshStandardMaterial color="#ffd23f" roughness={0.5} />
 			</mesh>

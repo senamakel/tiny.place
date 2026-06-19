@@ -39,11 +39,13 @@ export function useKeyboard(): MutableRefObject<InputState> {
 			const key = KEY_MAP[code];
 			if (key) state.current[key] = value;
 		};
-		const onDown = (e: KeyboardEvent): void => {
-			if (KEY_MAP[e.code]) e.preventDefault();
-			set(e.code, true);
+		const onDown = (event: KeyboardEvent): void => {
+			if (KEY_MAP[event.code]) event.preventDefault();
+			set(event.code, true);
 		};
-		const onUp = (e: KeyboardEvent): void => set(e.code, false);
+		const onUp = (event: KeyboardEvent): void => {
+			set(event.code, false);
+		};
 		const onBlur = (): void => {
 			state.current = {
 				forward: false,
@@ -56,7 +58,7 @@ export function useKeyboard(): MutableRefObject<InputState> {
 		window.addEventListener("keydown", onDown);
 		window.addEventListener("keyup", onUp);
 		window.addEventListener("blur", onBlur);
-		return () => {
+		return (): void => {
 			window.removeEventListener("keydown", onDown);
 			window.removeEventListener("keyup", onUp);
 			window.removeEventListener("blur", onBlur);

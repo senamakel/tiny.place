@@ -1,6 +1,6 @@
 import { useRef, type RefObject } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Group, Vector3 } from "three";
+import { Vector3, type Group } from "three";
 
 import { CAMERA_BACK, CAMERA_LERP, CAMERA_UP } from "./constants";
 import { tangentForward, type SurfaceState } from "./sphereMovement";

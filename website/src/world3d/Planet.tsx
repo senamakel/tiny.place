@@ -45,19 +45,19 @@ export function Planet({ meshRef, seed = 1337 }: PlanetProps): React.ReactElemen
 		const v = new Vector3();
 		const c = new Color();
 
-		for (let i = 0; i < pos.count; i++) {
-			v.fromBufferAttribute(pos, i);
-			const dir = v.clone().normalize();
-			const n = terrainNoise(dir, seed); // [-1,1]
-			const displaced = dir
+		for (let index = 0; index < pos.count; index++) {
+			v.fromBufferAttribute(pos, index);
+			const direction = v.clone().normalize();
+			const n = terrainNoise(direction, seed); // [-1,1]
+			const displaced = direction
 				.clone()
 				.multiplyScalar(PLANET_RADIUS + n * TERRAIN_AMPLITUDE);
-			pos.setXYZ(i, displaced.x, displaced.y, displaced.z);
+			pos.setXYZ(index, displaced.x, displaced.y, displaced.z);
 
 			colorForHeight((n + 1) / 2, c);
-			colors[i * 3] = c.r;
-			colors[i * 3 + 1] = c.g;
-			colors[i * 3 + 2] = c.b;
+			colors[index * 3] = c.r;
+			colors[index * 3 + 1] = c.g;
+			colors[index * 3 + 2] = c.b;
 		}
 
 		geo.setAttribute("color", new BufferAttribute(colors, 3));
@@ -67,15 +67,15 @@ export function Planet({ meshRef, seed = 1337 }: PlanetProps): React.ReactElemen
 	}, [seed]);
 
 	useEffect(() => {
-		return () => {
+		return (): void => {
 			geometry.disposeBoundsTree?.();
 			geometry.dispose();
 		};
 	}, [geometry]);
 
 	return (
-		<mesh ref={meshRef} geometry={geometry} receiveShadow castShadow>
-			<meshStandardMaterial vertexColors flatShading roughness={0.95} />
+		<mesh ref={meshRef} castShadow receiveShadow geometry={geometry}>
+			<meshStandardMaterial flatShading vertexColors roughness={0.95} />
 		</mesh>
 	);
 }

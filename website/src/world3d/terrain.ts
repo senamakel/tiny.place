@@ -55,8 +55,8 @@ function valueNoise3(
  * Terrain displacement (signed, roughly in [-1, 1]) at a point on the unit
  * sphere. Multiply by the desired amplitude. `dir` need not be normalized.
  */
-export function terrainNoise(dir: Vector3, seed = 1337): number {
-	const n = dir.clone().normalize();
+export function terrainNoise(direction: Vector3, seed = 1337): number {
+	const n = direction.clone().normalize();
 	const freq = 1.7;
 	let amp = 1;
 	let sum = 0;

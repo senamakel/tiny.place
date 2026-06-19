@@ -4,6 +4,6 @@ export { useLofiAudio } from "./useLofiAudio";
 export * from "./sphereMovement";
 export * from "./collision";
 export * from "./terrain";
-export { buildObstacles } from "./Scatter";
+export { buildObstacles } from "./obstacles";
 export * from "./constants";
 export type { Obstacle, WorldRefs } from "./types";

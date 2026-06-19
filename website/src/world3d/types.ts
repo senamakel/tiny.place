@@ -24,5 +24,5 @@ export interface WorldRefs {
 	/** Live player surface state, read by the camera + HUD each frame. */
 	player: MutableRefObject<SurfaceState>;
 	/** Scattered obstacles for movement blocking. */
-	obstacles: MutableRefObject<Obstacle[]>;
+	obstacles: MutableRefObject<Array<Obstacle>>;
 }

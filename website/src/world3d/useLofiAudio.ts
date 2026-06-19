@@ -28,12 +28,12 @@ export function useLofiAudio(url: string = LOFI_STREAM_URL): LofiAudio {
 		audio.volume = 0.5;
 		audioRef.current = audio;
 
-		const onPlay = (): void => setPlaying(true);
-		const onPause = (): void => setPlaying(false);
+		const onPlay = (): void => { setPlaying(true); };
+		const onPause = (): void => { setPlaying(false); };
 		audio.addEventListener("play", onPlay);
 		audio.addEventListener("pause", onPause);
 
-		return () => {
+		return (): void => {
 			audio.removeEventListener("play", onPlay);
 			audio.removeEventListener("pause", onPause);
 			audio.pause();
@@ -47,7 +47,7 @@ export function useLofiAudio(url: string = LOFI_STREAM_URL): LofiAudio {
 		if (!audio) return;
 		setStarted(true);
 		if (audio.paused) {
-			void audio.play().catch(() => setPlaying(false));
+			void audio.play().catch(() => { setPlaying(false); });
 		} else {
 			audio.pause();
 		}

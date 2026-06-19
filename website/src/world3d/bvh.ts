@@ -18,8 +18,8 @@ export function installBVH(): void {
 	BufferGeometry.prototype.computeBoundsTree =
 		computeBoundsTree as unknown as typeof BufferGeometry.prototype.computeBoundsTree;
 	BufferGeometry.prototype.disposeBoundsTree =
-		disposeBoundsTree as unknown as typeof BufferGeometry.prototype.disposeBoundsTree;
+		disposeBoundsTree;
 	Mesh.prototype.raycast =
-		acceleratedRaycast as unknown as typeof Mesh.prototype.raycast;
+		acceleratedRaycast;
 	installed = true;
 }

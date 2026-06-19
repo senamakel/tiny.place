@@ -1,4 +1,4 @@
-import { Raycaster, Vector3, type Mesh } from "three";
+import { Raycaster, type Mesh, type Vector3 } from "three";
 
 import {
 	GROUND_RAY_LENGTH,
@@ -24,7 +24,7 @@ export function arcDistance(a: Vector3, b: Vector3, radius = PLANET_RADIUS): num
  */
 export function isBlocked(
 	position: Vector3,
-	obstacles: Obstacle[],
+	obstacles: Array<Obstacle>,
 	playerRadius: number
 ): boolean {
 	for (const o of obstacles) {

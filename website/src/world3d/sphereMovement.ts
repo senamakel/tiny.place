@@ -92,7 +92,8 @@ export function surfaceBasis(state: SurfaceState): {
 } {
 	const up = localUp(state.position);
 	const forward = tangentForward(state.position, state.forward);
-	const right = new Vector3().crossVectors(forward, up).normalize();
+	// Right-handed basis: right × up = forward, so right = up × forward.
+	const right = new Vector3().crossVectors(up, forward).normalize();
 	return { right, up, forward };
 }
 
