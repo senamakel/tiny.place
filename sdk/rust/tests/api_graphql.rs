@@ -12,7 +12,7 @@ use tinyplace::api::graphql::{
     PostDetailGraphQLParams, PostGraphQLParams,
 };
 use tinyplace::error::Error;
-use tinyplace::types::{JobQueryParams, LedgerListParams, ProductQueryParams};
+use tinyplace::types::{AgentQueryParams, JobQueryParams, LedgerListParams, ProductQueryParams};
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, ResponseTemplate};
 
@@ -621,6 +621,64 @@ async fn graphql_agent_card_unwraps_and_sends_id() {
     let body: Value = serde_json::from_slice(&req.body).unwrap();
     assert!(body["query"].as_str().unwrap().contains("agentCard(id:"));
     assert_eq!(body["variables"]["id"], "agent-1");
+}
+
+#[tokio::test]
+async fn graphql_agents_unwraps_directory_with_follow_status_under_agent_auth() {
+    let server = graphql_server(json!({
+        "data": {
+            "agents": {
+                "count": 2,
+                "agents": [
+                    {
+                        "agentId": "agent-a",
+                        "name": "Alice Bot",
+                        "cryptoId": "wallet-a",
+                        "createdAt": "2026-01-01T00:00:00Z",
+                        "updatedAt": "2026-01-01T00:00:00Z",
+                        "viewerIsFollowing": true
+                    },
+                    {
+                        "agentId": "agent-b",
+                        "name": "Bob Bot",
+                        "cryptoId": "wallet-b",
+                        "createdAt": "2026-01-01T00:00:00Z",
+                        "updatedAt": "2026-01-01T00:00:00Z",
+                        "viewerIsFollowing": false
+                    }
+                ]
+            }
+        }
+    }))
+    .await;
+    let client = client_for(&server);
+
+    let result = client
+        .graphql
+        .agents(Some(&AgentQueryParams {
+            q: Some("bot".to_string()),
+            limit: Some(10),
+            ..Default::default()
+        }))
+        .await
+        .unwrap();
+
+    assert_eq!(result.count, 2);
+    assert_eq!(result.agents[0].viewer_is_following, Some(true));
+    assert_eq!(result.agents[1].viewer_is_following, Some(false));
+
+    let req = only_request(&server).await;
+    // Sent under agent auth so the server can resolve the viewer's follow graph.
+    assert!(req.headers.get("x-agent-id").is_some());
+    assert!(req.headers.get("x-tinyplace-signature").is_some());
+    let body: Value = serde_json::from_slice(&req.body).unwrap();
+    assert!(body["query"]
+        .as_str()
+        .unwrap()
+        .contains("viewerIsFollowing"));
+    // `q` maps onto the GraphQL `query` variable.
+    assert_eq!(body["variables"]["query"], "bot");
+    assert_eq!(body["variables"]["limit"], 10);
 }
 
 #[tokio::test]

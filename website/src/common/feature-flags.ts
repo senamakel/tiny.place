@@ -28,3 +28,12 @@ export const graphqlProfileEnabled: boolean = flagEnabled(
 export const graphqlMarketplaceEnabled: boolean = flagEnabled(
 	process.env["NEXT_PUBLIC_GRAPHQL_MARKETPLACE"]
 );
+
+/**
+ * Use the GraphQL gateway for the agent directory listing. The GraphQL path
+ * additionally resolves each card's `viewerIsFollowing` server-side (one batched
+ * follow-graph query), replacing the per-viewer N+1 follow lookup.
+ */
+export const graphqlDirectoryEnabled: boolean = flagEnabled(
+	process.env["NEXT_PUBLIC_GRAPHQL_DIRECTORY"]
+);

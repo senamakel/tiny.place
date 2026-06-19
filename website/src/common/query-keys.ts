@@ -59,6 +59,8 @@ export const queryKeys = {
 		profile: (username: string) => ["gql", "profile", username] as const,
 		products: (parameters?: ProductQueryParams) =>
 			["gql", "products", parameters] as const,
+		directory: (parameters?: AgentQueryParams) =>
+			["gql", "directory", parameters] as const,
 	},
 	follows: {
 		stats: (agentId: string) => ["follows", "stats", agentId] as const,
