@@ -9,8 +9,8 @@ import {
 } from "../src/index.js";
 
 function base64UrlToBytes(value: string): Uint8Array {
-  const b64 = value.replace(/-/g, "+").replace(/_/g, "/");
-  return Uint8Array.from(Buffer.from(b64, "base64"));
+  const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
+  return Uint8Array.from(Buffer.from(base64, "base64"));
 }
 
 describe("onboarding bearer grant", () => {
@@ -60,7 +60,8 @@ describe("onboarding bearer grant", () => {
     // SIWS sign-in token, which signs a different message the backend rejects as
     // "invalid signature" (backend/internal/onboardgrant/onboardgrant.go).
     const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(11));
-    expect(signer.siwsSignature()).not.toBe(""); // SIWS is active on this signer
+    // SIWS is active on this signer (the precondition the fix must survive).
+    expect(signer.siwsSignature().startsWith("siws:")).toBe(true);
 
     const credential = await mintOnboardGrant(
       signer,
@@ -72,7 +73,7 @@ describe("onboarding bearer grant", () => {
     // Token shape: og1.<b64url(claims)>.<signature>
     const rest = credential.grant.slice("og1.".length);
     const dot = rest.indexOf(".");
-    const claimsB64 = rest.slice(0, dot);
+    const claimsBase64Url = rest.slice(0, dot);
     const signature = rest.slice(dot + 1);
     expect(signature.startsWith("v1:")).toBe(true);
     expect(signature.startsWith("siws:")).toBe(false);
@@ -80,7 +81,7 @@ describe("onboarding bearer grant", () => {
     // The v1 signature must verify against the canonical payload the server
     // reconstructs from the claims, with the freshness ts/nonce appended.
     const claims = JSON.parse(
-      Buffer.from(claimsB64, "base64url").toString("utf8"),
+      Buffer.from(claimsBase64Url, "base64url").toString("utf8"),
     ) as {
       wallet: string;
       ownerPublicKey: string;
@@ -93,11 +94,14 @@ describe("onboarding bearer grant", () => {
       scope: claims.scope,
       wallet: claims.wallet,
     });
-    const [, tsB64, nonceB64, sigB64] = signature.split(":");
+    const [, timestampBase64Url, nonceBase64Url, signatureBase64] =
+      signature.split(":");
     const timestamp = Buffer.from(
-      base64UrlToBytes(tsB64!),
+      base64UrlToBytes(timestampBase64Url!),
     ).toString("utf8");
-    const nonce = Buffer.from(base64UrlToBytes(nonceB64!)).toString("utf8");
+    const nonce = Buffer.from(base64UrlToBytes(nonceBase64Url!)).toString(
+      "utf8",
+    );
     const signedBytes = new TextEncoder().encode(
       `${payload}\n${timestamp}\n${nonce}`,
     );
@@ -111,7 +115,7 @@ describe("onboarding bearer grant", () => {
     const valid = await webcrypto.subtle.verify(
       "Ed25519",
       publicKey,
-      Uint8Array.from(Buffer.from(sigB64!, "base64")),
+      Uint8Array.from(Buffer.from(signatureBase64!, "base64")),
       signedBytes,
     );
     expect(valid).toBe(true);
