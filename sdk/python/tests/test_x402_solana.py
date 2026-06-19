@@ -9,11 +9,39 @@ from tinyplace import (
     LocalSigner,
     SOLANA_MAINNET_NETWORK,
     SOLANA_USDC_MINT,
+    SOLANA_WSOL_MINT,
     build_canonical_message,
     build_x402_payment_map,
     execute_solana_payment,
     execute_solana_x402_payment,
+    is_likely_mint_address,
+    resolve_solana_asset,
+    solana_asset_symbol,
 )
+
+
+def test_resolve_solana_asset_by_symbol_and_mint() -> None:
+    assert resolve_solana_asset("USDC") == (SOLANA_USDC_MINT, 6)
+    assert resolve_solana_asset("usdc") == (SOLANA_USDC_MINT, 6)
+    # The 402 challenge advertises the mint address; it must resolve back.
+    assert resolve_solana_asset(SOLANA_USDC_MINT) == (SOLANA_USDC_MINT, 6)
+    assert resolve_solana_asset("WSOL") == (SOLANA_WSOL_MINT, 9)
+    # Native SOL has no SPL mint.
+    assert resolve_solana_asset("SOL") == ("", 9)
+    # An unknown but base58-shaped value is treated as a bare mint.
+    bare = "9n4nbM75f5Ui33ZbPYXn59EwSgE8CGsHtAeTH5YFeJ9E"
+    assert resolve_solana_asset(bare) == (bare, 6)
+    # Unknown non-address symbol / empty -> None.
+    assert resolve_solana_asset("DOGE") is None
+    assert resolve_solana_asset("") is None
+
+
+def test_solana_asset_symbol_and_mint_detection() -> None:
+    assert solana_asset_symbol(SOLANA_USDC_MINT) == "USDC"
+    assert solana_asset_symbol("usdc") == "USDC"
+    assert solana_asset_symbol("DOGE") == "DOGE"
+    assert is_likely_mint_address(SOLANA_USDC_MINT) is True
+    assert is_likely_mint_address("USDC") is False
 
 
 async def test_x402_payment_map_flattens_metadata_and_references() -> None:
@@ -181,6 +209,55 @@ async def test_execute_solana_payment_usdc_spl_transfer() -> None:
         "sendTransaction",
         "getSignatureStatuses",
     ]
+
+
+async def test_execute_solana_payment_resolves_mint_address_asset() -> None:
+    # Regression: the 402 challenge advertises the SPL mint in `asset` (not the
+    # "USDC" symbol). It must take the SPL path and use that mint directly.
+    signer = LocalSigner.from_seed(bytes([35]) * 32)
+    calls: list[str] = []
+    recipient = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+    source_ata = SOLANA_USDC_MINT
+    dest_ata = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+
+    async def rpc_request(method: str, params: list) -> dict | str:
+        calls.append(method)
+        if method == "getTokenAccountsByOwner":
+            owner = params[0]
+            pubkey = source_ata if owner == signer.agent_id else dest_ata
+            return {
+                "value": [
+                    {
+                        "pubkey": pubkey,
+                        "account": {
+                            "data": {"parsed": {"info": {"tokenAmount": {"amount": "5000000"}}}}
+                        },
+                    }
+                ]
+            }
+        if method == "getLatestBlockhash":
+            return {"value": {"blockhash": "11111111111111111111111111111111"}}
+        if method == "sendTransaction":
+            return "mint-sig"
+        if method == "getSignatureStatuses":
+            return {"value": [{"confirmationStatus": "confirmed", "err": None}]}
+        raise AssertionError(method)
+
+    result = await execute_solana_payment(
+        rpc_url="https://solana.example.test",
+        secret_key=bytes([35]) * 32,
+        payment={
+            "network": SOLANA_MAINNET_NETWORK,
+            "asset": SOLANA_USDC_MINT,
+            "amount": "1000000",
+            "to": recipient,
+        },
+        rpc_request=rpc_request,
+    )
+
+    assert result["signature"] == "mint-sig"
+    assert result["mint"] == SOLANA_USDC_MINT
+    assert calls[0] == "getTokenAccountsByOwner"
 
 
 async def test_execute_solana_payment_rejects_bad_inputs() -> None:

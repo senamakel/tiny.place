@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import re
 from typing import Any, Awaitable, Callable
 
 import aiohttp
@@ -24,6 +25,67 @@ SOLANA_NATIVE_ASSET = "SOL"
 SOLANA_USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 SOLANA_TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 USDC_DECIMALS = 6
+SOLANA_NATIVE_DECIMALS = 9
+# Mainnet wrapped-SOL (WSOL) SPL mint.
+SOLANA_WSOL_MINT = "So11111111111111111111111111111111111111112"
+
+_BASE58_MINT_PATTERN = re.compile(r"^[1-9A-HJ-NP-Za-km-z]{32,44}$")
+
+# Hardcoded asset table: symbol -> (mint, decimals). The x402 challenge now
+# advertises the on-chain SPL *mint address* in `asset` (per the exact-scheme
+# spec), not a symbol like "USDC", so clients resolve the mint they echo back to
+# the server from this table. A `/solana`-backed resolver can replace it later;
+# these mints are stable. CASH has no fixed mainnet mint (resolved per
+# environment), so it is intentionally absent here.
+_SOLANA_ASSETS: dict[str, tuple[str, int]] = {
+    "SOL": ("", SOLANA_NATIVE_DECIMALS),
+    "USDC": (SOLANA_USDC_MINT, USDC_DECIMALS),
+    "WSOL": (SOLANA_WSOL_MINT, SOLANA_NATIVE_DECIMALS),
+}
+
+
+def is_likely_mint_address(value: str) -> bool:
+    """Return True when value looks like a base58 SPL mint address (not a symbol)."""
+    return bool(_BASE58_MINT_PATTERN.match(value.strip()))
+
+
+def resolve_solana_asset(value: str | None) -> tuple[str, int] | None:
+    """Resolve an x402 ``asset`` to ``(mint, decimals)``.
+
+    The value may be a symbol ("USDC") or — as the 402 challenge now advertises —
+    an on-chain SPL mint address, matched case-insensitively. The mint is "" for
+    native SOL. An unknown but base58-shaped value is treated as a bare mint with
+    6 decimals so a payment can still settle. Returns ``None`` for an empty value
+    or an unknown non-address symbol.
+    """
+    raw = (value or "").strip()
+    if raw == "":
+        return None
+    upper = raw.upper()
+    if upper in _SOLANA_ASSETS:
+        return _SOLANA_ASSETS[upper]
+    for mint, decimals in _SOLANA_ASSETS.values():
+        if mint and mint.lower() == raw.lower():
+            return (mint, decimals)
+    if is_likely_mint_address(raw):
+        return (raw, USDC_DECIMALS)
+    return None
+
+
+def solana_asset_symbol(value: str | None) -> str:
+    """Friendly display symbol for an x402 ``asset`` (symbol or mint address).
+
+    Echoes the trimmed input back when it matches no known asset.
+    """
+    raw = (value or "").strip()
+    upper = raw.upper()
+    if upper in _SOLANA_ASSETS:
+        return upper
+    for symbol, (mint, _decimals) in _SOLANA_ASSETS.items():
+        if mint and mint.lower() == raw.lower():
+            return symbol
+    return raw
+
 
 RpcRequest = Callable[[str, list[Any]], Awaitable[Any]]
 
@@ -36,7 +98,7 @@ async def execute_solana_payment(
     network: str | None = None,
     native_asset: str = SOLANA_NATIVE_ASSET,
     mint: str | None = None,
-    decimals: int = USDC_DECIMALS,
+    decimals: int | None = None,
     source_token_account: str | None = None,
     destination_token_account: str | None = None,
     commitment: str = "confirmed",
@@ -50,7 +112,14 @@ async def execute_solana_payment(
 
     asset = str(payment["asset"])
     is_native = asset.upper() == native_asset.upper()
-    if not is_native and asset.upper() != "USDC" and mint is None:
+    # The x402 challenge advertises the SPL mint address in `asset` now; resolve
+    # the mint + decimals from it. Explicit `mint`/`decimals` arguments still win.
+    resolved = None if is_native else resolve_solana_asset(asset)
+    if mint is None and resolved is not None and resolved[0]:
+        mint = resolved[0]
+    if decimals is None:
+        decimals = resolved[1] if resolved is not None else USDC_DECIMALS
+    if not is_native and mint is None:
         raise ValueError(
             f'Unsupported Solana asset: {asset} '
             f'(provide a mint, or use the native "{native_asset}" asset)'
@@ -122,7 +191,7 @@ async def execute_solana_x402_payment(
     secret_key: str | bytes,
     payment: dict[str, Any],
     mint: str | None = None,
-    decimals: int = USDC_DECIMALS,
+    decimals: int | None = None,
     source_token_account: str | None = None,
     destination_token_account: str | None = None,
     commitment: str = "confirmed",
