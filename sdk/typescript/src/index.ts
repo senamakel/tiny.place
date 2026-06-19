@@ -74,6 +74,9 @@ export {
   executeSolanaX402Payment,
   FACILITATOR_COMPUTE_UNIT_LIMIT,
   FACILITATOR_COMPUTE_UNIT_PRICE_MICRO_LAMPORTS,
+  isLikelyMintAddress,
+  resolveSolanaAsset,
+  solanaAssetSymbol,
   SOLANA_CASH_DECIMALS,
   SOLANA_CASH_MINT,
   SOLANA_COMPUTE_BUDGET_PROGRAM_ID,
@@ -83,10 +86,12 @@ export {
   SOLANA_SYSTEM_PROGRAM_ID,
   SOLANA_TOKEN_PROGRAM_ID,
   SOLANA_USDC_MINT,
+  SOLANA_WSOL_MINT,
 } from "./solana.js";
 export type {
   DelegatedX402PaymentMapOptions,
   PayerSignedDelegatedTxOptions,
+  SolanaAssetInfo,
   SolanaPaymentExecution,
   SolanaPaymentExecutionOptions,
   SolanaX402PaymentExecution,

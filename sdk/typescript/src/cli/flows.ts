@@ -187,7 +187,12 @@ async function performPaidRegistration(
       return { identity: result.identity, onChainTx: result.onChainTx };
     }
 
-    const shortfall = await paymentShortfall(ctx, request.cryptoId, opts.challenge);
+    const shortfall = await paymentShortfall(
+      ctx,
+      request.cryptoId,
+      opts.challenge,
+      asset?.symbol,
+    );
     if (shortfall) {
       return shortfall;
     }
@@ -233,14 +238,18 @@ async function paymentShortfall(
   ctx: CliContext,
   address: string,
   challenge: PaymentChallenge | undefined,
+  assetSymbol: string | undefined,
 ): Promise<JsonObject | undefined> {
   if (!challenge?.amount) {
     return undefined;
   }
+  // The challenge advertises the SPL mint address in `asset`; use the symbol
+  // resolved from `/solana` so it matches the wallet balance entries (keyed by
+  // symbol) and so the guidance shown to the user reads "USDC", not the mint.
+  const symbol = (assetSymbol ?? challenge.asset ?? "USDC").toUpperCase();
   let held: bigint | undefined;
   try {
     const balances = await ctx.client.solana.balances(address);
-    const symbol = (challenge.asset ?? "USDC").toUpperCase();
     const match = balances.balances.find(
       (entry) => entry.symbol.toUpperCase() === symbol,
     );
@@ -251,38 +260,45 @@ async function paymentShortfall(
   if (held >= BigInt(challenge.amount)) {
     return undefined;
   }
-  const fundFlags = challenge.asset ? ` --asset ${challenge.asset}` : "";
   return {
     status: "payment-required",
     payment: {
-      ...(challenge.asset ? { asset: challenge.asset } : {}),
+      asset: symbol,
       ...(challenge.amount ? { amount: challenge.amount } : {}),
     },
-    note: `Wallet holds ${held} but registration needs ${challenge.amount} ${challenge.asset ?? ""}. Fund, then retry.`,
+    note: `Wallet holds ${held} but registration needs ${challenge.amount} ${symbol}. Fund, then retry.`,
     suggestions: [
-      suggest("Fund your wallet", `tinyplace fund${fundFlags}`),
+      suggest("Fund your wallet", `tinyplace fund --asset ${symbol}`),
       suggest("Then claim the handle", "tinyplace status"),
     ],
   };
 }
 
-/** Resolves the SPL mint + decimals for an asset symbol from `/solana`. */
+/**
+ * Resolves an x402 `asset` from `/solana` to its symbol + SPL mint + decimals.
+ * The value may be a symbol ("USDC") or — as the 402 challenge now advertises —
+ * the on-chain mint address, so it is matched against both fields.
+ */
 async function resolveSplAsset(
   ctx: CliContext,
-  assetSymbol: string | undefined,
-): Promise<{ mint?: string; decimals?: number } | undefined> {
+  asset: string | undefined,
+): Promise<{ symbol?: string; mint?: string; decimals?: number } | undefined> {
   try {
     const info = await ctx.client.solana.info();
-    const symbol = (assetSymbol ?? "USDC").toUpperCase();
-    const asset = info.assets.find(
-      (entry) => entry.symbol.toUpperCase() === symbol,
+    const value = (asset ?? "USDC").trim();
+    const upper = value.toUpperCase();
+    const match = info.assets.find(
+      (entry) =>
+        entry.symbol.toUpperCase() === upper ||
+        (entry.address ? entry.address.toLowerCase() === value.toLowerCase() : false),
     );
-    if (!asset) {
+    if (!match) {
       return undefined;
     }
     return {
-      ...(asset.address ? { mint: asset.address } : {}),
-      decimals: asset.decimals,
+      symbol: match.symbol,
+      ...(match.address ? { mint: match.address } : {}),
+      decimals: match.decimals,
     };
   } catch {
     return undefined;
