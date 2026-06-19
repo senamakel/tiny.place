@@ -45,6 +45,12 @@ pub fn build_auth_header(agent_id: &str, signature: &str, timestamp: &str) -> St
 /// Sign an agent request: signature over `body + timestamp`.
 pub async fn sign_request(signer: &dyn Signer, body: &str) -> Result<Headers> {
     let ts = timestamp();
+    if let Some(siws) = signer.siws_signature() {
+        return Ok(vec![(
+            "Authorization".to_string(),
+            build_auth_header(&signer.agent_id(), &siws, &ts),
+        )]);
+    }
     let payload = format!("{body}{ts}");
     let signature = signer.sign(payload.as_bytes()).await?;
     Ok(vec![(
@@ -100,6 +106,17 @@ pub async fn sign_directory_write(
 ) -> Result<Headers> {
     let ts = timestamp();
     let nonce = generate_nonce();
+    if let Some(siws) = signer.siws_signature() {
+        return Ok(vec![
+            ("X-TinyPlace-Date".to_string(), ts),
+            ("X-TinyPlace-Nonce".to_string(), nonce),
+            (
+                "X-TinyPlace-Public-Key".to_string(),
+                public_key_base64.to_string(),
+            ),
+            ("X-TinyPlace-Signature".to_string(), siws),
+        ]);
+    }
     let body_hash = sha256_hex(body.as_bytes());
     let payload = format!("{method}\n{request_uri}\n{ts}\n{nonce}\n{body_hash}");
     let signature = signer.sign(payload.as_bytes()).await?;
@@ -135,6 +152,12 @@ pub async fn sign_directory_write_query(
             ("X-TinyPlace-Public-Key", public_key_base64),
         ],
     );
+    if let Some(siws) = signer.siws_signature() {
+        return Ok(with_query_params(
+            &unsigned_uri,
+            &[("X-TinyPlace-Signature", &siws)],
+        ));
+    }
     let body_hash = sha256_hex(body.as_bytes());
     let payload = format!("{method}\n{unsigned_uri}\n{ts}\n{nonce}\n{body_hash}");
     let signature = signer.sign(payload.as_bytes()).await?;
@@ -229,6 +252,9 @@ fn decode_component(value: &str) -> String {
 
 /// Sign a bare canonical payload, returning the base64 signature.
 pub async fn sign_canonical_payload(signer: &dyn Signer, payload: &str) -> Result<String> {
+    if let Some(siws) = signer.siws_signature() {
+        return Ok(siws);
+    }
     let signature = signer.sign(payload.as_bytes()).await?;
     Ok(to_base64(&signature))
 }
@@ -236,6 +262,9 @@ pub async fn sign_canonical_payload(signer: &dyn Signer, payload: &str) -> Resul
 /// Sign a canonical payload with freshness binding, returning a
 /// `v1:<b64url(ts)>:<b64url(nonce)>:<b64(sig)>` token.
 pub async fn sign_fresh_canonical_payload(signer: &dyn Signer, payload: &str) -> Result<String> {
+    if let Some(siws) = signer.siws_signature() {
+        return Ok(siws);
+    }
     let ts = timestamp();
     let nonce = generate_nonce();
     let signed = format!("{payload}\n{ts}\n{nonce}");

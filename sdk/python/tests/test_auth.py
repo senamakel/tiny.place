@@ -4,7 +4,25 @@ import base64
 
 from nacl.signing import VerifyKey
 
-from tinyplace import LocalSigner, canonical_payload, sign_fresh_canonical_payload, sign_request
+from tinyplace import (
+    LocalSigner,
+    Signer,
+    canonical_payload,
+    sign_directory_write,
+    sign_fresh_canonical_payload,
+    sign_request,
+)
+
+
+class SiwsSigner(Signer):
+    agent_id = "wallet-address"
+    public_key_base64 = "wallet-public-key"
+
+    async def sign(self, data: bytes) -> bytes:
+        raise AssertionError("SIWS auth should not call sign()")
+
+    def siws_signature(self) -> str | None:
+        return "siws:test-token"
 
 
 def test_local_signer_from_seed_is_deterministic() -> None:
@@ -36,3 +54,15 @@ async def test_fresh_canonical_signature_shape() -> None:
 
     assert token.startswith("v1:")
     assert len(token.split(":")) == 4
+
+
+async def test_siws_signer_passes_token_through() -> None:
+    signer = SiwsSigner()
+
+    request_headers = await sign_request(signer, "{}")
+    directory_headers = await sign_directory_write(signer, "wallet-public-key", "PUT", "/directory/agents/x", "{}")
+    canonical = await sign_fresh_canonical_payload(signer, "{}")
+
+    assert request_headers["Authorization"].startswith("tiny.place wallet-address:siws:test-token:")
+    assert directory_headers["X-TinyPlace-Signature"] == "siws:test-token"
+    assert canonical == "siws:test-token"

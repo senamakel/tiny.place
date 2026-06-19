@@ -16,6 +16,7 @@ export type {
   AdminAuthHeaders,
   AdminSigningOptions,
   SigningKey,
+  SiwsSigningKey,
   AuthHeaders,
   DirectoryWriteHeaders,
   OnboardGrantCredential,

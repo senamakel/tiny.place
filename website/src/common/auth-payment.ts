@@ -17,6 +17,7 @@ import {
 } from "@src/common/delegated-payment";
 import { primarySolanaRpcUrl } from "@src/common/solana-rpc";
 import { SessionWalletSigner } from "@src/common/session-wallet";
+import { SiwsProofSigner } from "@src/common/siws-auth";
 import { WalletSigner } from "@src/common/wallet-signer";
 import {
 	assertValidX402Challenge,
@@ -48,7 +49,7 @@ export type X402PaymentSigningOptions = {
 
 const DEFAULT_PAYMENT_EXPIRY_MS = 5 * 60 * 1000;
 
-export { SessionWalletSigner, WalletSigner };
+export { SessionWalletSigner, SiwsProofSigner, WalletSigner };
 
 export function currentAuthSession(): AuthSession | undefined {
 	const { agentId, identitySigner, signer } = useAuthStore.getState();
@@ -96,7 +97,7 @@ export async function signX402ChallengeAuthorization({
 	metadata,
 	noncePrefix,
 	payment,
-	signer = requireAuthSession().signer,
+	signer = requireAuthSession().identitySigner,
 }: X402PaymentSigningOptions): Promise<X402Authorization> {
 	assertValidX402Challenge(payment, expected);
 	return signX402Authorization(signer, {
@@ -116,7 +117,7 @@ export async function signX402ChallengeAuthorization({
 export async function signX402ChallengePaymentMap(
 	options: X402PaymentSigningOptions
 ): Promise<Record<string, string>> {
-	const signer = options.signer ?? requireAuthSession().signer;
+	const signer = options.signer ?? requireAuthSession().identitySigner;
 	const signedPayment = await signX402ChallengeAuthorization({
 		...options,
 		signer,
@@ -139,7 +140,7 @@ export async function signX402ChallengePaymentMap(
 		asset &&
 		payee &&
 		payer &&
-		signer instanceof SessionWalletSigner &&
+		(signer instanceof SessionWalletSigner || signer instanceof WalletSigner) &&
 		signer.walletSignTransaction
 	) {
 		const delegatedTx = await buildPayerSignedTransferTx({

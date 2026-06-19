@@ -4,12 +4,18 @@ import {
 	publicKeyToBase64,
 	type X25519KeyPair,
 } from "@tinyhumansai/tinyplace";
+import type { Transaction } from "@solana/web3.js";
 
-type SignMessageFunction = (message: Uint8Array) => Promise<Uint8Array>;
+export type SignMessageFunction = (message: Uint8Array) => Promise<Uint8Array>;
+
+export type WalletSignTransaction = (
+	transaction: Transaction
+) => Promise<Transaction>;
 
 export class WalletSigner extends Signer {
 	public readonly agentId: string;
 	public readonly publicKeyBase64: string;
+	public walletSignTransaction?: WalletSignTransaction;
 
 	private readonly walletSignMessage: SignMessageFunction;
 

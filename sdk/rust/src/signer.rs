@@ -20,6 +20,12 @@ pub trait Signer: Send + Sync {
 
     /// Sign `data`, returning the 64-byte Ed25519 signature.
     async fn sign(&self, data: &[u8]) -> Result<Vec<u8>>;
+
+    /// Return a reusable `siws:` proof token when this signer authenticates via
+    /// Sign-In With Solana instead of per-request Ed25519 signatures.
+    fn siws_signature(&self) -> Option<String> {
+        None
+    }
 }
 
 /// An in-process signer backed by an Ed25519 key pair.

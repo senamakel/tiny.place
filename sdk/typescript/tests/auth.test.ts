@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { TinyPlaceClient, type SigningKey } from "../src/index.js";
-import { signDirectoryWrite, signDirectoryWriteQuery } from "../src/auth.js";
+import {
+  signDirectoryWrite,
+  signDirectoryWriteQuery,
+  signFreshCanonicalPayload,
+} from "../src/auth.js";
 
 describe("directory write auth", () => {
   it("binds the nonce into header signed payloads", async () => {
@@ -59,6 +63,30 @@ describe("directory write auth", () => {
       url.searchParams.get("X-TinyPlace-Nonce"),
       expect.any(String),
     ]);
+  });
+
+  it("uses SIWS proof tokens directly when a signer exposes one", async () => {
+    const key: SigningKey & { siwsSignature(): string } = {
+      agentId: "7YttLkHDoVzP6pYphcCg5GkA2N4GokB3k1drpbUaW7oX",
+      sign(): Uint8Array {
+        throw new Error("SIWS auth should not call sign()");
+      },
+      siwsSignature(): string {
+        return "siws:test-token";
+      },
+    };
+
+    const headers = await signDirectoryWrite(
+      key,
+      "public-key",
+      "POST",
+      "/channels",
+      "{}",
+    );
+    expect(headers["X-TinyPlace-Signature"]).toBe("siws:test-token");
+    await expect(signFreshCanonicalPayload(key, "{}")).resolves.toBe(
+      "siws:test-token",
+    );
   });
 });
 

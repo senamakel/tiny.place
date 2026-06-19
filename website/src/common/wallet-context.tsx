@@ -20,9 +20,8 @@ import {
 } from "react";
 
 import type { FunctionComponent } from "@src/common/types";
-import { createClient } from "@src/common/api-client";
 import {
-	SessionWalletSigner,
+	SiwsProofSigner,
 	WalletSigner,
 	setAuthSession,
 } from "@src/common/auth-payment";
@@ -31,7 +30,6 @@ import {
 	primarySolanaRpcUrl,
 	solanaConnectionConfig,
 } from "@src/common/solana-rpc";
-import type { WalletSignTransaction } from "@src/common/session-wallet";
 import {
 	ConnectionContext,
 	WalletStateContext,
@@ -39,6 +37,7 @@ import {
 	type TinyplaceWalletState,
 	useTinyplaceWallet,
 } from "@src/common/tinyplace-wallet";
+import type { WalletSignTransaction } from "@src/common/wallet-signer";
 import { useAuthStore } from "@src/store/auth";
 import { useAppStore } from "@src/store/app";
 
@@ -171,7 +170,7 @@ function loginSignatureFields(message: string): Array<{
 						: (value as string),
 			}));
 	} catch {
-		return [{ label: "Message", value: message || "Wallet signature request" }];
+		return [{ label: "Message", value: message || "Sign-in request" }];
 	}
 }
 
@@ -208,9 +207,9 @@ function LoginSignatureDialog({
 			<div
 				className={`w-full max-w-md rounded-lg border p-5 shadow-xl ${panelClass}`}
 			>
-				<h3 className="text-sm font-semibold">Approve browser session</h3>
+				<h3 className="text-sm font-semibold">Sign in to tiny.place</h3>
 				<p className={`mt-1 text-xs ${mutedClass}`}>
-					Your wallet will sign this session approval for tiny.place.
+					Your wallet will sign this reusable website auth proof.
 				</p>
 
 				<dl className="theme-detail-list mt-4 rounded-lg border">
@@ -241,9 +240,7 @@ function LoginSignatureDialog({
 				</details>
 
 				<p className={`mt-3 text-xs ${mutedClass}`}>
-					This signature does not submit a transaction. It approves a temporary
-					browser session so tiny.place can sign app requests without prompting
-					your wallet every time.
+					This signature does not submit a transaction or authorize a payment.
 				</p>
 				{error && <p className="mt-3 text-xs text-rose-500">{error}</p>}
 
@@ -266,7 +263,7 @@ function LoginSignatureDialog({
 						type="button"
 						onClick={onConfirm}
 					>
-						{signing ? "Opening wallet…" : "Continue to wallet"}
+						{signing ? "Opening wallet…" : "Sign in"}
 					</button>
 				</div>
 			</div>
@@ -342,36 +339,27 @@ const WalletAuthSync = (): FunctionComponent => {
 
 			const publicKeyBytes = publicKey.toBytes();
 			const walletId = publicKey.toBase58();
-			// Restore a persisted hot session wallet — or, if none is valid, approve
-			// a fresh one with a single wallet signature. Once established, the
-			// in-memory session key signs everything afterwards. If the user declines
-			// the approval (or it fails), fall back to the direct WalletSigner, which
-			// still works but prompts the wallet per request.
-			inFlight.current = SessionWalletSigner.restoreOrEstablish(
+			// Restore a cached Sign-In-With-Solana proof, or ask the wallet for a
+			// fresh one. If the user declines the sign-in proof, fall back to the
+			// direct WalletSigner so custom per-request signatures still work.
+			inFlight.current = SiwsProofSigner.createOrRestore(
 				publicKeyBytes,
-				// Raw wallet signMessage backs the persistent grantor/identity signer,
-				// so wallet-only acts (identity registration, x402 payments) prompt the
-				// wallet directly. The session-approval dialog is used ONLY for the
-				// one-time grant signature, passed as approveSignMessage below.
-				signMessage,
-				createClient,
 				confirmLoginSignature
 			)
 				.then((signer) => {
 					if (activeWalletId.current !== walletId) return;
-					// Attach the wallet's transaction signer so the delegated-payment
-					// path can sign the one-time on-chain spend approval (Phantom signs
-					// transactions via signTransaction, never via signMessage).
+					const walletSigner = signer.walletSigner;
 					if (signTransaction) {
-						signer.walletSignTransaction = signTransaction;
+						walletSigner.walletSignTransaction = signTransaction;
 					}
-					// The session key signs routine calls, but registration must be
-					// signed by the wallet (grantor), whose key derives the cryptoId.
-					setAuthSession(signer, signer.walletSigner);
+					setAuthSession(signer, walletSigner);
 				})
 				.catch(() => {
 					if (activeWalletId.current !== walletId) return;
 					const fallback = new WalletSigner(publicKeyBytes, signMessage);
+					if (signTransaction) {
+						fallback.walletSignTransaction = signTransaction;
+					}
 					setAuthSession(fallback);
 				})
 				.finally(() => {

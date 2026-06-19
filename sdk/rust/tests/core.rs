@@ -4,13 +4,37 @@
 
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use tinyplace::auth::{
-    build_auth_header, sign_fresh_canonical_payload, sign_request, AdminSigningOptions,
+    build_auth_header, sign_directory_write, sign_directory_write_query,
+    sign_fresh_canonical_payload, sign_request, AdminSigningOptions,
 };
 use tinyplace::crypto::{
     canonical_payload, derive_crypto_id, public_key_to_solana_address, sha256_hex,
 };
 use tinyplace::x402::{build_canonical_message, X402AuthorizationFields};
-use tinyplace::{LocalSigner, Signer};
+use tinyplace::{Error, LocalSigner, Result, Signer};
+
+struct SiwsSigner;
+
+#[async_trait::async_trait]
+impl Signer for SiwsSigner {
+    fn agent_id(&self) -> String {
+        "wallet-address".to_string()
+    }
+
+    fn public_key_base64(&self) -> String {
+        "wallet-public-key".to_string()
+    }
+
+    async fn sign(&self, _data: &[u8]) -> Result<Vec<u8>> {
+        Err(Error::InvalidArgument(
+            "SIWS auth should not call sign()".to_string(),
+        ))
+    }
+
+    fn siws_signature(&self) -> Option<String> {
+        Some("siws:test-token".to_string())
+    }
+}
 
 #[test]
 fn solana_address_of_zero_key_is_all_ones() {
@@ -129,6 +153,46 @@ async fn fresh_canonical_payload_is_versioned_token() {
     let parts: Vec<&str> = token.split(':').collect();
     assert_eq!(parts.len(), 4);
     assert_eq!(parts[0], "v1");
+}
+
+#[tokio::test]
+async fn siws_signer_passes_token_through() {
+    let signer = SiwsSigner;
+
+    let request = sign_request(&signer, "{}").await.unwrap();
+    let directory = sign_directory_write(
+        &signer,
+        "wallet-public-key",
+        "PUT",
+        "/directory/agents/x",
+        "{}",
+    )
+    .await
+    .unwrap();
+    let query = sign_directory_write_query(
+        &signer,
+        "wallet-public-key",
+        "GET",
+        "/marketplace/stream",
+        "",
+    )
+    .await
+    .unwrap();
+    let canonical = sign_fresh_canonical_payload(&signer, "{}").await.unwrap();
+
+    assert!(request[0]
+        .1
+        .starts_with("tiny.place wallet-address:siws:test-token:"));
+    assert_eq!(
+        directory
+            .iter()
+            .find(|(name, _)| name == "X-TinyPlace-Signature")
+            .unwrap()
+            .1,
+        "siws:test-token"
+    );
+    assert!(query.contains("X-TinyPlace-Signature=siws%3Atest-token"));
+    assert_eq!(canonical, "siws:test-token");
 }
 
 #[tokio::test]

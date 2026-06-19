@@ -5,6 +5,17 @@ export interface SigningKey {
   sign(data: Uint8Array): Promise<Uint8Array> | Uint8Array;
 }
 
+export interface SiwsSigningKey extends SigningKey {
+  siwsSignature(): string;
+}
+
+function siwsSignature(key: SigningKey): string | undefined {
+  const candidate = key as Partial<SiwsSigningKey>;
+  return typeof candidate.siwsSignature === "function"
+    ? candidate.siwsSignature()
+    : undefined;
+}
+
 /**
  * A bearer onboarding grant: a scoped, short-TTL capability token the wallet
  * signs once (CLI-side, where the private key lives) and a key-less web client
@@ -155,6 +166,10 @@ export async function signRequest(
   body: string,
 ): Promise<AuthHeaders> {
   const timestamp = new Date().toISOString();
+  const siws = siwsSignature(key);
+  if (siws) {
+    return buildAuthHeader(key.agentId, siws, timestamp);
+  }
   const payload = new TextEncoder().encode(body + timestamp);
   const signature = await key.sign(payload);
   return buildAuthHeader(key.agentId, toBase64(signature), timestamp);
@@ -198,6 +213,15 @@ export async function signDirectoryWrite(
 ): Promise<DirectoryWriteHeaders> {
   const timestamp = new Date().toISOString();
   const nonce = generateNonce();
+  const siws = siwsSignature(key);
+  if (siws) {
+    return {
+      "X-TinyPlace-Date": timestamp,
+      "X-TinyPlace-Nonce": nonce,
+      "X-TinyPlace-Public-Key": publicKeyBase64,
+      "X-TinyPlace-Signature": siws,
+    };
+  }
   const bodyBytes =
     typeof body === "string" ? new TextEncoder().encode(body) : body;
   const bodyHash = sha256Hex(bodyBytes);
@@ -225,6 +249,12 @@ export async function signDirectoryWriteQuery(
     "X-TinyPlace-Nonce": nonce,
     "X-TinyPlace-Public-Key": publicKeyBase64,
   });
+  const siws = siwsSignature(key);
+  if (siws) {
+    return withQueryParams(unsignedUri, {
+      "X-TinyPlace-Signature": siws,
+    });
+  }
   const bodyBytes =
     typeof body === "string" ? new TextEncoder().encode(body) : body;
   const bodyHash = sha256Hex(bodyBytes);
@@ -239,6 +269,10 @@ export async function signCanonicalPayload(
   key: SigningKey,
   payload: string,
 ): Promise<string> {
+  const siws = siwsSignature(key);
+  if (siws) {
+    return siws;
+  }
   const payloadBytes = new TextEncoder().encode(payload);
   const signature = await key.sign(payloadBytes);
   return toBase64(signature);
@@ -248,6 +282,10 @@ export async function signFreshCanonicalPayload(
   key: SigningKey,
   payload: string,
 ): Promise<string> {
+  const siws = siwsSignature(key);
+  if (siws) {
+    return siws;
+  }
   const timestamp = new Date().toISOString();
   const nonce = generateNonce();
   const payloadBytes = new TextEncoder().encode(

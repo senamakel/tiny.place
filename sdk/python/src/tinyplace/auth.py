@@ -28,12 +28,22 @@ def _to_base64(data: bytes) -> str:
     return base64.b64encode(data).decode("ascii")
 
 
+def _siws_signature(signer: Signer) -> str | None:
+    method = getattr(signer, "siws_signature", None)
+    if not callable(method):
+        return None
+    token = method()
+    return token if isinstance(token, str) and token.strip() else None
+
+
 def build_auth_header(agent_id: str, signature: str, signed_at: str) -> Headers:
     return {"Authorization": f"tiny.place {agent_id}:{signature}:{signed_at}"}
 
 
 async def sign_request(signer: Signer, body: str) -> Headers:
     signed_at = timestamp()
+    if siws := _siws_signature(signer):
+        return build_auth_header(signer.agent_id, siws, signed_at)
     signature = await signer.sign(f"{body}{signed_at}".encode("utf-8"))
     return build_auth_header(signer.agent_id, _to_base64(signature), signed_at)
 
@@ -72,6 +82,13 @@ async def sign_directory_write(
 ) -> Headers:
     signed_at = timestamp()
     nonce = generate_nonce()
+    if siws := _siws_signature(signer):
+        return {
+            "X-TinyPlace-Date": signed_at,
+            "X-TinyPlace-Nonce": nonce,
+            "X-TinyPlace-Public-Key": public_key_base64,
+            "X-TinyPlace-Signature": siws,
+        }
     payload = f"{method}\n{request_uri}\n{signed_at}\n{nonce}\n{sha256_hex(body)}"
     signature = await signer.sign(payload.encode("utf-8"))
     return {
@@ -83,10 +100,14 @@ async def sign_directory_write(
 
 
 async def sign_canonical_payload(signer: Signer, payload: str) -> str:
+    if siws := _siws_signature(signer):
+        return siws
     return _to_base64(await signer.sign(payload.encode("utf-8")))
 
 
 async def sign_fresh_canonical_payload(signer: Signer, payload: str) -> str:
+    if siws := _siws_signature(signer):
+        return siws
     signed_at = timestamp()
     nonce = generate_nonce()
     signature = await signer.sign(f"{payload}\n{signed_at}\n{nonce}".encode("utf-8"))

@@ -17,6 +17,10 @@ class Signer(ABC):
     async def sign(self, data: bytes) -> bytes:
         """Return an Ed25519 signature over ``data``."""
 
+    def siws_signature(self) -> str | None:
+        """Return a reusable ``siws:`` proof token when this signer uses SIWS."""
+        return None
+
 
 class LocalSigner(Signer):
     """Local Ed25519 signer backed by PyNaCl."""
