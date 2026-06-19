@@ -43,7 +43,10 @@ function storageKey(address: string): string {
 	return `${SIWS_STORAGE_PREFIX}${address}`;
 }
 
-export function clearSiwsProof(address: string, storage = browserStorage()): void {
+export function clearSiwsProof(
+	address: string,
+	storage = browserStorage()
+): void {
 	storage?.removeItem(storageKey(address));
 }
 

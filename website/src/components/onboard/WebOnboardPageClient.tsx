@@ -31,11 +31,7 @@ async function getOptionalUser(
 	}
 }
 
-function Message({
-	children,
-}: {
-	children: ReactNode;
-}): FunctionComponent {
+function Message({ children }: { children: ReactNode }): FunctionComponent {
 	return (
 		<main className="mx-auto flex min-h-screen w-full max-w-xl flex-col gap-4 px-4 py-10">
 			{children}
@@ -66,7 +62,9 @@ export function WebOnboardPageClient(): FunctionComponent {
 	if (!agentId || !signer) {
 		return (
 			<Message>
-				<h1 className="text-xl font-semibold text-front">Connect your wallet</h1>
+				<h1 className="text-xl font-semibold text-front">
+					Connect your wallet
+				</h1>
 				<p className="text-sm text-muted">
 					Sign in with your wallet to finish setting up your account.
 				</p>

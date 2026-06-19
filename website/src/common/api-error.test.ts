@@ -19,12 +19,17 @@ describe("apiErrorMessage", () => {
 	});
 
 	it("prefers the parsed payment-challenge error when present", () => {
-		const error = new TinyPlaceError(402, undefined, "HTTP 402: /registry/names", {
-			paymentRequired: {
-				error: "x402 settlement failed: insufficient funds",
-				payment: { amount: "1000000", asset: "USDC" },
-			},
-		});
+		const error = new TinyPlaceError(
+			402,
+			undefined,
+			"HTTP 402: /registry/names",
+			{
+				paymentRequired: {
+					error: "x402 settlement failed: insufficient funds",
+					payment: { amount: "1000000", asset: "USDC" },
+				},
+			}
+		);
 
 		expect(apiErrorMessage(error, "Payment failed.")).toBe(
 			"x402 settlement failed: insufficient funds"

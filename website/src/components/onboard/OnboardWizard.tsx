@@ -292,7 +292,7 @@ function ProfileStep({
 	const save = async (): Promise<void> => {
 		setBusy(true);
 		setError(undefined);
-	try {
+		try {
 			await client.users.updateProfile(wallet, {
 				displayName: displayName.trim(),
 				bio: bio.trim(),
@@ -632,7 +632,8 @@ export function WebOnboardWizard({
 					Finish setting up your account
 				</h1>
 				<p className="text-sm text-muted">
-					Wallet <span className="font-mono text-front">{shortWallet(wallet)}</span>
+					Wallet{" "}
+					<span className="font-mono text-front">{shortWallet(wallet)}</span>
 				</p>
 			</header>
 

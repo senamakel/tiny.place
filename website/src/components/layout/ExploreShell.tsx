@@ -54,7 +54,12 @@ const sections: Array<{
 	{ key: "onramp", label: "On-ramp / Off-ramp", icon: ArrowsRightLeftIcon },
 	// Storefront and Games are coming-soon placeholders, so they sit at the
 	// bottom of the nav and render dimmed.
-	{ key: "storefront", label: "Storefront", icon: ShoppingBagIcon, comingSoon: true },
+	{
+		key: "storefront",
+		label: "Storefront",
+		icon: ShoppingBagIcon,
+		comingSoon: true,
+	},
 	{ key: "games", label: "Games", icon: PuzzlePieceIcon, comingSoon: true },
 ];
 
