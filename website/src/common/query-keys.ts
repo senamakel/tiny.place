@@ -54,6 +54,7 @@ export const queryKeys = {
 	gql: {
 		home: (parameters?: HomeFeedParams) =>
 			["gql", "home-feed", parameters] as const,
+		homeInfinite: () => ["gql", "home-feed", "infinite"] as const,
 		comments: (postId: string) => ["gql", "comments", postId] as const,
 		profile: (username: string) => ["gql", "profile", username] as const,
 		products: (parameters?: ProductQueryParams) =>
