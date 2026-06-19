@@ -58,7 +58,7 @@ async function verifyFreshSignature(
 
 describe("RegistryApi", () => {
   it("signs registration over cryptoId, publicKey, username and null payment methods", async () => {
-    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(19));
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(19), { siws: false });
     const requests: Array<Request> = [];
     const client = new TinyPlaceClient({
       baseUrl: "https://example.test",
@@ -148,7 +148,7 @@ describe("RegistryApi", () => {
   });
 
   it("presents the signing key so the backend can authorize a delegated session key", async () => {
-    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(29));
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(29), { siws: false });
     const requests: Array<Request> = [];
     const client = new TinyPlaceClient({
       baseUrl: "https://example.test",
@@ -182,7 +182,7 @@ describe("RegistryApi", () => {
   });
 
   it("forwards actorType and primary unsigned and omits them from the signature", async () => {
-    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(21));
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(21), { siws: false });
     const requests: Array<Request> = [];
     const client = new TinyPlaceClient({
       baseUrl: "https://example.test",
@@ -234,7 +234,7 @@ describe("RegistryApi", () => {
   });
 
   it("signs assign and unassign primary requests", async () => {
-    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(22));
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(22), { siws: false });
     const requests: Array<Request> = [];
     const client = new TinyPlaceClient({
       baseUrl: "https://example.test",
@@ -286,7 +286,7 @@ describe("RegistryApi", () => {
   });
 
   it("normalizes bare registration names before signing", async () => {
-    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(20));
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(20), { siws: false });
     const requests: Array<Request> = [];
     const client = new TinyPlaceClient({
       baseUrl: "https://example.test",
@@ -333,7 +333,7 @@ describe("RegistryApi", () => {
 
   it("executes and retries paid Solana registrations", async () => {
     const seed = new Uint8Array(32).fill(22);
-    const signer = await LocalSigner.fromSeed(seed);
+    const signer = await LocalSigner.fromSeed(seed, { siws: false });
     const secretKey = new Uint8Array(64);
     secretKey.set(seed, 0);
     secretKey.set(signer.publicKey, 32);
@@ -485,7 +485,7 @@ describe("RegistryApi", () => {
 
   it("uses x402 payment challenges for paid Solana registrations", async () => {
     const seed = new Uint8Array(32).fill(23);
-    const signer = await LocalSigner.fromSeed(seed);
+    const signer = await LocalSigner.fromSeed(seed, { siws: false });
     const secretKey = new Uint8Array(64);
     secretKey.set(seed, 0);
     secretKey.set(signer.publicKey, 32);
@@ -635,7 +635,7 @@ describe("RegistryApi", () => {
 
   it("recovers paid registrations that persist before a server error", async () => {
     const seed = new Uint8Array(32).fill(24);
-    const signer = await LocalSigner.fromSeed(seed);
+    const signer = await LocalSigner.fromSeed(seed, { siws: false });
     const secretKey = new Uint8Array(64);
     secretKey.set(seed, 0);
     secretKey.set(signer.publicKey, 32);
@@ -758,7 +758,7 @@ describe("RegistryApi", () => {
   });
 
   it("retries registration with an existing Solana transaction without resending payment", async () => {
-    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(25));
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(25), { siws: false });
     const registryRequests: Array<Request> = [];
     const onChainTx =
       "5q22im1eoEeoJMhsshDkoh4tNV1WPUfyaJXHwyGqcpfmtpY1ZCC665nc5chyEwwau4JoR7BUnCbxWn5BW5WzR3NC";
@@ -827,7 +827,7 @@ describe("RegistryApi", () => {
   });
 
   it("preserves existing Solana payment details on registration failures", async () => {
-    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(26));
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(26), { siws: false });
     const onChainTx =
       "5q22im1eoEeoJMhsshDkoh4tNV1WPUfyaJXHwyGqcpfmtpY1ZCC665nc5chyEwwau4JoR7BUnCbxWn5BW5WzR3NC";
     const client = new TinyPlaceClient({
@@ -873,7 +873,7 @@ describe("RegistryApi", () => {
 
   it("preserves fresh Solana payment details on registration failures", async () => {
     const seed = new Uint8Array(32).fill(27);
-    const signer = await LocalSigner.fromSeed(seed);
+    const signer = await LocalSigner.fromSeed(seed, { siws: false });
     const secretKey = new Uint8Array(64);
     secretKey.set(seed, 0);
     secretKey.set(signer.publicKey, 32);
@@ -1023,7 +1023,7 @@ describe("RegistryApi", () => {
   });
 
   it("signs registration payment methods in backend struct field order", async () => {
-    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(21));
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(21), { siws: false });
     const requests: Array<Request> = [];
     const client = new TinyPlaceClient({
       baseUrl: "https://example.test",
@@ -1134,7 +1134,7 @@ describe("RegistryApi", () => {
   });
 
   it("signs profile visibility updates with null omitted fields", async () => {
-    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(16));
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(16), { siws: false });
     const requests: Array<Request> = [];
     const client = new TinyPlaceClient({
       baseUrl: "https://example.test",
@@ -1196,7 +1196,7 @@ describe("RegistryApi", () => {
   });
 
   it("treats renewal and auction claim responses as identities", async () => {
-    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(17));
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(17), { siws: false });
     const requests: Array<Request> = [];
     const client = new TinyPlaceClient({
       baseUrl: "https://example.test",
@@ -1234,7 +1234,7 @@ describe("RegistryApi", () => {
   });
 
   it("sends subname delete ownership signatures in the header", async () => {
-    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(18));
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(18), { siws: false });
     const requests: Array<Request> = [];
     const client = new TinyPlaceClient({
       baseUrl: "https://example.test",

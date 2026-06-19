@@ -145,7 +145,7 @@ describe("MarketplaceApi", () => {
   });
 
   it("opens marketplace streams with directory query auth", async () => {
-    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(18));
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(18), { siws: false });
     const openedUrls: Array<string> = [];
     const originalWebSocket = globalThis.WebSocket;
 
@@ -202,7 +202,7 @@ describe("MarketplaceApi", () => {
   });
 
   it("signs product reviews with a client-generated review ID", async () => {
-    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(11));
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(11), { siws: false });
     const requests: Array<Request> = [];
     const client = new TinyPlaceClient({
       baseUrl: "https://example.test",
@@ -271,7 +271,7 @@ describe("MarketplaceApi", () => {
 
   it("buys products with Solana x402 pinned to the listing price and seller", async () => {
     const seed = new Uint8Array(32).fill(23);
-    const signer = await LocalSigner.fromSeed(seed);
+    const signer = await LocalSigner.fromSeed(seed, { siws: false });
     const secretKey = new Uint8Array(64);
     secretKey.set(seed, 0);
     secretKey.set(signer.publicKey, 32);
@@ -388,7 +388,7 @@ describe("MarketplaceApi", () => {
 
   it("buys identity listings with Solana x402 pinned to listing price and seller", async () => {
     const seed = new Uint8Array(32).fill(24);
-    const signer = await LocalSigner.fromSeed(seed);
+    const signer = await LocalSigner.fromSeed(seed, { siws: false });
     const secretKey = new Uint8Array(64);
     secretKey.set(seed, 0);
     secretKey.set(signer.publicKey, 32);
@@ -523,7 +523,7 @@ describe("MarketplaceApi", () => {
   });
 
   it("creates identity offers with an upto Solana x402 authorization", async () => {
-    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(25));
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(25), { siws: false });
     const requests: Array<Request> = [];
     const client = new TinyPlaceClient({
       baseUrl: "https://example.test",
@@ -618,7 +618,7 @@ describe("MarketplaceApi", () => {
   });
 
   it("places identity bids with an upto Solana x402 authorization", async () => {
-    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(26));
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(26), { siws: false });
     const requests: Array<Request> = [];
     const client = new TinyPlaceClient({
       baseUrl: "https://example.test",
@@ -740,7 +740,7 @@ describe("MarketplaceApi", () => {
   });
 
   it("signs product lifecycle requests with marketplace actors", async () => {
-    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(14));
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(14), { siws: false });
     const requests: Array<Request> = [];
     const price = { amount: "7", asset: "USDC", network: "eip155:8453" };
     const client = new TinyPlaceClient({
@@ -880,7 +880,7 @@ describe("MarketplaceApi", () => {
   });
 
   it("signs product delivery reads and fulfillment as the delivery actor", async () => {
-    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(15));
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(15), { siws: false });
     const requests: Array<Request> = [];
     const client = new TinyPlaceClient({
       baseUrl: "https://example.test",
@@ -941,7 +941,7 @@ describe("MarketplaceApi", () => {
   });
 
   it("signs identity listing, purchase, and bid payloads", async () => {
-    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(12));
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(12), { siws: false });
     const requests: Array<Request> = [];
     const price = { amount: "10", asset: "USDC", network: "eip155:8453" };
     const client = new TinyPlaceClient({
@@ -1048,7 +1048,7 @@ describe("MarketplaceApi", () => {
   });
 
   it("signs identity offers and offer lifecycle requests", async () => {
-    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(13));
+    const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(13), { siws: false });
     const requests: Array<Request> = [];
     const price = { amount: "12", asset: "USDC", network: "eip155:8453" };
     const client = new TinyPlaceClient({
