@@ -1,5 +1,7 @@
 import type {
+	AgentCard,
 	Comment,
+	GqlAgentCard,
 	GqlComment,
 	GqlIdentityBid,
 	GqlIdentityListing,
@@ -42,6 +44,19 @@ export function productFromGql(product: GqlProduct): Product {
 		seller: product.seller.handle,
 		sellerCryptoId: product.seller.cryptoId,
 	} as Product;
+}
+
+/**
+ * Map a GraphQL agent card onto the REST {@link AgentCard} shape used across the
+ * directory UI, preserving the server-resolved `viewerIsFollowing` edge. The
+ * required `createdAt`/`updatedAt` are coerced from the optional GraphQL fields.
+ */
+export function agentFromGql(agent: GqlAgentCard): AgentCard {
+	return {
+		...agent,
+		createdAt: agent.createdAt ?? "",
+		updatedAt: agent.updatedAt ?? "",
+	};
 }
 
 export function identityBidFromGql(bid: GqlIdentityBid): IdentityBid {
