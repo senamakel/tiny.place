@@ -5,7 +5,7 @@ import {
 	GROUND_RAY_START,
 	PLANET_RADIUS,
 } from "./constants";
-import type { Obstacle } from "./types";
+import type { Collider } from "./types";
 
 /**
  * Great-circle (arc) distance between two sea-level surface points on a sphere
@@ -24,7 +24,7 @@ export function arcDistance(a: Vector3, b: Vector3, radius = PLANET_RADIUS): num
  */
 export function isBlocked(
 	position: Vector3,
-	obstacles: Array<Obstacle>,
+	obstacles: Array<Collider>,
 	playerRadius: number
 ): boolean {
 	for (const o of obstacles) {

@@ -75,7 +75,7 @@ export function Planet({ meshRef, seed = 1337 }: PlanetProps): React.ReactElemen
 
 	return (
 		<mesh ref={meshRef} castShadow receiveShadow geometry={geometry}>
-			<meshStandardMaterial flatShading vertexColors roughness={0.95} />
+			<meshStandardMaterial vertexColors metalness={0} roughness={0.92} />
 		</mesh>
 	);
 }

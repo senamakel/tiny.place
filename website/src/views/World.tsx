@@ -15,7 +15,7 @@ export function World(): FunctionComponent {
 	const audio = useLofiAudio();
 
 	return (
-		<div className="relative h-dvh w-full overflow-hidden bg-[#0b1026]">
+		<div className="absolute inset-0 overflow-hidden bg-[#0b1026]">
 			<Canvas
 				shadows
 				camera={{ fov: 60, near: 0.1, far: 1000, position: [0, 70, 0] }}
@@ -35,10 +35,10 @@ export function World(): FunctionComponent {
 					</div>
 
 					<button
+						aria-pressed={audio.playing}
+						className="pointer-events-auto rounded-lg bg-black/40 px-3 py-2 text-sm backdrop-blur transition hover:bg-black/60"
 						type="button"
 						onClick={audio.toggle}
-						className="pointer-events-auto rounded-lg bg-black/40 px-3 py-2 text-sm backdrop-blur transition hover:bg-black/60"
-						aria-pressed={audio.playing}
 					>
 						{audio.playing ? "♪ lo-fi: on" : "♪ lo-fi: off"}
 					</button>

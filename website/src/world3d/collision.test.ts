@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import { Vector3 } from "three";
 
 import { arcDistance, isBlocked } from "./collision";
+import { PLANET_RADIUS } from "./constants";
 import { buildObstacles } from "./obstacles";
 import type { Obstacle } from "./types";
 
-const R = 50;
+const R = PLANET_RADIUS;
 
 describe("arcDistance", () => {
 	it("is zero for the same point", () => {

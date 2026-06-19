@@ -73,6 +73,26 @@ export const ExploreShell = ({
 	const hasHero =
 		activeSection === "feed" ||
 		resolveSectionHero(activeSection, segments[1]) !== undefined;
+	// Immersive routes (the 3D world) fill the whole content panel edge-to-edge,
+	// with no header, hero backdrop, or padded max-width wrapper.
+	const fullBleed = activeSection === "world";
+
+	if (fullBleed) {
+		return (
+			<div
+				className={`font-body h-screen w-full flex overflow-hidden transition-colors ${isDark ? "bg-black" : "bg-white"}`}
+			>
+				<Sidebar
+					activeSection={activeSection}
+					isDark={isDark}
+					sections={sections}
+				/>
+				<main className="relative flex-1 min-h-0 overflow-hidden">
+					{children}
+				</main>
+			</div>
+		);
+	}
 
 	return (
 		<div

@@ -5,5 +5,6 @@ export * from "./sphereMovement";
 export * from "./collision";
 export * from "./terrain";
 export { buildObstacles } from "./obstacles";
+export { placeBuildings } from "./building-data";
 export * from "./constants";
-export type { Obstacle, WorldRefs } from "./types";
+export type { Building, Collider, Obstacle, WorldRefs } from "./types";

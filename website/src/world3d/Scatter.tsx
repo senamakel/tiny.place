@@ -1,33 +1,19 @@
-import { useEffect, useMemo, type RefObject } from "react";
-
 import { PLANET_RADIUS, TERRAIN_AMPLITUDE } from "./constants";
-import { buildObstacles, obstacleQuaternion } from "./obstacles";
+import { obstacleQuaternion } from "./obstacles";
 import { terrainNoise } from "./terrain";
 import type { Obstacle } from "./types";
 
 interface ScatterProps {
-	obstaclesRef: RefObject<Array<Obstacle>>;
-	count?: number;
-	seed?: number;
+	obstacles: ReadonlyArray<Obstacle>;
 }
 
 /**
  * Renders the obstacles as placeholder rocks (dodecahedra) and trees
  * (trunk + foliage cone), each sat on the terrain and oriented to local up.
  * Swap these meshes for glTF models (Houdini/Blender/Substance) later — the
- * collision data in `obstaclesRef` is independent of the visuals.
+ * collider data is owned by the parent scene and is independent of the visuals.
  */
-export function Scatter({
-	obstaclesRef,
-	count = 48,
-	seed = 4242,
-}: ScatterProps): React.ReactElement {
-	const obstacles = useMemo(() => buildObstacles(count, seed), [count, seed]);
-
-	useEffect(() => {
-		obstaclesRef.current = obstacles;
-	}, [obstacles, obstaclesRef]);
-
+export function Scatter({ obstacles }: ScatterProps): React.ReactElement {
 	return (
 		<group>
 			{obstacles.map((o, index) => {

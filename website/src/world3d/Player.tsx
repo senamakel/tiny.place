@@ -2,6 +2,7 @@ import { useRef, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Vector3, type Group, type Mesh } from "three";
 
+import { Avatar, type Gait } from "./Avatar";
 import {
 	PLAYER_COLLIDER_RADIUS,
 	PLAYER_EYE_HEIGHT,
@@ -15,34 +16,37 @@ import {
 	turn,
 	type SurfaceState,
 } from "./sphereMovement";
+import type { Collider } from "./types";
 import type { InputState } from "./useKeyboard";
-import type { Obstacle } from "./types";
 
 interface PlayerProps {
 	stateRef: RefObject<SurfaceState>;
 	planetRef: RefObject<Mesh | null>;
-	obstaclesRef: RefObject<Array<Obstacle>>;
+	collidersRef: RefObject<Array<Collider>>;
 	avatarRef: RefObject<Group | null>;
 	input: RefObject<InputState>;
 }
 
 /**
- * Drives the player avatar: turning, great-circle walking, obstacle blocking,
- * and ground-following the terrain via a three-mesh-bvh raycast each frame.
+ * Drives the player avatar: turning, great-circle walking, collider blocking,
+ * and ground-following the terrain via a three-mesh-bvh raycast each frame. The
+ * gait ref feeds the humanoid's walk-cycle animation.
  */
 export function Player({
 	stateRef,
 	planetRef,
-	obstaclesRef,
+	collidersRef,
 	avatarRef,
 	input,
 }: PlayerProps): React.ReactElement {
 	const temporaryUp = useRef(new Vector3());
+	const gaitRef = useRef<Gait>({ speed: 0 });
 
 	useFrame((_, rawDelta) => {
 		const delta = Math.min(rawDelta, 0.05); // clamp big tab-out frames
 		const keys = input.current;
 		let state = stateRef.current;
+		let groundSpeed = 0;
 
 		// Turn (A/D).
 		const turnDirection = (keys.left ? 1 : 0) - (keys.right ? 1 : 0);
@@ -50,7 +54,7 @@ export function Player({
 			state = turn(state, turnDirection * TURN_SPEED * delta);
 		}
 
-		// Walk (W/S) along the great circle, blocked by obstacles.
+		// Walk (W/S) along the great circle, blocked by colliders.
 		const moveDirection = (keys.forward ? 1 : 0) - (keys.back ? 1 : 0);
 		if (moveDirection !== 0) {
 			const speed = WALK_SPEED * (keys.run ? 1.7 : 1);
@@ -59,8 +63,15 @@ export function Player({
 				moveDirection * speed * delta,
 				stateRef.current.position.length()
 			);
-			if (!isBlocked(proposed.position, obstaclesRef.current ?? [], PLAYER_COLLIDER_RADIUS)) {
+			if (
+				!isBlocked(
+					proposed.position,
+					collidersRef.current ?? [],
+					PLAYER_COLLIDER_RADIUS
+				)
+			) {
 				state = { position: proposed.position, forward: proposed.forward };
+				groundSpeed = speed;
 			} else {
 				// Keep heading change but cancel the blocked translation.
 				state = { position: state.position, forward: proposed.forward };
@@ -68,6 +79,7 @@ export function Player({
 		}
 
 		stateRef.current = state;
+		gaitRef.current.speed = groundSpeed;
 
 		// Place + orient the avatar on the terrain surface.
 		const avatar = avatarRef.current;
@@ -76,25 +88,14 @@ export function Player({
 			const up = temporaryUp.current.copy(state.position).normalize();
 			const ground = planet ? groundPoint(planet, state.position) : null;
 			const foot = ground ?? state.position.clone();
-			avatar.position
-				.copy(foot)
-				.addScaledVector(up, PLAYER_EYE_HEIGHT);
+			avatar.position.copy(foot).addScaledVector(up, PLAYER_EYE_HEIGHT);
 			avatar.quaternion.copy(surfaceQuaternion(state));
 		}
 	});
 
 	return (
 		<group ref={avatarRef}>
-			{/* Body */}
-			<mesh castShadow position={[0, 0, 0]}>
-				<capsuleGeometry args={[0.5, 1, 6, 12]} />
-				<meshStandardMaterial color="#ff6b9d" roughness={0.6} />
-			</mesh>
-			{/* Facing indicator (points along +Z = forward) */}
-			<mesh castShadow position={[0, 0.2, 0.55]} rotation={[Math.PI / 2, 0, 0]}>
-				<coneGeometry args={[0.18, 0.5, 8]} />
-				<meshStandardMaterial color="#ffd23f" roughness={0.5} />
-			</mesh>
+			<Avatar gaitRef={gaitRef} />
 		</group>
 	);
 }

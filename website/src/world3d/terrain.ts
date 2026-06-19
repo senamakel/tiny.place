@@ -57,7 +57,9 @@ function valueNoise3(
  */
 export function terrainNoise(direction: Vector3, seed = 1337): number {
 	const n = direction.clone().normalize();
-	const freq = 1.7;
+	// Lower base frequency + gentle octave falloff → broad, rolling landmasses
+	// instead of high-frequency jaggedness.
+	const freq = 1.05;
 	let amp = 1;
 	let sum = 0;
 	let norm = 0;
@@ -67,14 +69,14 @@ export function terrainNoise(direction: Vector3, seed = 1337): number {
 	for (let o = 0; o < 4; o++) {
 		sum += valueNoise3(px, py, pz, seed + o * 101) * amp;
 		norm += amp;
-		amp *= 0.5;
-		px *= 2.03;
-		py *= 2.03;
-		pz *= 2.03;
+		amp *= 0.45;
+		px *= 2.0;
+		py *= 2.0;
+		pz *= 2.0;
 	}
-	// Map [0,1] → [-1,1] and sharpen valleys/peaks slightly.
+	// Map [0,1] → [-1,1]; the >1 exponent rounds off peaks for a smoother feel.
 	const v = (sum / norm) * 2 - 1;
-	return Math.sign(v) * Math.pow(Math.abs(v), 0.85);
+	return Math.sign(v) * Math.pow(Math.abs(v), 1.2);
 }
 
 /** Mulberry32 — tiny deterministic RNG for scatter placement. */
