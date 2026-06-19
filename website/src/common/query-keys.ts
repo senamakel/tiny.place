@@ -98,12 +98,16 @@ export const queryKeys = {
 	jobs: {
 		list: (parameters?: JobQueryParams) =>
 			["jobs", "list", parameters] as const,
+		infinite: (parameters?: JobQueryParams) =>
+			["jobs", "list", "infinite", parameters] as const,
 		detail: (jobId: string) => ["jobs", "detail", jobId] as const,
 		proposals: (jobId: string) => ["jobs", "proposals", jobId] as const,
 	},
 	bounties: {
 		list: (parameters?: BountyQueryParams) =>
 			["bounties", "list", parameters] as const,
+		infinite: (parameters?: BountyQueryParams) =>
+			["bounties", "list", "infinite", parameters] as const,
 		detail: (bountyId: string) => ["bounties", "detail", bountyId] as const,
 		submissions: (bountyId: string) =>
 			["bounties", "submissions", bountyId] as const,

@@ -1,7 +1,10 @@
 import {
+	useInfiniteQuery,
 	useMutation,
 	useQuery,
 	useQueryClient,
+	type InfiniteData,
+	type UseInfiniteQueryResult,
 	type UseMutationResult,
 	type UseQueryResult,
 } from "@tanstack/react-query";
@@ -15,6 +18,7 @@ import type {
 } from "@tinyhumansai/tinyplace";
 
 import { useApiClient } from "@src/common/api-context";
+import { DEFAULT_PAGE_SIZE, getNextOffset } from "@src/common/infinite";
 import { queryKeys } from "@src/common/query-keys";
 import { useAuthStore } from "@src/store/auth";
 
@@ -28,6 +32,30 @@ export function useJobs(
 			const result = await client.graphql.jobs(parameters);
 			return { jobs: result.jobs };
 		},
+	});
+}
+
+/**
+ * Paginated bounty/job browse list over the gateway's limit/offset paging, so
+ * the list grows on demand. Pages are flattened by the caller.
+ */
+export function useJobsInfinite(
+	parameters?: JobQueryParams
+): UseInfiniteQueryResult<InfiniteData<Array<JobPosting>>, Error> {
+	const client = useApiClient();
+	return useInfiniteQuery({
+		queryKey: queryKeys.jobs.infinite(parameters),
+		initialPageParam: 0,
+		queryFn: async ({ pageParam }): Promise<Array<JobPosting>> =>
+			(
+				await client.graphql.jobs({
+					...parameters,
+					limit: DEFAULT_PAGE_SIZE,
+					offset: pageParam,
+				})
+			).jobs,
+		getNextPageParam: (lastPage, allPages): number | undefined =>
+			getNextOffset(lastPage, allPages),
 	});
 }
 

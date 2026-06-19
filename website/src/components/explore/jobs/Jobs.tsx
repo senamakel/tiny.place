@@ -10,9 +10,11 @@ import { useState } from "react";
 
 import type { JobPosting, Proposal } from "@tinyhumansai/tinyplace";
 
+import { flattenPages } from "@src/common/infinite";
 import type { FunctionComponent } from "@src/common/types";
 import { ActorAvatar, ActorLink } from "@src/components/profile/ActorLink";
 import { Chip } from "@src/components/ui/Chip";
+import { LoadMore } from "@src/components/ui/LoadMore";
 import {
 	useAdjudicateJobDispute,
 	useApplyToJob,
@@ -20,7 +22,7 @@ import {
 	useCreateJob,
 	useJob,
 	useJobProposals,
-	useJobs,
+	useJobsInfinite,
 	useOpenJobDispute,
 	useSelectCandidate,
 } from "@src/hooks/use-jobs";
@@ -139,8 +141,9 @@ const BrowseJobs = ({
 	isDark: boolean;
 	onOpen: (jobId: string) => void;
 }): FunctionComponent => {
-	const { data, isLoading } = useJobs();
-	const jobs = data?.jobs ?? [];
+	const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } =
+		useJobsInfinite();
+	const jobs = flattenPages(data?.pages);
 	if (isLoading) {
 		return <p className={`text-xs ${mutedClass(isDark)}`}>Loading bounties…</p>;
 	}
@@ -182,6 +185,13 @@ const BrowseJobs = ({
 					</div>
 				</button>
 			))}
+			<LoadMore
+				hasNextPage={hasNextPage}
+				isFetchingNextPage={isFetchingNextPage}
+				onClick={(): void => {
+					void fetchNextPage();
+				}}
+			/>
 		</div>
 	);
 };
