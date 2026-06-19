@@ -616,8 +616,10 @@ export async function findWorkFlow(
   flags: Flags,
 ): Promise<unknown> {
   const limit = numberFlag(flags, "limit") ?? 10;
+  // Browse open jobs through the batched GraphQL gateway: one request resolves
+  // every job's client profile, avoiding the per-client REST fan-out (and 429s).
   const jobs = await settle(() =>
-    ctx.client.jobs.list({
+    ctx.client.graphql.jobs({
       status: "open" as never,
       ...(stringFlag(flags, "skill") ? { skill: stringFlag(flags, "skill") } : {}),
       ...(stringFlag(flags, "q") ? { q: stringFlag(flags, "q") } : {}),

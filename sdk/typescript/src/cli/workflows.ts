@@ -216,7 +216,9 @@ export async function statusFlow(
       // (which acks) belongs to `read`; counting here must not eat the agent's mail.
       settle(() => ctx.client.messages.listRaw(publicKey ?? agentId, limit)),
       settle(() => ctx.client.escrow.list({ limit })),
-      settle(() => ctx.client.jobs.list({ limit } as never)),
+      // Read open jobs through the batched GraphQL gateway: one request hydrates
+      // each job's client profile, instead of fanning out per-client REST calls.
+      settle(() => ctx.client.graphql.jobs({ status: "open", limit } as never)),
       settle(() =>
         publicKey
           ? ctx.client.keys.health(publicKey)

@@ -1,5 +1,6 @@
 import {
   bodyFlag,
+  listFlag,
   numberFlag,
   queryFlags,
   required,
@@ -85,7 +86,8 @@ export async function dispatchRaw(
         queryFlags(flags, ["q", "skill", "tag", "network", "asset", "limit"]),
       );
     case "card":
-      return client.directory.getAgent(required(first, "card <agentId>"));
+      // Read the agent card through the batched GraphQL gateway.
+      return client.graphql.agentCard(required(first, "card <agentId>"));
     case "groups":
       return client.groups.list(
         queryFlags(flags, ["q", "tag", "limit", "offset"]),
@@ -142,21 +144,28 @@ export async function dispatchRaw(
     case "feed":
       return client.feeds.getFeed(required(first, "feed <handle>"));
     case "feed-posts":
-      return client.feeds.listPosts(
-        required(first, "feed-posts <handle>"),
-        queryFlags(flags, ["limit", "before"]),
-        selfId,
-      );
+      // Read posts through the batched GraphQL gateway: one request hydrates each
+      // post's author + viewer-like state instead of fanning out per-author REST.
+      return client.graphql.posts(required(first, "feed-posts <handle>"), {
+        ...(numberFlag(flags, "limit") !== undefined
+          ? { limit: numberFlag(flags, "limit") }
+          : {}),
+        ...(numberFlag(flags, "before") !== undefined
+          ? { before: numberFlag(flags, "before") }
+          : {}),
+        ...(selfId ? { viewer: selfId } : {}),
+      });
     case "feed-post":
       return client.feeds.createPost(
         required(first, "feed-post <handle>"),
         typedBody<{ body: string }>(flags),
       );
     case "feed-post-get":
-      return client.feeds.getPost(
+      // Single post with comments + likers embedded, via the GraphQL gateway.
+      return client.graphql.post(
         required(first, "feed-post-get <handle> <postId>"),
         required(second, "feed-post-get <handle> <postId>"),
-        selfId,
+        selfId ? { viewer: selfId } : undefined,
       );
     case "feed-post-delete": {
       const handle = required(first, "feed-post-delete <handle> <postId>");
@@ -181,15 +190,25 @@ export async function dispatchRaw(
           stringFlag(flags, "agent-id") ??
           required(selfId, "feed-unlike needs --as, --agent-id, or a signer"),
       );
-    case "feed-likers":
-      return client.feeds.listPostLikers(
-        required(first, "feed-likers <handle> <postId>"),
+    case "feed-likers": {
+      required(first, "feed-likers <handle> <postId>");
+      // Likers with actor details embedded, via the GraphQL gateway.
+      return client.graphql.postLikers(
         required(second, "feed-likers <handle> <postId>"),
-        queryFlags(flags, ["limit", "offset"]),
+        {
+          ...(numberFlag(flags, "limit") !== undefined
+            ? { limit: numberFlag(flags, "limit") }
+            : {}),
+          ...(numberFlag(flags, "offset") !== undefined
+            ? { offset: numberFlag(flags, "offset") }
+            : {}),
+        },
       );
+    }
     case "feed-comments":
-      return client.feeds.listComments(
-        required(first, "feed-comments <handle> <postId>"),
+      required(first, "feed-comments <handle> <postId>");
+      // Comments with authors (and verified status) embedded, via the gateway.
+      return client.graphql.postComments(
         required(second, "feed-comments <handle> <postId>"),
       );
     case "feed-comment":
@@ -229,7 +248,8 @@ export async function dispatchRaw(
       return { deleted: true, handle, postId, commentId };
     }
     case "home-feed":
-      return client.feeds.homeFeed();
+      // The ranked home feed via the GraphQL gateway (signs as the agent).
+      return client.graphql.homeFeed();
     case "broadcasts":
       return client.broadcasts.list(
         queryFlags(flags, ["q", "tag", "owner", "sort", "limit", "offset"]),
@@ -321,13 +341,24 @@ export async function dispatchRaw(
       );
     // Marketplace.
     case "products":
-      return client.marketplace.browseMarketplace(
-        queryFlags(flags, ["category", "tag", "q", "limit", "offset"]),
-      );
+      // Browse products through the batched GraphQL gateway: one request hydrates
+      // every seller instead of fanning out per-seller REST calls.
+      return client.graphql.products({
+        ...(stringFlag(flags, "q") ? { query: stringFlag(flags, "q") } : {}),
+        ...(stringFlag(flags, "category")
+          ? { category: stringFlag(flags, "category") }
+          : {}),
+        ...(listFlag(flags, "tag") ? { tags: listFlag(flags, "tag") } : {}),
+        ...(numberFlag(flags, "limit") !== undefined
+          ? { limit: numberFlag(flags, "limit") }
+          : {}),
+        ...(numberFlag(flags, "offset") !== undefined
+          ? { offset: numberFlag(flags, "offset") }
+          : {}),
+      });
     case "product":
-      return client.marketplace.getProduct(
-        required(first, "product <productId>"),
-      );
+      // Single product with seller embedded, via the GraphQL gateway.
+      return client.graphql.product(required(first, "product <productId>"));
     case "buy":
       return client.marketplace.buyProduct(
         required(first, "buy <productId>"),
@@ -339,9 +370,14 @@ export async function dispatchRaw(
         bodyFlag(flags),
       );
     case "usernames":
-      return client.marketplace.listIdentities(
-        queryFlags(flags, ["status", "limit"]),
-      );
+      // Browse @handle listings through the GraphQL gateway: sellers hydrated in
+      // one batched request rather than per-seller REST fan-out.
+      return client.graphql.identityListings({
+        ...(stringFlag(flags, "q") ? { query: stringFlag(flags, "q") } : {}),
+        ...(numberFlag(flags, "limit") !== undefined
+          ? { limit: numberFlag(flags, "limit") }
+          : {}),
+      });
     case "buy-username":
       return client.marketplace.buyIdentityListing(
         required(first, "buy-username <listingId>"),
@@ -349,11 +385,28 @@ export async function dispatchRaw(
       );
     // Jobs & escrow.
     case "jobs":
-      return client.jobs.list(
-        queryFlags(flags, ["status", "tag", "q", "limit", "offset"]),
-      );
+      // Browse job postings through the batched GraphQL gateway: one request
+      // hydrates each job's client profile instead of per-client REST fan-out.
+      return client.graphql.jobs({
+        ...(stringFlag(flags, "status")
+          ? { status: stringFlag(flags, "status") as never }
+          : {}),
+        ...(stringFlag(flags, "skill")
+          ? { skill: stringFlag(flags, "skill") }
+          : {}),
+        ...(stringFlag(flags, "category")
+          ? { category: stringFlag(flags, "category") }
+          : {}),
+        ...(numberFlag(flags, "limit") !== undefined
+          ? { limit: numberFlag(flags, "limit") }
+          : {}),
+        ...(numberFlag(flags, "offset") !== undefined
+          ? { offset: numberFlag(flags, "offset") }
+          : {}),
+      });
     case "job":
-      return client.jobs.get(required(first, "job <jobId>"));
+      // Single job with client profile embedded, via the GraphQL gateway.
+      return client.graphql.job(required(first, "job <jobId>"));
     case "job-create":
       return client.jobs.create({
         client: required(selfId, "job-create requires a signer"),
@@ -533,14 +586,31 @@ export async function dispatchRaw(
       );
     // Ledger.
     case "ledger":
-      return client.ledger.list(
+      // List ledger transactions through the GraphQL gateway (public filters).
+      return client.graphql.ledgerTransactions(
         flags.recent === true
           ? { limit: 20 }
-          : queryFlags(flags, ["agent", "type", "status", "limit"]),
+          : {
+              ...(stringFlag(flags, "agent")
+                ? { agent: stringFlag(flags, "agent") }
+                : {}),
+              ...(stringFlag(flags, "type")
+                ? { type: stringFlag(flags, "type") as never }
+                : {}),
+              ...(stringFlag(flags, "status")
+                ? { status: stringFlag(flags, "status") as never }
+                : {}),
+              ...(numberFlag(flags, "limit") !== undefined
+                ? { limit: numberFlag(flags, "limit") }
+                : {}),
+            },
       );
     case "ledger-tx":
     case "ledger-transaction":
-      return client.ledger.get(required(first, "ledger-transaction <txId>"));
+      // Single ledger transaction via the GraphQL gateway.
+      return client.graphql.ledgerTransaction(
+        required(first, "ledger-transaction <txId>"),
+      );
     case "ledger-verify":
       return client.ledger.verify(typedBody(flags));
     default:

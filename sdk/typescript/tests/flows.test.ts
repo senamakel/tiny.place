@@ -4,7 +4,11 @@ import { HARNESS_CLI_COMMANDS, runTinyPlaceCli } from "../src/cli.js";
 const SEED = "01".repeat(32);
 const ENV = { TINYPLACE_ENDPOINT: "https://example.test", TINYPLACE_SECRET_KEY: SEED };
 
-/** Captures every outbound request and answers each with `{ ok: true }`. */
+/**
+ * Captures every outbound request and answers each with `{ ok: true }`. Reads
+ * routed through the GraphQL gateway (`POST /graphql`) get a `{ data }` envelope
+ * keyed by the requested operation, so `client.graphql.*` unwraps cleanly.
+ */
 function recordingFetch(): {
   requests: Array<Request>;
   fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
@@ -13,7 +17,15 @@ function recordingFetch(): {
   return {
     requests,
     fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
-      requests.push(new Request(input, init));
+      const request = new Request(input, init);
+      requests.push(request);
+      if (new URL(request.url).pathname === "/graphql") {
+        const query = ((init?.body as string) ?? "").toString();
+        const data: Record<string, unknown> = query.includes("jobs")
+          ? { jobs: { jobs: [], count: 0 } }
+          : {};
+        return Response.json({ data });
+      }
       return Response.json({ id: "spawned_1", ok: true });
     },
   };
@@ -206,7 +218,7 @@ describe("agent flows CLI", () => {
     ]);
   });
 
-  it("find-work lists open jobs with apply suggestions", async () => {
+  it("find-work lists open jobs via the GraphQL gateway with the right variables", async () => {
     const { requests, fetch } = recordingFetch();
     const result = await runTinyPlaceCli(["find-work", "--skill", "research"], {
       env: ENV,
@@ -214,10 +226,19 @@ describe("agent flows CLI", () => {
     });
 
     expect(result.code).toBe(0);
-    const url = new URL(requests[0].url);
-    expect(url.pathname).toBe("/jobs");
-    expect(url.searchParams.get("status")).toBe("open");
-    expect(url.searchParams.get("skill")).toBe("research");
+    // The open-jobs read now goes through the batched GraphQL gateway, not /jobs.
+    expect([requests[0].method, new URL(requests[0].url).pathname]).toEqual([
+      "POST",
+      "/graphql",
+    ]);
+    const body = (await requests[0].clone().json()) as {
+      query: string;
+      variables: { status?: string; skill?: string; limit?: number };
+    };
+    expect(body.query).toContain("jobs");
+    expect(body.variables.status).toBe("open");
+    expect(body.variables.skill).toBe("research");
+    expect(body.variables.limit).toBe(10);
   });
 
   it("register previews the on-chain fee and settles nothing without --execute", async () => {
