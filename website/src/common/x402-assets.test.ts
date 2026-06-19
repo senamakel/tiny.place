@@ -65,7 +65,10 @@ describe("assetDecimals", () => {
 describe("resolveSplAsset", () => {
 	it("resolves USDC by symbol and by mint to the same mint + decimals", () => {
 		expect(resolveSplAsset("USDC")).toEqual({ mint: USDC_MINT, decimals: 6 });
-		expect(resolveSplAsset(USDC_MINT)).toEqual({ mint: USDC_MINT, decimals: 6 });
+		expect(resolveSplAsset(USDC_MINT)).toEqual({
+			mint: USDC_MINT,
+			decimals: 6,
+		});
 	});
 
 	it("returns undefined for native SOL and unconfigured CASH", () => {
