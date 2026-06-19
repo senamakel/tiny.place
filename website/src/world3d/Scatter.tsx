@@ -3,20 +3,21 @@ import { obstacleQuaternion } from "./obstacles";
 import { terrainNoise } from "./terrain";
 import { getDetailNoise } from "./textures";
 import type { Obstacle } from "./types";
+import { usePBR } from "./usePBR";
 
 interface ScatterProps {
 	obstacles: ReadonlyArray<Obstacle>;
 }
 
 /**
- * Renders the obstacles as placeholder rocks (dodecahedra) and trees
- * (trunk + foliage cone), each sat on the terrain and oriented to local up. A
- * shared procedural noise drives a bump map so the surfaces aren't flat. Swap
- * these meshes for glTF models (Houdini/Blender/Substance) later — the collider
- * data is owned by the parent scene and is independent of the visuals.
+ * Renders the obstacles as rocks (real scanned-rock PBR) and trees (procedural
+ * bump-mapped bark + foliage), each sat on the terrain and oriented to local up.
+ * Swap these meshes for glTF models (Houdini/Blender/Substance) later — the
+ * collider data is owned by the parent scene and is independent of the visuals.
  */
 export function Scatter({ obstacles }: ScatterProps): React.ReactElement {
 	const bump = getDetailNoise();
+	const rock = usePBR("rock", 1.5);
 	return (
 		<group>
 			{obstacles.map((o, index) => {
@@ -35,10 +36,9 @@ export function Scatter({ obstacles }: ScatterProps): React.ReactElement {
 							<mesh castShadow receiveShadow position={[0, o.height * 0.4, 0]}>
 								<dodecahedronGeometry args={[o.radius, 1]} />
 								<meshStandardMaterial
-									bumpMap={bump}
-									bumpScale={0.6}
-									color="#777b82"
-									roughness={1}
+									map={rock.map}
+									normalMap={rock.normalMap}
+									roughnessMap={rock.roughnessMap}
 								/>
 							</mesh>
 						) : (

@@ -1,27 +1,32 @@
 import type { MeshStandardMaterial, Texture } from "three";
 
 interface TriplanarOptions {
+	/** Colour texture (sRGB) sampled triplanar and multiplied into the surface. */
 	map: Texture;
 	/** World-space sampling scale (smaller = larger features). */
 	scale?: number;
-	/** 0..1 how strongly the detail modulates the base colour. */
+	/** 0..1 how strongly the texture modulates the base colour. */
 	strength?: number;
+	/** Brightness compensation for the multiply (keeps mid-tones from going dark). */
+	boost?: number;
 }
 
 /**
- * Modulate a MeshStandardMaterial's diffuse colour with a triplanar-sampled
- * detail texture, so a sphere (or any UV-less surface) gets fine, seamless
- * surface variation without UV seams. Implemented by patching the built-in
- * shader via onBeforeCompile — vertex colours and lighting are preserved.
+ * Multiply a MeshStandardMaterial's diffuse colour with a triplanar-sampled
+ * colour texture, so a sphere (or any UV-less surface) gets rich, seamless
+ * detail without UV seams. The altitude vertex colours act as a macro tint and
+ * the texture supplies micro detail. Implemented by patching the built-in
+ * shader via onBeforeCompile; lighting and shadows are preserved.
  */
 export function applyTriplanarDetail(
 	material: MeshStandardMaterial,
-	{ map, scale = 0.12, strength = 0.45 }: TriplanarOptions
+	{ map, scale = 0.06, strength = 0.7, boost = 1.8 }: TriplanarOptions
 ): void {
 	material.onBeforeCompile = (shader): void => {
-		shader.uniforms["uDetail"] = { value: map };
-		shader.uniforms["uDetailScale"] = { value: scale };
-		shader.uniforms["uDetailStrength"] = { value: strength };
+		shader.uniforms["uTri"] = { value: map };
+		shader.uniforms["uTriScale"] = { value: scale };
+		shader.uniforms["uTriStrength"] = { value: strength };
+		shader.uniforms["uTriBoost"] = { value: boost };
 
 		shader.vertexShader = shader.vertexShader
 			.replace(
@@ -45,9 +50,10 @@ vTriNormal = normalize(mat3(modelMatrix) * objectNormal);`
 			.replace(
 				"#include <common>",
 				`#include <common>
-uniform sampler2D uDetail;
-uniform float uDetailScale;
-uniform float uDetailStrength;
+uniform sampler2D uTri;
+uniform float uTriScale;
+uniform float uTriStrength;
+uniform float uTriBoost;
 varying vec3 vTriPos;
 varying vec3 vTriNormal;`
 			)
@@ -57,11 +63,12 @@ varying vec3 vTriNormal;`
 {
   vec3 bw = abs(normalize(vTriNormal));
   bw /= (bw.x + bw.y + bw.z + 1e-5);
-  float dx = texture2D(uDetail, vTriPos.zy * uDetailScale).r;
-  float dy = texture2D(uDetail, vTriPos.xz * uDetailScale).r;
-  float dz = texture2D(uDetail, vTriPos.xy * uDetailScale).r;
-  float d = dx * bw.x + dy * bw.y + dz * bw.z;
-  diffuseColor.rgb *= mix(1.0, 0.62 + 0.76 * d, uDetailStrength);
+  vec3 cx = texture2D(uTri, vTriPos.zy * uTriScale).rgb;
+  vec3 cy = texture2D(uTri, vTriPos.xz * uTriScale).rgb;
+  vec3 cz = texture2D(uTri, vTriPos.xy * uTriScale).rgb;
+  vec3 tex = cx * bw.x + cy * bw.y + cz * bw.z;
+  tex = pow(tex, vec3(2.2)) * uTriBoost; // sRGB -> linear + brighten
+  diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * tex, uTriStrength);
 }`
 			);
 	};

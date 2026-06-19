@@ -15,8 +15,8 @@ import {
 	TERRAIN_AMPLITUDE,
 } from "./constants";
 import { terrainNoise } from "./terrain";
-import { getDetailNoise } from "./textures";
 import { applyTriplanarDetail } from "./triplanar";
+import { usePBR } from "./usePBR";
 
 interface PlanetProps {
 	meshRef: RefObject<Mesh | null>;
@@ -70,6 +70,8 @@ export function Planet({ meshRef, seed = 1337 }: PlanetProps): React.ReactElemen
 	}, [seed]);
 
 	const materialRef = useRef<MeshStandardMaterial>(null);
+	// usePBR configures wrapping/repeat; we only need the albedo for triplanar.
+	const ground = usePBR("ground", 1);
 
 	useEffect(() => {
 		return (): void => {
@@ -79,15 +81,15 @@ export function Planet({ meshRef, seed = 1337 }: PlanetProps): React.ReactElemen
 	}, [geometry]);
 
 	useEffect(() => {
-		const detail = getDetailNoise();
-		if (materialRef.current && detail) {
+		if (materialRef.current) {
 			applyTriplanarDetail(materialRef.current, {
-				map: detail,
-				scale: 0.09,
-				strength: 0.5,
+				map: ground.map,
+				scale: 0.05,
+				strength: 0.75,
+				boost: 1.9,
 			});
 		}
-	}, []);
+	}, [ground]);
 
 	return (
 		<mesh ref={meshRef} castShadow receiveShadow geometry={geometry}>

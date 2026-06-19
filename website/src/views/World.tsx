@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 
 import type { FunctionComponent } from "@src/common/types";
@@ -21,7 +22,9 @@ export function World(): FunctionComponent {
 				camera={{ fov: 60, near: 0.1, far: 1000, position: [0, 70, 0] }}
 				gl={{ antialias: true, powerPreference: "high-performance" }}
 			>
-				<WorldScene input={input} />
+				<Suspense fallback={null}>
+					<WorldScene input={input} />
+				</Suspense>
 			</Canvas>
 
 			{/* HUD overlay */}

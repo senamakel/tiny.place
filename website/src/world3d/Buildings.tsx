@@ -5,20 +5,25 @@ import { obstacleQuaternion } from "./obstacles";
 import { terrainNoise } from "./terrain";
 import { getFacade } from "./textures";
 import type { Building } from "./types";
+import { usePBR } from "./usePBR";
 
 interface BuildingsProps {
 	buildings: ReadonlyArray<Building>;
 }
 
-/** A single procedural building: textured walls, a roof, and a door. */
+/** A single building: facade-painted walls over scanned plaster relief,
+ *  scanned roofing-tile roof, and a door. */
 function BuildingMesh({ b }: { b: Building }): React.ReactElement {
 	const roofRadius = Math.hypot(b.footprint, b.depth);
 	const roofHeight = b.kind === 1 ? 1.2 : roofRadius * 0.7;
 	const isTower = b.kind === 1;
 	const facade = useMemo(() => getFacade(b.kind, b.color), [b.kind, b.color]);
+	const wall = usePBR("wall", 1.3);
+	const roof = usePBR("roof", 1.4);
 	return (
 		<group>
-			{/* Walls — procedural facade with windows; lit windows glow */}
+			{/* Walls — procedural facade albedo (windows + glow) over real plaster
+			    normal/roughness for surface relief */}
 			<mesh castShadow receiveShadow position={[0, b.height / 2, 0]}>
 				<boxGeometry args={[b.footprint * 2, b.height, b.depth * 2]} />
 				<meshStandardMaterial
@@ -26,7 +31,8 @@ function BuildingMesh({ b }: { b: Building }): React.ReactElement {
 					emissiveIntensity={1.1}
 					emissiveMap={facade.emissiveMap}
 					map={facade.map}
-					roughness={0.82}
+					normalMap={wall.normalMap}
+					roughnessMap={wall.roughnessMap}
 				/>
 			</mesh>
 			{/* Roof — flat parapet for towers, pitched pyramid otherwise */}
@@ -35,7 +41,12 @@ function BuildingMesh({ b }: { b: Building }): React.ReactElement {
 					<boxGeometry
 						args={[b.footprint * 2.1, roofHeight, b.depth * 2.1]}
 					/>
-					<meshStandardMaterial color={b.roof} roughness={0.8} />
+					<meshStandardMaterial
+						color={b.roof}
+						map={roof.map}
+						normalMap={roof.normalMap}
+						roughnessMap={roof.roughnessMap}
+					/>
 				</mesh>
 			) : (
 				<mesh
@@ -44,7 +55,12 @@ function BuildingMesh({ b }: { b: Building }): React.ReactElement {
 					rotation={[0, Math.PI / 4, 0]}
 				>
 					<coneGeometry args={[roofRadius * 1.05, roofHeight, 4]} />
-					<meshStandardMaterial flatShading color={b.roof} roughness={0.8} />
+					<meshStandardMaterial
+						color={b.roof}
+						map={roof.map}
+						normalMap={roof.normalMap}
+						roughnessMap={roof.roughnessMap}
+					/>
 				</mesh>
 			)}
 			{/* Door on the +Z face */}
