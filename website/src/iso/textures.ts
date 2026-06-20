@@ -82,27 +82,31 @@ export class TextureFactory {
 		return baked;
 	}
 
-	/** A flat floor diamond with a soft bevel and a faint grid edge. */
+	/** A flat floor diamond: a darker grout border, a bright surface and a sheen. */
 	public floorTile(): BakedTexture {
 		const graphics = new Graphics();
+		// Grout/border underneath (reads darker once tinted).
+		graphics.poly(diamondPoints(1, 1, 0)).fill({ color: 0xb2b2b2 });
+		// Bright inset surface.
+		const inset = 0.1;
+		const surface = [
+			0,
+			inset * TILE_HEIGHT,
+			TILE_WIDTH / 2 - inset * TILE_WIDTH,
+			TILE_HEIGHT / 2,
+			0,
+			TILE_HEIGHT - inset * TILE_HEIGHT,
+			-(TILE_WIDTH / 2 - inset * TILE_WIDTH),
+			TILE_HEIGHT / 2,
+		];
+		graphics.poly(surface).fill({ color: SHADE_TOP });
+		// A soft specular sheen toward the north corner.
+		graphics
+			.poly([0, 3, 12, 9, 0, 15, -12, 9])
+			.fill({ color: 0xffffff, alpha: 0.16 });
 		graphics
 			.poly(diamondPoints(1, 1, 0))
-			.fill({ color: 0xe2e2e2 })
-			.stroke({ color: EDGE_COLOR, width: 1, alpha: 0.18, alignment: 0.5 });
-		// Inset highlight diamond for a subtle bevelled surface.
-		const inset = 0.12;
-		graphics
-			.poly([
-				0 + 0,
-				inset * TILE_HEIGHT,
-				TILE_WIDTH / 2 - inset * TILE_WIDTH,
-				TILE_HEIGHT / 2,
-				0,
-				TILE_HEIGHT - inset * TILE_HEIGHT,
-				-(TILE_WIDTH / 2 - inset * TILE_WIDTH),
-				TILE_HEIGHT / 2,
-			])
-			.fill({ color: SHADE_TOP, alpha: 0.85 });
+			.stroke({ color: EDGE_COLOR, width: 1, alpha: 0.14, alignment: 0 });
 		return this.bake("floor", graphics);
 	}
 
@@ -165,12 +169,177 @@ export class TextureFactory {
 			])
 			.fill({ color: SHADE_LEFT })
 			.stroke({ color: EDGE_COLOR, width: 1, alpha: 0.3 });
+		// Soft bottom shading on the side faces for grounded depth.
+		const band = height * 0.62;
+		graphics
+			.poly([
+				eastX,
+				eastY + band,
+				southX,
+				southY + band,
+				southX,
+				southY + height,
+				eastX,
+				eastY + height,
+			])
+			.fill({ color: 0x000000, alpha: 0.16 });
+		graphics
+			.poly([
+				southX,
+				southY + band,
+				westX,
+				westY + band,
+				westX,
+				westY + height,
+				southX,
+				southY + height,
+			])
+			.fill({ color: 0x000000, alpha: 0.12 });
 		// Top face last so the seams sit cleanly on top.
 		graphics
 			.poly(top)
 			.fill({ color: SHADE_TOP })
 			.stroke({ color: EDGE_COLOR, width: 1, alpha: 0.35 });
+		// A faint highlight along the north top edge.
+		graphics
+			.poly([top[0]!, top[1]!, top[2]!, top[3]!, top[6]!, top[7]!])
+			.fill({ color: 0xffffff, alpha: 0.08 });
 		return this.bake(key, graphics);
+	}
+
+	/**
+	 * A tall, detailed wall block: shaded faces with a cornice cap, a chair-rail
+	 * trim, a lighter wainscot panel with vertical grooves, and a dark baseboard.
+	 * Everything is greyscale so the room palette's wall colour tints it whole.
+	 */
+	public wallBlock(height: number): BakedTexture {
+		const graphics = new Graphics();
+		const top = diamondPoints(1, 1, height);
+		const northX = top[0]!;
+		const northY = top[1]!;
+		const eastX = top[2]!;
+		const eastY = top[3]!;
+		const southX = top[4]!;
+		const southY = top[5]!;
+		const westX = top[6]!;
+		const westY = top[7]!;
+
+		// A horizontal band across a face, expressed as height fractions (0 = top).
+		const rightBand = (
+			from: number,
+			to: number,
+			color: number,
+			alpha = 1
+		): void => {
+			graphics
+				.poly([
+					eastX,
+					eastY + from * height,
+					southX,
+					southY + from * height,
+					southX,
+					southY + to * height,
+					eastX,
+					eastY + to * height,
+				])
+				.fill({ color, alpha });
+		};
+		const leftBand = (
+			from: number,
+			to: number,
+			color: number,
+			alpha = 1
+		): void => {
+			graphics
+				.poly([
+					southX,
+					southY + from * height,
+					westX,
+					westY + from * height,
+					westX,
+					westY + to * height,
+					southX,
+					southY + to * height,
+				])
+				.fill({ color, alpha });
+		};
+		// A vertical groove line down a face at horizontal fraction `t`.
+		const groove = (
+			cornerAX: number,
+			cornerAY: number,
+			cornerBX: number,
+			cornerBY: number,
+			t: number
+		): void => {
+			const x = cornerAX + (cornerBX - cornerAX) * t;
+			const y = cornerAY + (cornerBY - cornerAY) * t;
+			graphics
+				.moveTo(x, y + 0.18 * height)
+				.lineTo(x, y + 0.88 * height)
+				.stroke({ color: 0x000000, width: 1, alpha: 0.16 });
+		};
+
+		// Right (east) face: base, wainscot, chair rail, baseboard, cornice.
+		rightBand(0, 1, 0x8d8d8d);
+		rightBand(0.5, 0.9, 0x9b9b9b);
+		rightBand(0.46, 0.5, 0x6c6c6c);
+		rightBand(0.9, 1, 0x5d5d5d);
+		rightBand(0, 0.06, 0xa8a8a8);
+		groove(eastX, eastY, southX, southY, 0.34);
+		groove(eastX, eastY, southX, southY, 0.67);
+		graphics
+			.poly([
+				eastX,
+				eastY,
+				southX,
+				southY,
+				southX,
+				southY + height,
+				eastX,
+				eastY + height,
+			])
+			.stroke({ color: EDGE_COLOR, width: 1, alpha: 0.3 });
+
+		// Left (west) face, a shade lighter overall.
+		leftBand(0, 1, 0xb6b6b6);
+		leftBand(0.5, 0.9, 0xc4c4c4);
+		leftBand(0.46, 0.5, 0x979797);
+		leftBand(0.9, 1, 0x868686);
+		leftBand(0, 0.06, 0xd0d0d0);
+		groove(southX, southY, westX, westY, 0.34);
+		groove(southX, southY, westX, westY, 0.67);
+		graphics
+			.poly([
+				southX,
+				southY,
+				westX,
+				westY,
+				westX,
+				westY + height,
+				southX,
+				southY + height,
+			])
+			.stroke({ color: EDGE_COLOR, width: 1, alpha: 0.3 });
+
+		// Top cap with a brighter inner cornice.
+		graphics
+			.poly(top)
+			.fill({ color: 0xd2d2d2 })
+			.stroke({ color: EDGE_COLOR, width: 1, alpha: 0.35 });
+		const capInset = 0.16;
+		graphics
+			.poly([
+				northX,
+				northY + capInset * TILE_HEIGHT,
+				eastX - capInset * TILE_WIDTH,
+				eastY,
+				southX,
+				southY - capInset * TILE_HEIGHT,
+				westX + capInset * TILE_WIDTH,
+				westY,
+			])
+			.fill({ color: 0xe6e6e6 });
+		return this.bake(`wall:${height}`, graphics);
 	}
 
 	/** A small chair: a seat block with a low back, facing the camera. */
@@ -263,13 +432,100 @@ export class TextureFactory {
 		// Rounded belly shade and a soft chest highlight for volume.
 		graphics.ellipse(0, -8, 11, 8).fill({ color: 0xd2d2d2, alpha: 0.55 });
 		graphics.ellipse(-4, -29, 6, 7).fill({ color: 0xffffff, alpha: 0.5 });
-		// A little antenna with a bobble to give each agent some personality.
-		graphics.rect(-0.8, -46, 1.6, 8).fill({ color: 0xc8c8c8 });
-		graphics
-			.circle(0, -47, 2.6)
-			.fill({ color: 0xf2f2f2 })
-			.stroke({ color: 0x1a1d29, width: 1, alpha: 0.2 });
 		return this.bake("agent", graphics);
+	}
+
+	/**
+	 * A head accessory, attached at the top-centre of the head (local origin).
+	 * Fabric kinds are drawn light so they can be tinted; identity kinds (crown,
+	 * glasses, headphones, flower) carry their own colours and are left untinted.
+	 */
+	public accessory(kind: string): BakedTexture {
+		const graphics = new Graphics();
+		switch (kind) {
+			case "antenna":
+				graphics.rect(-0.8, -8, 1.6, 8).fill({ color: 0xc8c8c8 });
+				graphics
+					.circle(0, -9, 2.6)
+					.fill({ color: 0xf2f2f2 })
+					.stroke({ color: 0x1a1d29, width: 1, alpha: 0.2 });
+				break;
+			case "cap":
+				graphics.ellipse(0, -3, 8.5, 5).fill({ color: 0xffffff });
+				graphics.ellipse(5, 1, 8, 2.6).fill({ color: 0xe2e2e2 });
+				break;
+			case "beanie":
+				graphics.ellipse(0, -4, 8.5, 6).fill({ color: 0xffffff });
+				graphics.rect(-8, -2, 16, 3.4).fill({ color: 0xdddddd });
+				graphics.circle(0, -11, 2.6).fill({ color: 0xffffff });
+				break;
+			case "party":
+				graphics.poly([0, -16, -6, 0, 6, 0]).fill({ color: 0xffffff });
+				graphics.circle(0, -16, 2.4).fill({ color: 0xffe9a8 });
+				break;
+			case "bow":
+				graphics.poly([-8, -4, -1, 0, -8, 4]).fill({ color: 0xffffff });
+				graphics.poly([8, -4, 1, 0, 8, 4]).fill({ color: 0xffffff });
+				graphics.circle(0, 0, 2).fill({ color: 0xe2e2e2 });
+				break;
+			case "crown":
+				graphics
+					.poly([-8, 0, -8, -5, -4, -1, 0, -7, 4, -1, 8, -5, 8, 0])
+					.fill({ color: 0xf5c542 });
+				graphics.rect(-8, -1, 16, 2.4).fill({ color: 0xe0ad2e });
+				graphics.circle(0, -6, 1.5).fill({ color: 0xff5d6c });
+				break;
+			case "glasses":
+				graphics.circle(-5, 12, 3.2).stroke({ color: 0x1a1d29, width: 1.6 });
+				graphics.circle(5, 12, 3.2).stroke({ color: 0x1a1d29, width: 1.6 });
+				graphics.rect(-1.8, 11.4, 3.6, 1.1).fill({ color: 0x1a1d29 });
+				break;
+			case "headphones":
+				graphics
+					.moveTo(-9, 2)
+					.lineTo(-9, -6)
+					.lineTo(-5, -9)
+					.lineTo(5, -9)
+					.lineTo(9, -6)
+					.lineTo(9, 2)
+					.stroke({ color: 0x2a2d3a, width: 2.4 });
+				graphics.roundRect(-11, -2, 4, 7, 2).fill({ color: 0x2a2d3a });
+				graphics.roundRect(7, -2, 4, 7, 2).fill({ color: 0x2a2d3a });
+				break;
+			case "flower":
+				for (let petal = 0; petal < 5; petal++) {
+					const angle = (petal * Math.PI * 2) / 5 - Math.PI / 2;
+					graphics
+						.circle(Math.cos(angle) * 4, -3 + Math.sin(angle) * 4, 2.4)
+						.fill({ color: 0xff8fab });
+				}
+				graphics.circle(0, -3, 2).fill({ color: 0xffe08a });
+				break;
+			default:
+				break;
+		}
+		return this.bake(`accessory:${kind}`, graphics);
+	}
+
+	/** Soft contact shadow sized to a footprint, grounding a furniture piece. */
+	public contactShadow(
+		footprintWidth: number,
+		footprintHeight: number
+	): BakedTexture {
+		const key = `contact:${footprintWidth}x${footprintHeight}`;
+		const graphics = new Graphics();
+		const centerX = ((footprintWidth - footprintHeight) / 2) * TILE_WIDTH * 0.5;
+		const centerY =
+			((footprintWidth + footprintHeight) / 2) * TILE_HEIGHT * 0.5;
+		const radiusX = (footprintWidth + footprintHeight) * HALF_TILE_WIDTH * 0.46;
+		const radiusY = (footprintWidth + footprintHeight) * HALF_TILE_HEIGHT * 0.5;
+		graphics
+			.ellipse(centerX, centerY, radiusX, radiusY)
+			.fill({ color: 0x000000, alpha: 0.1 });
+		graphics
+			.ellipse(centerX, centerY, radiusX * 0.7, radiusY * 0.7)
+			.fill({ color: 0x000000, alpha: 0.12 });
+		return this.bake(key, graphics);
 	}
 
 	/**

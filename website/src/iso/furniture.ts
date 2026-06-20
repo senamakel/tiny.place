@@ -195,7 +195,7 @@ export const FURNITURE_BLUEPRINTS: Record<string, FurnitureBlueprint> = {
 	couch: {
 		footprintWidth: 2,
 		footprintHeight: 1,
-		solid: false,
+		solid: true,
 		baseTint: 0x8a5a6a,
 		parts: [
 			{ shape: "cuboid", footprintWidth: 2, footprintHeight: 1, height: 12 },
@@ -325,10 +325,187 @@ export const FURNITURE_BLUEPRINTS: Record<string, FurnitureBlueprint> = {
 	chair: {
 		footprintWidth: 1,
 		footprintHeight: 1,
-		solid: false,
+		// Seats block transit but are reachable as a terminal "sit" step, so
+		// agents walk around them rather than over them.
+		solid: true,
 		baseTint: 0x7a5a3c,
 		parts: [{ shape: "chair", offsetTileX: 0.19, offsetTileY: 0.19 }],
 		interactionPoints: [sit(0, 0, "right", 6)],
+	},
+	stool: {
+		footprintWidth: 1,
+		footprintHeight: 1,
+		solid: true,
+		baseTint: 0x8a6442,
+		parts: [
+			{
+				shape: "cuboid",
+				footprintWidth: 0.5,
+				footprintHeight: 0.5,
+				height: 16,
+				offsetTileX: 0.25,
+				offsetTileY: 0.25,
+			},
+		],
+		interactionPoints: [sit(0, 0, "right", 4)],
+	},
+	lamp: {
+		footprintWidth: 1,
+		footprintHeight: 1,
+		solid: true,
+		baseTint: 0x3a3f4a,
+		parts: [
+			{
+				shape: "cuboid",
+				footprintWidth: 0.16,
+				footprintHeight: 0.16,
+				height: 42,
+				offsetTileX: 0.42,
+				offsetTileY: 0.42,
+			},
+			{
+				shape: "cuboid",
+				footprintWidth: 0.5,
+				footprintHeight: 0.5,
+				height: 9,
+				offsetTileX: 0.25,
+				offsetTileY: 0.25,
+				lift: 42,
+				tint: 0xffe9a8,
+			},
+		],
+		interactionPoints: [],
+	},
+	crate: {
+		footprintWidth: 1,
+		footprintHeight: 1,
+		solid: true,
+		baseTint: 0x9a7042,
+		parts: [
+			{
+				shape: "cuboid",
+				footprintWidth: 0.8,
+				footprintHeight: 0.8,
+				height: 20,
+				offsetTileX: 0.1,
+				offsetTileY: 0.1,
+			},
+		],
+		interactionPoints: [
+			{ tileOffsetX: 0, tileOffsetY: 1, action: "inspect", facing: "left" },
+		],
+	},
+	painting: {
+		footprintWidth: 1,
+		footprintHeight: 1,
+		solid: true,
+		baseTint: 0xc9a878,
+		parts: [
+			{
+				shape: "cuboid",
+				footprintWidth: 1,
+				footprintHeight: 0.14,
+				height: 26,
+				offsetTileY: 0.42,
+				lift: 8,
+			},
+			{
+				shape: "cuboid",
+				footprintWidth: 0.78,
+				footprintHeight: 0.1,
+				height: 20,
+				offsetTileX: 0.11,
+				offsetTileY: 0.44,
+				lift: 11,
+				tint: 0x5a8fb0,
+			},
+		],
+		interactionPoints: [
+			{ tileOffsetX: 0, tileOffsetY: 1, action: "inspect", facing: "left" },
+		],
+	},
+	barCounter: {
+		footprintWidth: 3,
+		footprintHeight: 1,
+		solid: true,
+		baseTint: 0x5a3d28,
+		parts: [
+			{ shape: "cuboid", footprintWidth: 3, footprintHeight: 1, height: 24 },
+			{
+				shape: "decal",
+				footprintWidth: 3,
+				footprintHeight: 0.6,
+				offsetTileY: 0.1,
+				lift: 24,
+				tint: 0x2a2d3a,
+			},
+		],
+		interactionPoints: [],
+	},
+	trophy: {
+		footprintWidth: 1,
+		footprintHeight: 1,
+		solid: true,
+		baseTint: 0xf5c542,
+		parts: [
+			{
+				shape: "cuboid",
+				footprintWidth: 0.4,
+				footprintHeight: 0.4,
+				height: 8,
+				offsetTileX: 0.3,
+				offsetTileY: 0.3,
+			},
+			{
+				shape: "cuboid",
+				footprintWidth: 0.3,
+				footprintHeight: 0.3,
+				height: 12,
+				offsetTileX: 0.35,
+				offsetTileY: 0.35,
+				lift: 8,
+			},
+		],
+		interactionPoints: [
+			{ tileOffsetX: 0, tileOffsetY: 1, action: "inspect", facing: "left" },
+		],
+	},
+	fern: {
+		footprintWidth: 1,
+		footprintHeight: 1,
+		solid: true,
+		baseTint: 0x9a6b4a,
+		parts: [
+			{
+				shape: "cuboid",
+				footprintWidth: 0.4,
+				footprintHeight: 0.4,
+				height: 14,
+				offsetTileX: 0.3,
+				offsetTileY: 0.3,
+			},
+			{
+				shape: "cuboid",
+				footprintWidth: 0.72,
+				footprintHeight: 0.72,
+				height: 14,
+				offsetTileX: 0.14,
+				offsetTileY: 0.14,
+				lift: 14,
+				tint: 0x4e9f5a,
+			},
+			{
+				shape: "cuboid",
+				footprintWidth: 0.46,
+				footprintHeight: 0.46,
+				height: 12,
+				offsetTileX: 0.27,
+				offsetTileY: 0.27,
+				lift: 26,
+				tint: 0x3f8f53,
+			},
+		],
+		interactionPoints: [],
 	},
 	door: {
 		footprintWidth: 1,
@@ -386,6 +563,17 @@ export class FurnitureSprite extends Container {
 		this.stationPoints =
 			config.interactionPoints ?? blueprint.interactionPoints;
 
+		// A soft contact shadow grounds the piece (skipped for flat decals).
+		if (!blueprint.flat) {
+			const shadow = factory.contactShadow(
+				this.footprintWidth,
+				this.footprintHeight
+			);
+			const shadowSprite = new Sprite(shadow.texture);
+			shadowSprite.pivot.set(shadow.anchorX, shadow.anchorY);
+			this.addChild(shadowSprite);
+		}
+
 		const tint = config.tint ?? blueprint.baseTint;
 		for (const part of blueprint.parts) {
 			this.addChild(this.buildPart(part, tint, factory));
@@ -437,11 +625,8 @@ export class FurnitureSprite extends Container {
 		return sprite;
 	}
 
-	/** Tiles this piece blocks (empty if it is walkable). */
-	public solidTiles(): Array<{ x: number; y: number }> {
-		if (!this.solid) {
-			return [];
-		}
+	/** Every tile under the piece, regardless of whether it blocks. */
+	public footprintTiles(): Array<{ x: number; y: number }> {
 		const tiles: Array<{ x: number; y: number }> = [];
 		for (let column = 0; column < this.footprintWidth; column++) {
 			for (let row = 0; row < this.footprintHeight; row++) {
@@ -449,6 +634,21 @@ export class FurnitureSprite extends Container {
 			}
 		}
 		return tiles;
+	}
+
+	/** Tiles this piece blocks for transit (empty if it is walkable). */
+	public solidTiles(): Array<{ x: number; y: number }> {
+		return this.solid ? this.footprintTiles() : [];
+	}
+
+	/** Tiles an agent may stand on as a terminal "sit" step. */
+	public seatTiles(): Array<{ x: number; y: number }> {
+		return this.stationPoints
+			.filter((point) => point.action === "sit")
+			.map((point) => ({
+				x: this.tileX + point.tileOffsetX,
+				y: this.tileY + point.tileOffsetY,
+			}));
 	}
 
 	/** World-space interaction stations for this piece. */

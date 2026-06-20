@@ -144,8 +144,15 @@ function pokerDefinition(): RoomDefinition {
 		chair(4, 5, "right"),
 		chair(8, 4, "left"),
 		chair(8, 5, "left"),
-		{ kind: "plant", tileX: 10, tileY: 1 },
-		{ kind: "plant", tileX: 1, tileY: 9 },
+		// A little bar with stools along the front-left.
+		{ kind: "barCounter", tileX: 2, tileY: 9 },
+		{ kind: "stool", tileX: 2, tileY: 8 },
+		{ kind: "stool", tileX: 3, tileY: 8 },
+		{ kind: "stool", tileX: 4, tileY: 8 },
+		{ kind: "lamp", tileX: 1, tileY: 1 },
+		{ kind: "fern", tileX: 10, tileY: 1 },
+		{ kind: "trophy", tileX: 1, tileY: 9 },
+		{ kind: "plant", tileX: 10, tileY: 9 },
 	];
 	return {
 		key: "poker",
@@ -189,7 +196,10 @@ function courtDefinition(): RoomDefinition {
 		chair(4, 12, "right"),
 		chair(7, 12, "left"),
 		chair(8, 12, "left"),
-		{ kind: "plant", tileX: 10, tileY: 1 },
+		{ kind: "painting", tileX: 10, tileY: 1 },
+		{ kind: "crate", tileX: 9, tileY: 6 },
+		{ kind: "lamp", tileX: 1, tileY: 12 },
+		{ kind: "fern", tileX: 10, tileY: 12 },
 	];
 	return {
 		key: "court",
@@ -249,6 +259,10 @@ function officeDefinition(): RoomDefinition {
 		{ kind: "bookshelf", tileX: 12, tileY: 5 },
 		{ kind: "plant", tileX: 3, tileY: 10 },
 		{ kind: "plant", tileX: 10, tileY: 10 },
+		{ kind: "lamp", tileX: 12, tileY: 9 },
+		{ kind: "crate", tileX: 12, tileY: 10 },
+		{ kind: "fern", tileX: 11, tileY: 10 },
+		{ kind: "painting", tileX: 1, tileY: 1 },
 	];
 	return {
 		key: "office",
@@ -286,6 +300,10 @@ function homeDefinition(): RoomDefinition {
 		{ kind: "door", tileX: 8, tileY: 1 },
 		{ kind: "plant", tileX: 10, tileY: 1 },
 		{ kind: "plant", tileX: 2, tileY: 9 },
+		{ kind: "lamp", tileX: 2, tileY: 6 },
+		{ kind: "fern", tileX: 10, tileY: 9 },
+		{ kind: "painting", tileX: 6, tileY: 1 },
+		{ kind: "stool", tileX: 7, tileY: 6 },
 	];
 	return {
 		key: "home",
