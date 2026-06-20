@@ -10,6 +10,17 @@ export type {
   RetryOptions,
 } from "./http.js";
 export {
+  classifyError,
+  errorCode,
+  ERROR_CODE_GUIDE,
+  TINYPLACE_ERROR_CODES,
+} from "./errors.js";
+export type {
+  ClassifiedError,
+  ErrorCodeGuide,
+  TinyPlaceErrorCode,
+} from "./errors.js";
+export {
   asArray,
   asBool,
   asNumber,
