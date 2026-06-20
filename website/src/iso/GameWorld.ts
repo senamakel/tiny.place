@@ -21,7 +21,7 @@ import {
 } from "pixi.js";
 
 import { Agent } from "./Agent";
-import type { BaseRoom } from "./BaseRoom";
+import type { BaseRoom, DepthObstacle } from "./BaseRoom";
 import { ChatBubble } from "./ChatBubble";
 import type { FurnitureStation } from "./furniture";
 import {
@@ -106,6 +106,49 @@ const AMBIENT_LINES = [
 
 function clamp(value: number, low: number, high: number): number {
 	return Math.max(low, Math.min(high, value));
+}
+
+/**
+ * Isometric point-vs-box ordering. Returns +1 if the agent point should render
+ * in front of the footprint, -1 if behind, 0 if they are separated on the
+ * screen anti-diagonal (their order does not matter). This is what makes an
+ * agent correctly pass behind one corner of a multi-tile piece and in front of
+ * the opposite corner — a single `x + y` scalar cannot.
+ */
+function boxRelation(
+	pointX: number,
+	pointY: number,
+	box: DepthObstacle
+): number {
+	const xLow = box.minX;
+	const xHigh = box.maxX + 1;
+	const yLow = box.minY;
+	const yHigh = box.maxY + 1;
+	const withinX = pointX >= xLow && pointX < xHigh;
+	const withinY = pointY >= yLow && pointY < yHigh;
+	if (pointX >= xHigh && pointY >= yHigh) {
+		return 1;
+	}
+	if (pointX < xLow && pointY < yLow) {
+		return -1;
+	}
+	if (withinX) {
+		if (pointY >= yHigh) {
+			return 1;
+		}
+		if (pointY < yLow) {
+			return -1;
+		}
+	}
+	if (withinY) {
+		if (pointX >= xHigh) {
+			return 1;
+		}
+		if (pointX < xLow) {
+			return -1;
+		}
+	}
+	return 0;
 }
 
 // Bitmap fonts are global to PixiJS, so they only need installing once even if
@@ -516,6 +559,7 @@ export class GameWorld {
 				this.stepWander(agent, deltaMs);
 			}
 			agent.tick(deltaSeconds);
+			this.resolveAgentDepth(agent);
 		}
 
 		for (const [id, bubble] of this.bubbles) {
@@ -532,6 +576,37 @@ export class GameWorld {
 
 		this.updateSelectionRing();
 	};
+
+	/**
+	 * Nudge an agent's depth so it sorts correctly against the furniture it
+	 * overlaps: behind every piece it is behind, in front of every piece it is
+	 * in front of. `agent.tick` has already set the baseline `x + y` depth.
+	 */
+	private resolveAgentDepth(agent: Agent): void {
+		const room = this.room;
+		if (!room) {
+			return;
+		}
+		const tile = agent.currentTile;
+		let lowerBound = Number.NEGATIVE_INFINITY;
+		let upperBound = Number.POSITIVE_INFINITY;
+		for (const box of room.depthObstacles()) {
+			const relation = boxRelation(tile.x, tile.y, box);
+			if (relation > 0) {
+				lowerBound = Math.max(lowerBound, box.zIndex);
+			} else if (relation < 0) {
+				upperBound = Math.min(upperBound, box.zIndex);
+			}
+		}
+		let depth = agent.zIndex;
+		if (lowerBound !== Number.NEGATIVE_INFINITY && depth <= lowerBound) {
+			depth = lowerBound + 0.5;
+		}
+		if (upperBound !== Number.POSITIVE_INFINITY && depth >= upperBound) {
+			depth = upperBound - 0.5;
+		}
+		agent.zIndex = depth;
+	}
 
 	private stepWander(agent: Agent, deltaMs: number): void {
 		if (agent.currentAction !== "idle") {

@@ -48,6 +48,15 @@ function tileKey(tileX: number, tileY: number): string {
 	return `${tileX},${tileY}`;
 }
 
+/** A furniture footprint plus its render depth, used to sort agents around it. */
+export interface DepthObstacle {
+	minX: number;
+	maxX: number;
+	minY: number;
+	maxY: number;
+	zIndex: number;
+}
+
 export abstract class BaseRoom {
 	public readonly view: Container = new Container();
 	public readonly definition: RoomDefinition;
@@ -59,6 +68,7 @@ export abstract class BaseRoom {
 	private readonly seats = new Set<string>();
 	private readonly stationsByTile = new Map<string, FurnitureStation>();
 	private readonly pieceByTile = new Map<string, FurnitureSprite>();
+	private readonly obstacles: Array<DepthObstacle> = [];
 	private readonly center: ScreenPoint;
 	private readonly size: { width: number; height: number };
 
@@ -178,7 +188,23 @@ export abstract class BaseRoom {
 			for (const station of piece.stations()) {
 				this.stationsByTile.set(tileKey(station.tileX, station.tileY), station);
 			}
+			// Solid pieces occlude agents; record their footprint + depth so the
+			// renderer can sort agents around them by proper point-vs-box order.
+			if (piece.solid) {
+				this.obstacles.push({
+					minX: piece.tileX,
+					maxX: piece.tileX + piece.footprintWidth - 1,
+					minY: piece.tileY,
+					maxY: piece.tileY + piece.footprintHeight - 1,
+					zIndex: piece.zIndex,
+				});
+			}
 		}
+	}
+
+	/** Solid furniture footprints + depths, for agent depth resolution. */
+	public depthObstacles(): ReadonlyArray<DepthObstacle> {
+		return this.obstacles;
 	}
 
 	private computeBounds(): {
