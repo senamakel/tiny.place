@@ -1,4 +1,5 @@
 import { mintOnboardGrant } from "../auth.js";
+import { triageUpdates } from "../agent/attention.js";
 import { errorCode, type TinyPlaceErrorCode } from "../errors.js";
 import {
   bodyFlag,
@@ -302,6 +303,31 @@ export async function statusFlow(
     );
   }
 
+  // The same signals, as a prioritized machine-readable triage list (act >
+  // review > info). Additive to `attention`/`suggestions`: a harness can act on
+  // the top items directly, while the human-facing strings stay unchanged.
+  const nativeEmpty =
+    balances.ok &&
+    (() => {
+      const native = balances.value.balances.find(
+        (entry) => entry.mint === undefined,
+      );
+      return native && BigInt(native.raw) === 0n
+        ? { symbol: native.symbol }
+        : undefined;
+    })();
+  const triage = triageUpdates({
+    registered: !(notRegistered(counts) && notRegistered(keyHealth)),
+    ...(unread !== undefined ? { unreadInbox: unread } : {}),
+    pendingMessages: "error" in messageSummary ? 0 : messageSummary.count,
+    bountiesAwaiting: "error" in bountySummary ? 0 : bountySummary.count,
+    lowPreKeys: Boolean(
+      keyHealth.ok &&
+        (keyHealth.value as { lowOneTimePreKeys?: boolean }).lowOneTimePreKeys,
+    ),
+    ...(nativeEmpty ? { emptyNativeBalance: nativeEmpty } : {}),
+  });
+
   return {
     agentId,
     balance: balanceSummary,
@@ -312,6 +338,7 @@ export async function statusFlow(
     keys: keyHealth.ok ? keyHealth.value : { error: keyHealth.error },
     attention,
     suggestions,
+    triage,
   };
 }
 

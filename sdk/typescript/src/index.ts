@@ -287,6 +287,14 @@ export type {
   OnboardResult,
   OnboardStep,
 } from "./agent/index.js";
+export { triageUpdates } from "./agent/attention.js";
+export type {
+  AttentionItem,
+  AttentionKind,
+  AttentionPriority,
+  AttentionSuggestion,
+  PollSnapshot,
+} from "./agent/attention.js";
 export {
   AGENT_CATALOG,
   CATALOG_VERSION,

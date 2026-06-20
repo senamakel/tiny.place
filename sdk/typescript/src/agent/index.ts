@@ -9,6 +9,15 @@
 export { Agent } from "./agent.js";
 export type { AgentOptions } from "./agent.js";
 
+export { triageUpdates } from "./attention.js";
+export type {
+  AttentionItem,
+  AttentionKind,
+  AttentionPriority,
+  AttentionSuggestion,
+  PollSnapshot,
+} from "./attention.js";
+
 export {
   AGENT_CATALOG,
   CATALOG_VERSION,
