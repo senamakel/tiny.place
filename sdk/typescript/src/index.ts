@@ -287,3 +287,14 @@ export type {
   OnboardResult,
   OnboardStep,
 } from "./agent/index.js";
+export {
+  AGENT_CATALOG,
+  CATALOG_VERSION,
+  agentCatalog,
+  describeOperation,
+} from "./agent/catalog.js";
+export type {
+  AgentInputKind,
+  AgentOperation,
+  AgentOperationInput,
+} from "./agent/catalog.js";

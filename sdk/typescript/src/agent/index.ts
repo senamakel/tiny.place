@@ -10,6 +10,19 @@ export { Agent } from "./agent.js";
 export type { AgentOptions } from "./agent.js";
 
 export {
+  AGENT_CATALOG,
+  CATALOG_VERSION,
+  agentCatalog,
+  describeErrors,
+  describeOperation,
+} from "./catalog.js";
+export type {
+  AgentInputKind,
+  AgentOperation,
+  AgentOperationInput,
+} from "./catalog.js";
+
+export {
   challengeOf,
   payFromChallenge,
   withAutoPayment,

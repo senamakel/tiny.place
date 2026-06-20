@@ -1,3 +1,8 @@
+import {
+  agentCatalog,
+  describeErrors,
+  describeOperation,
+} from "../agent/catalog.js";
 import { classifyError } from "../errors.js";
 import { boolFlag, parseArgs } from "./args.js";
 import {
@@ -200,6 +205,25 @@ async function dispatchTop(
       return debugInfo(ctx);
     case "commands":
       return { commands: HARNESS_CLI_COMMANDS, guides: CLI_GUIDES };
+    // Self-description: let a harness fetch the agent operations + error contract.
+    case "catalog":
+      return agentCatalog();
+    case "describe": {
+      const [topic] = parsed.positionals;
+      if (!topic) {
+        return agentCatalog();
+      }
+      if (topic === "errors") {
+        return { errors: describeErrors() };
+      }
+      const operation = describeOperation(topic);
+      if (!operation) {
+        throw new Error(
+          `unknown operation: ${topic} (try \`tinyplace catalog\` for the list)`,
+        );
+      }
+      return operation;
+    }
     // Back-compat: a bare granular command behaves like `raw <command>`.
     default:
       return dispatchRaw(ctx, parsed);

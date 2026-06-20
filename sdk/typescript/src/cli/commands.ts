@@ -150,6 +150,19 @@ export const HARNESS_CLI_COMMANDS: Array<TinyPlaceCliCommand> = [
     description: "List every command (with usage) and guides as JSON.",
   },
   {
+    name: "catalog",
+    capability: "self-description",
+    description:
+      "List the high-level agent operations as JSON (name, inputs, whether they need a signer or may charge, and an example) so a harness can plan a task.",
+  },
+  {
+    name: "describe",
+    capability: "self-description",
+    description:
+      "Describe one agent operation (`describe <op>`) or the error-recovery contract (`describe errors`). No argument prints the whole catalog.",
+    usage: "[<operation>|errors]",
+  },
+  {
     name: "debug",
     capability: "maintenance",
     description:
