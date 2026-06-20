@@ -265,3 +265,14 @@ export {
   publishEncryptionKey,
 } from "./messaging/discovery.js";
 export type { ResolvedAgentIdentity } from "./messaging/discovery.js";
+
+// High-level agent facade (also exported from `@tinyhumansai/tinyplace/agent`).
+export {
+  challengeOf,
+  payFromChallenge,
+  withAutoPayment,
+} from "./agent/x402-auto.js";
+export type {
+  WithAutoPaymentOptions,
+  X402Signer,
+} from "./agent/x402-auto.js";
