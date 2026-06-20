@@ -22,20 +22,22 @@ type Step = { key: StepKey; title: string };
 // The grant-driven CLI onboarding is keyless, so it omits the "Verify X" step:
 // a Twitter/X attestation needs a wallet signature the bearer grant cannot
 // produce. Wallet-connected web onboarding (WEB_STEPS) includes it.
+// Fund the wallet before claiming an identity: registration is a paid x402 flow,
+// so the wallet needs a balance first.
 const STEPS: Array<Step> = [
 	{ key: "email", title: "Email" },
 	{ key: "profile", title: "Profile" },
-	{ key: "handle", title: "Handle" },
 	{ key: "fund", title: "Wallet" },
+	{ key: "handle", title: "Identity" },
 	{ key: "done", title: "Done" },
 ];
 
 const WEB_STEPS: Array<Step> = [
 	{ key: "email", title: "Email" },
 	{ key: "profile", title: "Profile" },
-	{ key: "handle", title: "Handle" },
-	{ key: "twitter", title: "X" },
 	{ key: "fund", title: "Wallet" },
+	{ key: "handle", title: "Identity" },
+	{ key: "twitter", title: "X" },
 	{ key: "done", title: "Done" },
 ];
 
@@ -144,10 +146,13 @@ function MissingGrant(): ReactElement {
 function Stepper({
 	current,
 	done,
+	onSelect,
 	steps,
 }: {
 	current: StepKey;
 	done: Partial<Record<StepKey, boolean>>;
+	/** Jump to any step — the stepper is freely navigable back and forth. */
+	onSelect: (key: StepKey) => void;
 	steps: Array<Step>;
 }): ReactElement {
 	return (
@@ -159,17 +164,23 @@ function Stepper({
 						: Boolean(done[entry.key]);
 				const active = entry.key === current;
 				return (
-					<li
-						key={entry.key}
-						className={`flex-1 rounded-md border px-2 py-1 text-center ${
-							active
-								? "border-primary text-front"
-								: complete
-									? "border-border text-positive"
-									: "border-border text-muted"
-						}`}
-					>
-						{entry.title}
+					<li key={entry.key} className="flex-1">
+						<button
+							aria-current={active ? "step" : undefined}
+							type="button"
+							className={`w-full rounded-md border px-2 py-1 text-center transition-colors ${
+								active
+									? "border-primary bg-primary text-primary-front"
+									: complete
+										? "border-border bg-surface text-positive hover:bg-bg"
+										: "border-border bg-surface text-muted hover:bg-bg"
+							}`}
+							onClick={() => {
+								onSelect(entry.key);
+							}}
+						>
+							{entry.title}
+						</button>
 					</li>
 				);
 			})}
@@ -392,14 +403,14 @@ function HandleStep({
 }): ReactElement {
 	return (
 		<section className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
-			<h2 className="text-sm font-medium text-front">Claim your handle</h2>
+			<h2 className="text-sm font-medium text-front">Claim your identity</h2>
 			<p className="text-xs text-muted">
-				An active handle makes your wallet usable across feeds, messaging,
+				An active @handle makes your wallet usable across feeds, messaging,
 				marketplace listings, and agent discovery.
 			</p>
 			{active ? (
 				<p className="text-xs text-positive">
-					You already have an active handle.
+					You already have an active identity.
 				</p>
 			) : (
 				<div className="flex items-center gap-2">
@@ -503,7 +514,7 @@ function DoneStep({
 			<ul className="flex flex-col gap-1 text-sm text-front">
 				<li>{emailDone ? "Complete" : "Skipped"}: Email verified</li>
 				<li>{profileDone ? "Complete" : "Skipped"}: Profile saved</li>
-				<li>{handleDone ? "Complete" : "Skipped"}: Active handle</li>
+				<li>{handleDone ? "Complete" : "Skipped"}: Active identity</li>
 				{twitterDone !== undefined ? (
 					<li>{twitterDone ? "Complete" : "Skipped"}: X account verified</li>
 				) : null}
@@ -578,6 +589,7 @@ export function OnboardWizard(): FunctionComponent {
 					handle: handleDone,
 					profile: profileDone,
 				}}
+				onSelect={setStep}
 			/>
 
 			{step === "email" ? (
@@ -735,6 +747,7 @@ export function WebOnboardWizard({
 					profile: profileDone,
 					twitter: twitterDone,
 				}}
+				onSelect={setStep}
 			/>
 
 			{step === "email" ? (

@@ -75,12 +75,31 @@ describe("WebOnboardWizard", () => {
 		// The stepper advertises the optional X step (one-word title).
 		expect(screen.getByText("X")).toBeTruthy();
 		// Start on the handle step, then defer it to advance to the X step.
-		expect(screen.getByText(/Claim your handle/i)).toBeTruthy();
+		expect(screen.getByText(/Claim your identity/i)).toBeTruthy();
 		fireEvent.click(screen.getByText(/I.ll do this later/i));
 
 		// The reusable verification card is now mounted in the wizard.
 		expect(screen.getByText(/Verify Twitter \/ X/i)).toBeTruthy();
 		expect(screen.getByText(/Skip for now/i)).toBeTruthy();
+	});
+
+	it("navigates back and forth by clicking the stepper", () => {
+		render(
+			<WebOnboardWizard
+				activeIdentities={[]}
+				client={stubClient}
+				user={{ emailVerified: true, displayName: "Ada" } as User}
+				wallet="F8zMkwbG3hp1k2t3eQWQh9bsh8qrK8CtqfZ2dBrrW3Ee"
+			/>
+		);
+
+		// Starts on the handle step; jump back to email via the stepper.
+		expect(screen.getByText(/Claim your identity/i)).toBeTruthy();
+		fireEvent.click(screen.getByRole("button", { name: "Email" }));
+		expect(screen.getByText(/Verify your email/i)).toBeTruthy();
+		// And forward to the X step.
+		fireEvent.click(screen.getByRole("button", { name: "X" }));
+		expect(screen.getByText(/Verify Twitter \/ X/i)).toBeTruthy();
 	});
 
 	it("finalizes from the All set step via the Complete button", () => {
