@@ -24,7 +24,7 @@ import {
 	tileToScreen,
 	type ScreenPoint,
 } from "./geometry";
-import type { TextureFactory } from "./textures";
+import type { BakedTexture, TextureFactory } from "./textures";
 import {
 	TileCode,
 	type RoomDefinition,
@@ -34,6 +34,7 @@ import {
 
 const WALL_HEIGHT = 78;
 const PARTITION_HEIGHT = 34;
+const PAVEMENT_TINT = 0x9aa3ad;
 const NEIGHBOR_STEPS: ReadonlyArray<readonly [number, number]> = [
 	[0, -1],
 	[1, 0],
@@ -102,6 +103,7 @@ export abstract class BaseRoom {
 
 	private buildTiles(factory: TextureFactory, palette: RoomPalette): void {
 		const floor = factory.floorTile();
+		const road = factory.roadTile();
 		for (let row = 0; row < this.rows; row++) {
 			this.levelGrid.push(new Array<number>(this.columns).fill(-1));
 			const matrixRow = this.definition.matrix[row] ?? [];
@@ -116,15 +118,27 @@ export abstract class BaseRoom {
 				}
 				if (code === TileCode.Partition) {
 					// A divider stands on visible floor but is not walkable.
-					this.placeFloor(floor, palette, column, row, 0);
+					this.placeFloor(floor, palette.floorTop, column, row, 0, true);
 					this.placePartition(factory, palette, column, row);
+					continue;
+				}
+				if (code === TileCode.Road) {
+					this.placeFloor(road, 0xffffff, column, row, 0, false);
+					this.levelGrid[row]![column] = 0;
+					this.walkable.add(tileKey(column, row));
+					continue;
+				}
+				if (code === TileCode.Pavement) {
+					this.placeFloor(floor, PAVEMENT_TINT, column, row, 0, true);
+					this.levelGrid[row]![column] = 0;
+					this.walkable.add(tileKey(column, row));
 					continue;
 				}
 				const level = code === TileCode.Dais ? 1 : 0;
 				if (level === 1) {
 					this.placeDaisRiser(factory, palette, column, row);
 				}
-				this.placeFloor(floor, palette, column, row, level);
+				this.placeFloor(floor, palette.floorTop, column, row, level, true);
 				this.levelGrid[row]![column] = level;
 				this.walkable.add(tileKey(column, row));
 			}
@@ -132,21 +146,20 @@ export abstract class BaseRoom {
 	}
 
 	private placeFloor(
-		floor: ReturnType<TextureFactory["floorTile"]>,
-		palette: RoomPalette,
+		baked: BakedTexture,
+		tint: number,
 		column: number,
 		row: number,
-		level: number
+		level: number,
+		checker: boolean
 	): void {
-		const sprite = new Sprite(floor.texture);
-		sprite.pivot.set(floor.anchorX, floor.anchorY);
+		const sprite = new Sprite(baked.texture);
+		sprite.pivot.set(baked.anchorX, baked.anchorY);
 		const screen = tileToScreen(column, row, level);
 		sprite.position.set(screen.x, screen.y);
 		// A faint checker keeps large floors from looking flat.
-		const isDark = (column + row) % 2 === 0;
-		sprite.tint = isDark
-			? shadeColor(palette.floorTop, 0.93)
-			: palette.floorTop;
+		const darken = checker && (column + row) % 2 === 0;
+		sprite.tint = darken ? shadeColor(tint, 0.93) : tint;
 		sprite.zIndex = depthAt(column, row, level, LAYER_FLOOR);
 		this.groundLayer.addChild(sprite);
 	}

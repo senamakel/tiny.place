@@ -15,6 +15,10 @@ export enum TileCode {
 	Dais = 3,
 	/** A short interior divider (cubicle wall) — blocks, but waist-high. */
 	Partition = 4,
+	/** Asphalt road surface (walkable, for streets and cars). */
+	Road = 5,
+	/** Light paved sidewalk / plaza tile. */
+	Pavement = 6,
 }
 
 export type Facing = "left" | "right";

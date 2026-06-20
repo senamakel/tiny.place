@@ -22,7 +22,7 @@ import {
 import type { BakedTexture, TextureFactory } from "./textures";
 import type { FurnitureConfig, InteractionPoint } from "./types";
 
-type PartShape = "cuboid" | "decal" | "chair" | "buildingDetail";
+type PartShape = "cuboid" | "decal" | "chair" | "buildingDetail" | "roadDash";
 
 interface FurniturePart {
 	shape: PartShape;
@@ -621,9 +621,9 @@ export const FURNITURE_BLUEPRINTS: Record<string, FurnitureBlueprint> = {
 	house: buildingBlueprint({
 		footprintWidth: 3,
 		footprintHeight: 3,
-		height: 48,
-		bodyTint: 0xb98a6b,
-		windowRows: 2,
+		height: 70,
+		bodyTint: 0xc8a06f,
+		windowRows: 3,
 		windowColumns: 2,
 		windowColor: 0xffe9a8,
 		roofColor: 0x9a4b3c,
@@ -632,9 +632,9 @@ export const FURNITURE_BLUEPRINTS: Record<string, FurnitureBlueprint> = {
 	shop: buildingBlueprint({
 		footprintWidth: 3,
 		footprintHeight: 2,
-		height: 40,
-		bodyTint: 0xc98b6a,
-		windowRows: 1,
+		height: 56,
+		bodyTint: 0xd0a07a,
+		windowRows: 2,
 		windowColumns: 3,
 		windowColor: 0x9ad0ec,
 		roofColor: 0x3f7d6a,
@@ -643,25 +643,143 @@ export const FURNITURE_BLUEPRINTS: Record<string, FurnitureBlueprint> = {
 	cafe: buildingBlueprint({
 		footprintWidth: 3,
 		footprintHeight: 2,
-		height: 44,
-		bodyTint: 0xa86b8a,
-		windowRows: 1,
+		height: 60,
+		bodyTint: 0xb87a96,
+		windowRows: 2,
 		windowColumns: 3,
 		windowColor: 0xffd9a8,
 		roofColor: 0xb04a4a,
 		doorColor: 0x5a3d28,
 	}),
+	apartment: buildingBlueprint({
+		footprintWidth: 3,
+		footprintHeight: 2,
+		height: 104,
+		bodyTint: 0xb0664a,
+		windowRows: 5,
+		windowColumns: 3,
+		windowColor: 0xffe2a0,
+		roofColor: 0x6a4036,
+		doorColor: 0x3a2820,
+	}),
 	tower: buildingBlueprint({
 		footprintWidth: 2,
 		footprintHeight: 2,
-		height: 96,
+		height: 150,
 		bodyTint: 0x8a9bb0,
-		windowRows: 5,
+		windowRows: 8,
 		windowColumns: 2,
 		windowColor: 0xffe9a8,
 		roofColor: 0x55606e,
 		doorColor: 0x2a2d3a,
 	}),
+	glassTower: buildingBlueprint({
+		footprintWidth: 2,
+		footprintHeight: 2,
+		height: 178,
+		bodyTint: 0x6f8aa0,
+		windowRows: 10,
+		windowColumns: 2,
+		windowColor: 0x9fd6ee,
+		roofColor: 0x44586a,
+		doorColor: 0x223040,
+	}),
+	car: {
+		footprintWidth: 2,
+		footprintHeight: 1,
+		solid: true,
+		baseTint: 0xc0392b,
+		parts: [
+			// Wheels.
+			{
+				shape: "cuboid",
+				footprintWidth: 0.22,
+				footprintHeight: 0.18,
+				height: 5,
+				offsetTileX: 0.2,
+				offsetTileY: 0.08,
+				tint: 0x14161b,
+			},
+			{
+				shape: "cuboid",
+				footprintWidth: 0.22,
+				footprintHeight: 0.18,
+				height: 5,
+				offsetTileX: 1.58,
+				offsetTileY: 0.08,
+				tint: 0x14161b,
+			},
+			{
+				shape: "cuboid",
+				footprintWidth: 0.22,
+				footprintHeight: 0.18,
+				height: 5,
+				offsetTileX: 0.2,
+				offsetTileY: 0.74,
+				tint: 0x14161b,
+			},
+			{
+				shape: "cuboid",
+				footprintWidth: 0.22,
+				footprintHeight: 0.18,
+				height: 5,
+				offsetTileX: 1.58,
+				offsetTileY: 0.74,
+				tint: 0x14161b,
+			},
+			// Chassis (body colour).
+			{
+				shape: "cuboid",
+				footprintWidth: 1.8,
+				footprintHeight: 0.66,
+				height: 9,
+				offsetTileX: 0.1,
+				offsetTileY: 0.17,
+				lift: 3,
+			},
+			// Cabin.
+			{
+				shape: "cuboid",
+				footprintWidth: 0.92,
+				footprintHeight: 0.56,
+				height: 8,
+				offsetTileX: 0.52,
+				offsetTileY: 0.22,
+				lift: 12,
+			},
+			// Glass roof.
+			{
+				shape: "decal",
+				footprintWidth: 0.84,
+				footprintHeight: 0.48,
+				offsetTileX: 0.56,
+				offsetTileY: 0.26,
+				lift: 20,
+				tint: 0x243040,
+			},
+			// Headlights.
+			{
+				shape: "cuboid",
+				footprintWidth: 0.08,
+				footprintHeight: 0.5,
+				height: 5,
+				offsetTileX: 0.07,
+				offsetTileY: 0.25,
+				lift: 4,
+				tint: 0xfff0c0,
+			},
+		],
+		interactionPoints: [],
+	},
+	roadDash: {
+		footprintWidth: 1,
+		footprintHeight: 1,
+		solid: false,
+		flat: true,
+		baseTint: 0xffffff,
+		parts: [{ shape: "roadDash" }],
+		interactionPoints: [],
+	},
 	fountain: {
 		footprintWidth: 2,
 		footprintHeight: 2,
@@ -766,6 +884,8 @@ export class FurnitureSprite extends Container {
 			switch (part.shape) {
 				case "chair":
 					return factory.chair();
+				case "roadDash":
+					return factory.roadDash();
 				case "decal":
 					return factory.decal(
 						part.footprintWidth ?? 1,

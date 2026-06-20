@@ -328,8 +328,17 @@ function homeDefinition(): RoomDefinition {
 // ---- Outside world ----------------------------------------------------------
 
 function outsideDefinition(): RoomDefinition {
-	// A big open plot of grass — no walls, it's outdoors.
-	const matrix = floorGrid(22, 22);
+	const size = 22;
+	const matrix = floorGrid(size, size); // grass everywhere to start
+	// Sidewalks flanking the central cross of streets...
+	fillRectangle(matrix, 0, 9, size, 1, TileCode.Pavement);
+	fillRectangle(matrix, 0, 12, size, 1, TileCode.Pavement);
+	fillRectangle(matrix, 9, 0, 1, size, TileCode.Pavement);
+	fillRectangle(matrix, 12, 0, 1, size, TileCode.Pavement);
+	// ...and the asphalt roads (laid last so they cross the sidewalks cleanly).
+	fillRectangle(matrix, 0, 10, size, 2, TileCode.Road);
+	fillRectangle(matrix, 10, 0, 2, size, TileCode.Road);
+
 	const prop = (
 		kind: string,
 		tileX: number,
@@ -339,71 +348,95 @@ function outsideDefinition(): RoomDefinition {
 		tileX,
 		tileY,
 	});
+	const car = (
+		tileX: number,
+		tileY: number,
+		tint: number
+	): FurnitureConfig => ({
+		kind: "car",
+		tileX,
+		tileY,
+		tint,
+	});
+
 	const furniture: Array<FurnitureConfig> = [
-		// Skyline of buildings along the back (north + west) edges.
-		prop("house", 1, 0),
-		prop("shop", 5, 0),
-		prop("tower", 9, 0),
-		prop("cafe", 12, 0),
+		// North-west block.
+		prop("glassTower", 0, 0),
+		prop("house", 3, 0),
+		prop("shop", 6, 1),
+		prop("apartment", 0, 4),
+		prop("cafe", 5, 5),
+		// North-east block.
+		prop("tower", 13, 0),
 		prop("house", 16, 0),
-		prop("tower", 20, 0),
-		prop("shop", 0, 4),
-		prop("house", 0, 8),
-		prop("cafe", 0, 13),
-		prop("house", 0, 18),
-		// A few buildings on the front/right edges, kept to the corners so the
-		// plaza stays visible.
-		prop("tower", 20, 4),
-		prop("house", 19, 8),
-		prop("shop", 19, 13),
-		prop("cafe", 19, 17),
-		prop("cafe", 3, 20),
-		prop("shop", 15, 20),
-		// Central plaza: paved square with a fountain, benches and lamps.
-		{
-			kind: "rug",
-			tileX: 8,
-			tileY: 8,
-			footprintWidth: 6,
-			footprintHeight: 6,
-			tint: 0x9298a4,
-		},
-		prop("fountain", 10, 10),
-		chair(9, 9, "right", 0, 0x6b7280),
-		chair(12, 9, "left", 0, 0x6b7280),
-		chair(9, 12, "right", 0, 0x6b7280),
-		chair(12, 12, "left", 0, 0x6b7280),
-		prop("lamp", 8, 8),
-		prop("lamp", 13, 8),
-		prop("lamp", 8, 13),
-		prop("lamp", 13, 13),
-		// Market stalls.
-		prop("barCounter", 5, 16),
-		prop("crate", 5, 15),
-		prop("barCounter", 14, 5),
-		prop("crate", 16, 5),
-		// Street trees and planters.
-		prop("fern", 6, 6),
-		prop("fern", 15, 6),
-		prop("fern", 6, 15),
-		prop("fern", 15, 15),
-		prop("plant", 11, 5),
-		prop("plant", 5, 11),
-		prop("plant", 16, 11),
-		prop("plant", 11, 16),
-		prop("lamp", 17, 10),
-		prop("lamp", 4, 10),
+		prop("apartment", 19, 1),
+		prop("shop", 13, 3),
+		prop("cafe", 17, 5),
+		prop("house", 13, 6),
+		// South-east block.
+		prop("house", 13, 13),
+		prop("apartment", 17, 13),
+		prop("tower", 19, 16),
+		prop("shop", 13, 17),
+		prop("cafe", 16, 18),
+		prop("glassTower", 20, 20),
+		// South-west block — a little park.
+		prop("house", 0, 13),
+		prop("shop", 6, 13),
+		prop("fountain", 3, 16),
+		chair(3, 18, "right", 0, 0x6b7280),
+		chair(4, 18, "left", 0, 0x6b7280),
+		prop("fern", 1, 17),
+		prop("fern", 6, 17),
+		prop("plant", 2, 19),
+		prop("plant", 5, 20),
+		// Street lamps at the intersection corners and along the sidewalks.
+		prop("lamp", 9, 9),
+		prop("lamp", 12, 9),
+		prop("lamp", 9, 12),
+		prop("lamp", 12, 12),
+		prop("lamp", 9, 3),
+		prop("lamp", 9, 17),
+		prop("lamp", 12, 5),
+		prop("lamp", 3, 9),
+		prop("lamp", 17, 9),
+		prop("lamp", 5, 12),
+		// Street trees along the sidewalks.
+		prop("fern", 9, 5),
+		prop("fern", 9, 15),
+		prop("fern", 12, 3),
+		prop("fern", 12, 17),
+		prop("fern", 5, 9),
+		prop("fern", 15, 9),
+		prop("fern", 7, 12),
+		prop("fern", 17, 12),
+		// Cars parked along the main street.
+		car(2, 10, 0xc0392b),
+		car(5, 11, 0x2e86c1),
+		car(7, 10, 0x8e44ad),
+		car(14, 11, 0x27ae60),
+		car(16, 11, 0xd35400),
+		car(18, 10, 0xe6b800),
 	];
+
+	// Dashed lane markings down the centre of each road (skip the intersection).
+	for (let index = 0; index < size; index += 2) {
+		if (index < 9 || index > 12) {
+			furniture.push(prop("roadDash", index, 10));
+			furniture.push(prop("roadDash", 10, index));
+		}
+	}
+
 	return {
 		key: "outside",
 		name: "Outside World",
 		description:
-			"A large open plaza ringed with pixelated buildings — the world beyond the rooms.",
+			"A city block with streets, parked cars, towers and a little park.",
 		matrix,
 		palette: OUTSIDE_PALETTE,
 		furniture,
-		spawnTile: { x: 10, y: 15 },
-		topMargin: 150,
+		spawnTile: { x: 12, y: 8 },
+		topMargin: 230,
 	};
 }
 

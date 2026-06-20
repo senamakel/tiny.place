@@ -110,6 +110,38 @@ export class TextureFactory {
 		return this.bake("floor", graphics);
 	}
 
+	/** Asphalt road tile — a dark surface with a worn sheen and a curb seam. */
+	public roadTile(): BakedTexture {
+		const graphics = new Graphics();
+		graphics.poly(diamondPoints(1, 1, 0)).fill({ color: 0x2b2e36 });
+		const inset = 0.07;
+		graphics
+			.poly([
+				0,
+				inset * TILE_HEIGHT,
+				TILE_WIDTH / 2 - inset * TILE_WIDTH,
+				TILE_HEIGHT / 2,
+				0,
+				TILE_HEIGHT - inset * TILE_HEIGHT,
+				-(TILE_WIDTH / 2 - inset * TILE_WIDTH),
+				TILE_HEIGHT / 2,
+			])
+			.fill({ color: 0x3c4049 });
+		graphics
+			.poly([0, 5, 9, 9, 0, 13, -9, 9])
+			.fill({ color: 0xffffff, alpha: 0.04 });
+		return this.bake("road", graphics);
+	}
+
+	/** A short dashed lane marking, laid down the centre of a road. */
+	public roadDash(): BakedTexture {
+		const graphics = new Graphics();
+		graphics
+			.poly([0, 11, 6, 14.5, 0, 18, -6, 14.5])
+			.fill({ color: 0xe6c34a, alpha: 0.85 });
+		return this.bake("road-dash", graphics);
+	}
+
 	/** A flat decorative diamond (rugs, mats) spanning a footprint. */
 	public decal(footprintWidth: number, footprintHeight: number): BakedTexture {
 		const key = `decal:${footprintWidth}x${footprintHeight}`;
@@ -391,6 +423,15 @@ export class TextureFactory {
 					...facePoint(aX, aY, bX, bY, 0, 0.06),
 				])
 				.fill({ color: 0x000000, alpha: 0.2 });
+			// Foundation band along the base.
+			graphics
+				.poly([
+					...facePoint(aX, aY, bX, bY, 0, 0.9),
+					...facePoint(aX, aY, bX, bY, 1, 0.9),
+					...facePoint(aX, aY, bX, bY, 1, 1),
+					...facePoint(aX, aY, bX, bY, 0, 1),
+				])
+				.fill({ color: 0x000000, alpha: 0.24 });
 			// Window grid.
 			const bandTop = 0.14;
 			const bandBottom = windowRows >= 4 ? 0.86 : 0.6;
