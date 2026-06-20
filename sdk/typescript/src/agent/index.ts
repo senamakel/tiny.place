@@ -6,6 +6,9 @@
  * Importable as `@tinyhumansai/tinyplace/agent` or, for the curated entrypoints,
  * from the package root.
  */
+export { Agent } from "./agent.js";
+export type { AgentOptions } from "./agent.js";
+
 export {
   challengeOf,
   payFromChallenge,
@@ -55,6 +58,9 @@ export type {
   BuyDomainResult,
   DiscoveredAgent,
   IdentityStatus,
+  OnboardInput,
+  OnboardResult,
+  OnboardStep,
   OwnedHandle,
   PollResult,
   ProfileSummary,

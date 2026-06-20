@@ -267,7 +267,11 @@ export {
 } from "./messaging/discovery.js";
 export type { ResolvedAgentIdentity } from "./messaging/discovery.js";
 
-// High-level agent facade (also exported from `@tinyhumansai/tinyplace/agent`).
+// High-level agent facade. The full surface (facade functions + result types) is
+// available from `@tinyhumansai/tinyplace/agent`; the curated entrypoints below
+// are re-exported from the root for convenience.
+export { Agent } from "./agent/agent.js";
+export type { AgentOptions } from "./agent/agent.js";
 export {
   challengeOf,
   payFromChallenge,
@@ -277,3 +281,9 @@ export type {
   WithAutoPaymentOptions,
   X402Signer,
 } from "./agent/x402-auto.js";
+export type {
+  AgentSigner,
+  OnboardInput,
+  OnboardResult,
+  OnboardStep,
+} from "./agent/index.js";

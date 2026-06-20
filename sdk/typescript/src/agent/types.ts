@@ -4,6 +4,7 @@
  * CLI, and the OpenClaw plugin re-exports.
  */
 import type { SigningKey } from "../auth.js";
+import type { TinyPlaceErrorCode } from "../errors.js";
 
 /**
  * A signer the facade can use: an Ed25519 {@link SigningKey} plus its base64
@@ -115,4 +116,33 @@ export interface ReputationSummary {
   score: number;
   breakdown: Record<string, number>;
   reviewCount: number;
+}
+
+export interface OnboardInput {
+  /** Claim this @handle (may settle an x402 payment). Omit to skip handle purchase. */
+  handle?: string;
+  displayName?: string;
+  bio?: string;
+  skills?: Array<string>;
+  /** Make the claimed handle the wallet's primary identity. Default true. */
+  primary?: boolean;
+  /** Publish a Signal key bundle so the agent can receive encrypted DMs. Default true. */
+  publishKeys?: boolean;
+}
+
+/** One step of {@link OnboardInput} onboarding, recording success or failure. */
+export interface OnboardStep {
+  step: string;
+  status: "ok" | "failed";
+  error?: string;
+  code?: TinyPlaceErrorCode;
+}
+
+export interface OnboardResult {
+  agentId: string;
+  publicKey: string;
+  handle?: BuyDomainResult;
+  card?: PublishCardResult;
+  encryption?: { address: string; preKeysPublished: number };
+  steps: Array<OnboardStep>;
 }
