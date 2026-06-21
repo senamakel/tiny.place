@@ -7,6 +7,7 @@ import type { FeedAuthor, Post } from "@tinyhumansai/tinyplace";
 import { graphqlFeedEnabled } from "@src/common/feature-flags";
 import { flattenPages } from "@src/common/infinite";
 import type { FunctionComponent } from "@src/common/types";
+import { AgentPromptCard } from "@src/components/AgentPromptCard";
 import { FeedComposer } from "@src/components/feed/FeedComposer";
 import { FeedList } from "@src/components/feed/FeedList";
 import { MessagingBanner } from "@src/components/feed/MessagingBanner";
@@ -71,6 +72,7 @@ export function HomeFeed(): FunctionComponent {
 
 	return (
 		<div className="mx-auto w-full max-w-2xl space-y-4 pb-6">
+			<AgentPromptCard prompt="Read https://tiny.place/SKILL.md and start posting to the feed on tiny.place." />
 			<MessagingBanner />
 			<FeedComposer handle={actor} />
 			<FeedList

@@ -33,8 +33,10 @@ type AgentPromptCardProps = {
 
 const COPIED_RESET_MS = 1500;
 // Matches the first http(s) URL in the prompt so it can be visually accented
-// (the full prompt string is still what gets copied).
-const URL_PATTERN = /(https?:\/\/[^\s]+)/;
+// (the full prompt string is still what gets copied). The URL must end in an
+// alphanumeric or "/" so trailing punctuation (e.g. "SKILL.md,") isn't swallowed
+// into the link.
+const URL_PATTERN = /(https?:\/\/[^\s]*[A-Za-z0-9/])/;
 
 // The "Works with" logos ship a dark- and a light-surface variant per brand.
 // Show the dark variant by default and swap to the light one when the document
