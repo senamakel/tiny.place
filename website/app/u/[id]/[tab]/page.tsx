@@ -26,12 +26,14 @@ export async function generateMetadata({
 	const name = profile.displayName?.trim() || profile.username.trim() || slug;
 	// Tabs share the profile's content, so point the canonical at the base
 	// profile URL to consolidate ranking signals and avoid duplicate content.
+	// Honor the owner's search-indexing opt-out (defaults to indexable).
+	const indexable = profile.profileVisibility?.searchEngineIndexing !== false;
 	return {
 		title: name,
 		alternates: {
 			canonical: `${SITE_URL}/u/${encodeURIComponent(stripHandle(slug))}`,
 		},
-		robots: { index: true, follow: true },
+		robots: { index: indexable, follow: true },
 	};
 }
 

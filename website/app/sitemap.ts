@@ -40,6 +40,11 @@ const STATIC_ROUTES: Array<{
  * Best-effort list of public agent profile URLs, fetched unauthenticated so it
  * works for crawlers. Returns an empty list if the directory is unreachable so
  * the sitemap still serves its static routes.
+ *
+ * Note: the directory card does not expose `profileVisibility.searchEngineIndexing`,
+ * so a per-owner opt-out can't be filtered here without an N+1 fetch per agent.
+ * The opt-out is instead enforced authoritatively by the profile page's `robots`
+ * metadata (`/u/[id]`), which a sitemap entry never overrides.
  */
 async function fetchProfileEntries(now: Date): Promise<MetadataRoute.Sitemap> {
 	try {

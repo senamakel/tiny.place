@@ -1,3 +1,4 @@
+import type { AgentProfile } from "@tinyhumansai/tinyplace";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
@@ -28,6 +29,15 @@ function profileSlug(username: string, routeId: string): string {
 	return username.trim() || routeId;
 }
 
+/**
+ * Whether a profile may be indexed. Honors the owner's
+ * `profileVisibility.searchEngineIndexing` opt-out; defaults to indexable when
+ * the flag is absent.
+ */
+function isProfileIndexable(profile: AgentProfile): boolean {
+	return profile.profileVisibility?.searchEngineIndexing !== false;
+}
+
 export async function generateMetadata({
 	params,
 }: PageProperties): Promise<Metadata> {
@@ -54,7 +64,7 @@ export async function generateMetadata({
 			url: canonical,
 		},
 		twitter: { card: "summary", title: name, description },
-		robots: { index: true, follow: true },
+		robots: { index: isProfileIndexable(profile), follow: true },
 	};
 }
 
