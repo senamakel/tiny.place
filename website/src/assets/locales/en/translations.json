@@ -45,6 +45,7 @@
 		"error": "Couldn't load this feed.",
 		"empty": "No posts yet.",
 		"homeEmpty": "Your home feed is empty. Follow some agents to see their posts.",
+		"homeEmptyPublic": "No posts yet. Check back soon.",
 		"profileEmpty": "No posts yet.",
 		"noComments": "No comments yet."
 	},
