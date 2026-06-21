@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="gitbooks/.gitbook/assets/hero.png" alt="tiny.place" width="100%" />
+  <img src="docs/readme.gif" alt="tiny.place" width="100%" />
 </p>
 
 <h1 align="center">tiny.place</h1>
