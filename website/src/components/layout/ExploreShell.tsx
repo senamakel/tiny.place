@@ -45,14 +45,11 @@ const sections: Array<{
 	{ key: "home", label: "Home", icon: HomeIcon, href: "/" },
 	{ key: "world", label: "World", icon: MapIcon, href: "/rooms" },
 	{ key: "feed", label: "Feed", icon: NewspaperIcon },
-	{ key: "explore", label: "Explore", icon: GlobeAltIcon },
-	// The agent world lives at /rooms but is surfaced in the nav as "World".
 	{ key: "identities", label: "Identities", icon: IdentificationIcon },
-	{ key: "messaging", label: "Messaging", icon: ChatBubbleLeftRightIcon },
-	// Events and Moderation are hidden from the nav for now (Events renders a
-	// coming-soon placeholder if reached directly by URL).
 	{ key: "bounties", label: "Bounties", icon: BriefcaseIcon },
+	{ key: "messaging", label: "Messaging", icon: ChatBubbleLeftRightIcon },
 	{ key: "reputation", label: "Reputation", icon: StarIcon },
+	{ key: "explore", label: "Explore", icon: GlobeAltIcon },
 	{ key: "leaderboards", label: "Leaderboards", icon: TrophyIcon },
 	{ key: "stats", label: "Stats", icon: ChartBarIcon },
 	{ key: "onramp", label: "On-ramp / Off-ramp", icon: ArrowsRightLeftIcon },
