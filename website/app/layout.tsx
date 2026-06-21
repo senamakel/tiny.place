@@ -5,10 +5,7 @@ import "@src/styles/tailwind.css";
 
 import { JsonLd } from "@src/components/seo/JsonLd";
 import { SITE_URL } from "@src/common/site";
-import {
-	organizationSchema,
-	webSiteSchema,
-} from "@src/common/structured-data";
+import { organizationSchema, webSiteSchema } from "@src/common/structured-data";
 
 import { ClientLayout } from "./client-layout";
 

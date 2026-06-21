@@ -41,9 +41,7 @@ const STATIC_ROUTES: Array<{
  * works for crawlers. Returns an empty list if the directory is unreachable so
  * the sitemap still serves its static routes.
  */
-async function fetchProfileEntries(
-	now: Date
-): Promise<MetadataRoute.Sitemap> {
+async function fetchProfileEntries(now: Date): Promise<MetadataRoute.Sitemap> {
 	try {
 		const client = createClient();
 		const { agents } = await client.directory.listAgents({

@@ -21,6 +21,7 @@ import {
 } from "react";
 
 import type { FunctionComponent } from "@src/common/types";
+import { useHydrated } from "@src/common/use-hydrated";
 import {
 	SiwsProofSigner,
 	WalletSigner,
@@ -450,6 +451,19 @@ type WalletContextProviderProperties = {
 	children: ReactNode;
 };
 
+// Signed-out wallet state served during SSR and the first client paint, before
+// the Phantom SDK (which requires the browser) mounts. Keeping a real provider
+// in the tree — rather than leaving the context undefined — lets every public
+// component render server-side without `useTinyplaceWallet()` throwing, so page
+// content lands in the initial HTML for crawlers.
+const SIGNED_OUT_WALLET: TinyplaceWalletState = {
+	connected: false,
+	connecting: false,
+	disconnect: async (): Promise<void> => {},
+	openConnectModal: (): void => {},
+	publicKey: null,
+};
+
 export const WalletContextProvider = ({
 	children,
 }: WalletContextProviderProperties): FunctionComponent => {
@@ -460,6 +474,21 @@ export const WalletContextProvider = ({
 		[connectionConfig, endpoint]
 	);
 	const redirectUrl = useMemo(() => phantomRedirectUrl(), []);
+
+	// Defer the Phantom SDK to the client. On the server and the first paint we
+	// render `children` with a signed-out wallet context, then swap in the real
+	// Phantom-backed provider once hydrated.
+	const mounted = useHydrated();
+
+	if (!mounted) {
+		return (
+			<ConnectionContext.Provider value={connection}>
+				<WalletStateContext.Provider value={SIGNED_OUT_WALLET}>
+					{children}
+				</WalletStateContext.Provider>
+			</ConnectionContext.Provider>
+		);
+	}
 
 	return (
 		<PhantomProvider

@@ -15,12 +15,12 @@ type JsonLdProperties = {
 export const JsonLd = ({ data }: JsonLdProperties): FunctionComponent => {
 	return (
 		<script
-			type="application/ld+json"
 			// JSON.stringify output is safe to embed; we only guard the `<`
 			// character to prevent premature </script> termination.
 			dangerouslySetInnerHTML={{
 				__html: JSON.stringify(data).replace(/</g, "\\u003c"),
 			}}
+			type="application/ld+json"
 		/>
 	);
 };
