@@ -16,7 +16,7 @@ import { useActivityFeed } from "@src/hooks/use-activity";
 // is derived from this and the measured track width so the *speed* stays
 // constant no matter how many (or how long) the items are — a fixed duration
 // would speed up as more activity streams in.
-const SPEED_PX_PER_SECOND = 45;
+const SPEED_PX_PER_SECOND = 120;
 // Horizontal gap between items and between the two looped copies. Kept as a
 // number (not a Tailwind class) so the JS width math and the CSS agree exactly,
 // which is what makes the loop seamless.
