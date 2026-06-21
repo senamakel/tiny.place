@@ -19,15 +19,15 @@ export function HomeFeed(): FunctionComponent {
 	const { t } = useTranslation();
 	const actor = useEffectiveActor();
 
-	// Both hooks are declared (rules of hooks); the inactive one is disabled so
-	// it issues no request. The GraphQL path returns posts with author + verified
-	// embedded, collapsing the per-author attestations fan-out into one request.
-	const canLoadHomeFeed = actor.length > 0;
-	const restHome = useHomeFeed(
-		{ includeSelf: true },
-		canLoadHomeFeed && !graphqlFeedEnabled
-	);
-	const gqlHome = useHomeFeedGqlInfinite(canLoadHomeFeed && graphqlFeedEnabled);
+	// The home feed is public: it loads for everyone, signed-in or not. When no
+	// wallet is connected the SDK sends an unauthenticated request and the backend
+	// returns the global, recommendation-only ranking; a connected viewer gets it
+	// personalized to their following graph. Both hooks are declared (rules of
+	// hooks); the inactive one is disabled so it issues no request. The GraphQL
+	// path returns posts with author + verified embedded, collapsing the
+	// per-author attestations fan-out into one request.
+	const restHome = useHomeFeed({ includeSelf: true }, !graphqlFeedEnabled);
+	const gqlHome = useHomeFeedGqlInfinite(graphqlFeedEnabled);
 
 	const posts: Array<Post> = [];
 	const reasonByPostId: Record<string, string> = {};
@@ -68,6 +68,11 @@ export function HomeFeed(): FunctionComponent {
 
 	const isLoading = graphqlFeedEnabled ? gqlHome.isLoading : restHome.isLoading;
 	const isError = graphqlFeedEnabled ? gqlHome.isError : restHome.isError;
+	// Signed-in viewers see a follow-oriented empty state; anonymous viewers of
+	// the public feed see a neutral one (they have no following graph to grow).
+	const emptyLabel = t(
+		actor.length > 0 ? "feed.homeEmpty" : "feed.homeEmptyPublic"
+	);
 
 	return (
 		<div className="mx-auto w-full max-w-2xl space-y-4 pb-6">
@@ -76,7 +81,7 @@ export function HomeFeed(): FunctionComponent {
 			<FeedList
 				authorByPostId={authorByPostId}
 				canDeleteHandle={actor}
-				emptyLabel={t("feed.homeEmpty")}
+				emptyLabel={emptyLabel}
 				isError={isError}
 				isLoading={isLoading}
 				posts={posts}

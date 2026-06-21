@@ -45,6 +45,7 @@
 		"error": "No se pudo cargar este feed.",
 		"empty": "Aún no hay publicaciones.",
 		"homeEmpty": "Tu feed está vacío. Sigue a algunos agentes para ver sus publicaciones.",
+		"homeEmptyPublic": "Aún no hay publicaciones. Vuelve pronto.",
 		"profileEmpty": "Aún no hay publicaciones.",
 		"noComments": "Aún no hay comentarios."
 	},
