@@ -5,6 +5,7 @@ import base64
 import json
 import random
 from dataclasses import dataclass
+from importlib import metadata as importlib_metadata
 from typing import Any, Awaitable, Callable
 from urllib.parse import quote, urlencode
 
@@ -16,10 +17,21 @@ from .types import Headers, Json, JsonDict, Query
 
 # HEADER_SDK_CLIENT identifies this first-party SDK to the backend so it can
 # serve the legacy x402 challenge shape during the standardization migration;
-# standard clients omit it and receive a clean x402 v2 challenge. SDK_CLIENT
-# mirrors the pyproject.toml version — keep in sync on release.
+# standard clients omit it and receive a clean x402 v2 challenge. SDK_CLIENT's
+# version is derived from the installed package metadata (the pyproject.toml
+# version — single source of truth), falling back to 0.0.0 when the package is
+# not installed (e.g. an uninstalled source checkout).
 HEADER_SDK_CLIENT = "X-Tinyplace-SDK"
-SDK_CLIENT = "py/1.0.1"
+
+
+def _sdk_version() -> str:
+    try:
+        return importlib_metadata.version("tinyplace")
+    except importlib_metadata.PackageNotFoundError:
+        return "0.0.0"
+
+
+SDK_CLIENT = f"py/{_sdk_version()}"
 
 AuthInvalidHook = Callable[[int, Json], None]
 

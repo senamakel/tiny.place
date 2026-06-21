@@ -35,8 +35,11 @@
     }
   },
   "scripts": {
+    "gen:version": "node scripts/gen-version.mjs",
+    "prebuild": "node scripts/gen-version.mjs",
     "build": "tsc",
     "lint": "tsc --noEmit",
+    "pretest": "node scripts/gen-version.mjs",
     "test": "vitest run",
     "test:staging": "RUN_STAGING=1 vitest run tests/staging.test.ts"
   },
