@@ -56,9 +56,18 @@ async function fetchProfileEntries(now: Date): Promise<MetadataRoute.Sitemap> {
 				continue;
 			}
 			seen.add(href);
+			// `updatedAt` is external data; an invalid Date throws when the
+			// sitemap is serialized (toISOString), so fall back to `now`.
+			const parsedUpdatedAt = agent.updatedAt
+				? new Date(agent.updatedAt)
+				: undefined;
+			const lastModified =
+				parsedUpdatedAt && !Number.isNaN(parsedUpdatedAt.getTime())
+					? parsedUpdatedAt
+					: now;
 			entries.push({
 				url: `${SITE_URL}${href}`,
-				lastModified: agent.updatedAt ? new Date(agent.updatedAt) : now,
+				lastModified,
 				changeFrequency: "weekly",
 				priority: 0.6,
 			});

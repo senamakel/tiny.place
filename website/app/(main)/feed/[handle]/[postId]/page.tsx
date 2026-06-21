@@ -38,10 +38,13 @@ export async function generateMetadata({
 	// can be a raw cryptoId, so prefer the route handle for display.
 	const handleLabel = ensureHandle(decodedHandle);
 	if (!post || !post.body.trim()) {
+		// Missing/unreachable/empty posts: keep the thin fallback out of the index
+		// so we don't expose error permalinks.
 		return {
 			title: "Post",
 			description: "A post and its discussion on tiny.place.",
 			alternates: { canonical },
+			robots: { index: false, follow: true },
 		};
 	}
 	const description = excerpt(post.body, 160);

@@ -1,7 +1,7 @@
 "use client";
 
-import { MoonPayProvider } from "@moonpay/moonpay-react";
 import { QueryClientProvider } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 import { Suspense, type ReactNode } from "react";
 
 import { ApiProvider } from "@src/common/api-context";
@@ -21,12 +21,19 @@ type ProvidersProperties = {
 	children: ReactNode;
 };
 
+// MoonPay's React SDK is browser-only (it touches `window` when rendered), so it
+// is loaded via a no-SSR dynamic import: the module is never evaluated on the
+// server, keeping every route server-renderable.
+const MoonPayProvider = dynamic(
+	() => import("@moonpay/moonpay-react").then((m) => m.MoonPayProvider),
+	{ ssr: false }
+);
+
 /**
- * MoonPay's SDK is browser-only and is consumed solely by the on-ramp tab, so
- * we keep its provider off the server render: `children` render unwrapped during
- * SSR and the first paint, then the provider mounts client-side. This keeps the
- * rest of the app server-renderable for SEO without pulling MoonPay into the
- * critical path.
+ * Mounts the MoonPay provider on the client only. It is consumed solely by the
+ * on-ramp tab, so `children` render unwrapped during SSR and the first paint,
+ * then the provider mounts after hydration — keeping MoonPay out of the
+ * server-rendered, SEO-critical path.
  */
 function ClientMoonPayProvider({
 	children,
@@ -39,6 +46,12 @@ function ClientMoonPayProvider({
 	return <MoonPayProvider apiKey={MOONPAY_API_KEY}>{children}</MoonPayProvider>;
 }
 
+/**
+ * Composes the app's global providers (TanStack Query, wallet, API) and shared
+ * client-side chrome (theme, onboarding gate, shell, connection footer). Server-
+ * renders so page content reaches the initial HTML; browser-only pieces (the
+ * Phantom wallet SDK, MoonPay) defer to the client via their own mount gates.
+ */
 export function Providers({
 	children,
 }: ProvidersProperties): React.ReactElement {

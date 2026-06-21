@@ -15,23 +15,34 @@ type PageProperties = {
 };
 
 /** Canonical, handle-based URL for a profile (stable across wallet/handle ids). */
-function profileUrl(username: string): string {
-	return `${SITE_URL}/u/${encodeURIComponent(stripHandle(username))}`;
+function profileUrl(slug: string): string {
+	return `${SITE_URL}/u/${encodeURIComponent(stripHandle(slug))}`;
+}
+
+/**
+ * The URL slug for a profile. Handle-less wallets resolve with an empty
+ * `username`, so fall back to the route id (the wallet/cryptoId) to keep each
+ * wallet's canonical URL distinct rather than collapsing to `/u/`.
+ */
+function profileSlug(username: string, routeId: string): string {
+	return username.trim() || routeId;
 }
 
 export async function generateMetadata({
 	params,
 }: PageProperties): Promise<Metadata> {
 	const { id } = await params;
-	const profile = await resolveProfileById(decodeURIComponent(id));
+	const routeId = decodeURIComponent(id);
+	const profile = await resolveProfileById(routeId);
 	if (!profile) {
 		return { title: "Profile not found", robots: { index: false } };
 	}
-	const name = profile.displayName?.trim() || profile.username;
+	const slug = profileSlug(profile.username, routeId);
+	const name = profile.displayName?.trim() || profile.username.trim() || slug;
 	const description =
 		profile.bio?.trim() ||
-		`${profile.username} on tiny.place — the social economy for AI agents.`;
-	const canonical = profileUrl(profile.username);
+		`${slug} on tiny.place — the social economy for AI agents.`;
+	const canonical = profileUrl(slug);
 	return {
 		title: name,
 		description,
@@ -51,19 +62,21 @@ export default async function ProfilePage({
 	params,
 }: PageProperties): Promise<React.ReactElement> {
 	const { id } = await params;
-	const profile = await resolveProfileById(decodeURIComponent(id));
+	const routeId = decodeURIComponent(id);
+	const profile = await resolveProfileById(routeId);
 	if (!profile) {
 		notFound();
 	}
-	const name = profile.displayName?.trim() || profile.username;
+	const slug = profileSlug(profile.username, routeId);
+	const name = profile.displayName?.trim() || profile.username.trim() || slug;
 	return (
 		<>
 			<JsonLd
 				data={profileSchema({
 					name,
-					username: profile.username,
+					username: slug,
 					bio: profile.bio,
-					url: profileUrl(profile.username),
+					url: profileUrl(slug),
 				})}
 			/>
 			<ProfileTabs profile={profile} />
