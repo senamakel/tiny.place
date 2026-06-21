@@ -53,12 +53,7 @@ export function Providers({
 						<WebOnboardingGate />
 					</Suspense>
 					<ClientMoonPayProvider>
-						<ExploreShell>
-							{/* Page content may read useSearchParams; the boundary
-							    keeps such pages from failing static generation
-							    while pages that don't still prerender fully. */}
-							<Suspense fallback={null}>{children}</Suspense>
-						</ExploreShell>
+						<ExploreShell>{children}</ExploreShell>
 					</ClientMoonPayProvider>
 					<ConnectionFooter />
 					<E2EAuthBridge />
