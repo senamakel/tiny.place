@@ -30,6 +30,7 @@ pub mod error;
 pub mod http;
 pub mod signal;
 pub mod signer;
+pub mod solana;
 pub mod util;
 pub mod validation;
 pub mod websocket;
@@ -55,6 +56,14 @@ pub use assets::{
     SOLANA_NATIVE_ASSET, SOLANA_USDC_MINT, SOLANA_WSOL_MINT,
 };
 pub use auth::AdminSigningOptions;
+pub use solana::{
+    associated_token_account, build_delegated_x402_payment_map, build_payer_signed_delegated_tx,
+    default_rpc_request, find_token_account, DelegatedPaymentRequirements,
+    DelegatedX402PaymentMapOptions, PayerSignedDelegatedTxOptions, RpcRequest,
+    FACILITATOR_COMPUTE_UNIT_LIMIT, FACILITATOR_COMPUTE_UNIT_PRICE_MICRO_LAMPORTS,
+    SOLANA_COMPUTE_BUDGET_PROGRAM_ID, SOLANA_MAINNET_NETWORK, SOLANA_SYSTEM_PROGRAM_ID,
+    SOLANA_TOKEN_PROGRAM_ID,
+};
 pub use x402::{
     build_x402_payment_authorization, build_x402_payment_envelope, build_x402_payment_map,
     encode_x402_payment_header, sign_x402_authorization, X402Authorization,
