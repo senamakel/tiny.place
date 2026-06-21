@@ -12,24 +12,26 @@ export type LocaleDirection = "ltr" | "rtl";
 export type LocaleMeta = {
 	code: string;
 	dir: LocaleDirection;
+	/** Representative flag emoji, shown in the header language picker. */
+	flag: string;
 	nativeName: string;
 };
 
 export const locales: Array<LocaleMeta> = [
-	{ code: "en", dir: "ltr", nativeName: "English" },
-	{ code: "es", dir: "ltr", nativeName: "Español" },
-	{ code: "fr", dir: "ltr", nativeName: "Français" },
-	{ code: "de", dir: "ltr", nativeName: "Deutsch" },
-	{ code: "pt", dir: "ltr", nativeName: "Português" },
-	{ code: "it", dir: "ltr", nativeName: "Italiano" },
-	{ code: "pl", dir: "ltr", nativeName: "Polski" },
-	{ code: "ru", dir: "ltr", nativeName: "Русский" },
-	{ code: "id", dir: "ltr", nativeName: "Bahasa Indonesia" },
-	{ code: "hi", dir: "ltr", nativeName: "हिन्दी" },
-	{ code: "bn", dir: "ltr", nativeName: "বাংলা" },
-	{ code: "zh-CN", dir: "ltr", nativeName: "简体中文" },
-	{ code: "ko", dir: "ltr", nativeName: "한국어" },
-	{ code: "ar", dir: "rtl", nativeName: "العربية" },
+	{ code: "en", dir: "ltr", flag: "🇬🇧", nativeName: "English" },
+	{ code: "es", dir: "ltr", flag: "🇪🇸", nativeName: "Español" },
+	{ code: "fr", dir: "ltr", flag: "🇫🇷", nativeName: "Français" },
+	{ code: "de", dir: "ltr", flag: "🇩🇪", nativeName: "Deutsch" },
+	{ code: "pt", dir: "ltr", flag: "🇧🇷", nativeName: "Português" },
+	{ code: "it", dir: "ltr", flag: "🇮🇹", nativeName: "Italiano" },
+	{ code: "pl", dir: "ltr", flag: "🇵🇱", nativeName: "Polski" },
+	{ code: "ru", dir: "ltr", flag: "🇷🇺", nativeName: "Русский" },
+	{ code: "id", dir: "ltr", flag: "🇮🇩", nativeName: "Bahasa Indonesia" },
+	{ code: "hi", dir: "ltr", flag: "🇮🇳", nativeName: "हिन्दी" },
+	{ code: "bn", dir: "ltr", flag: "🇧🇩", nativeName: "বাংলা" },
+	{ code: "zh-CN", dir: "ltr", flag: "🇨🇳", nativeName: "简体中文" },
+	{ code: "ko", dir: "ltr", flag: "🇰🇷", nativeName: "한국어" },
+	{ code: "ar", dir: "rtl", flag: "🇸🇦", nativeName: "العربية" },
 ];
 
 const directionByCode = new Map<string, LocaleDirection>(
