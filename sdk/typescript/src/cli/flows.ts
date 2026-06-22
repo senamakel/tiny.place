@@ -17,7 +17,7 @@ import {
 import type { CliContext, Flags, JsonObject } from "./types.js";
 import { idOf, resolveAgentId, settle, summarize } from "./workflows.js";
 import type { PaymentChallenge } from "../http.js";
-import { buildDelegatedX402PaymentMap } from "../solana.js";
+import { buildDelegatedX402PaymentHeader } from "../solana.js";
 import type { BountyCreateRequest, Identity } from "../types/index.js";
 import type { RegisterRequest } from "../api/registry.js";
 
@@ -433,25 +433,20 @@ async function createAndFundBounty(
       ctx.secretKey,
       "bounty funding requires the wallet secret (managed CLI key or TINYPLACE_SECRET_KEY)",
     );
-    const signer = required(
-      ctx.signer,
-      "bounty funding requires a wallet signer",
-    );
+    required(ctx.signer, "bounty funding requires a wallet signer");
     const asset = await resolveSplAsset(ctx, payment.asset);
     if (!asset?.mint || asset.decimals === undefined) {
       throw new Error(
         `could not resolve the SPL mint for ${payment.asset ?? "the reward asset"} (the facilitator cannot settle native SOL)`,
       );
     }
-    const paymentMap = await buildDelegatedX402PaymentMap({
-      signer,
+    const paymentHeader = await buildDelegatedX402PaymentHeader({
       secretKey: hexToBytes(secretHex),
       rpcUrl: opts.rpcUrl,
       ...(ctx.fetch ? { fetch: ctx.fetch } : {}),
       feePayer,
       mint: asset.mint,
       decimals: asset.decimals,
-      from: opts.creator,
       payment: {
         network: payment.network ?? "",
         asset: payment.asset ?? "",
@@ -460,7 +455,9 @@ async function createAndFundBounty(
         ...(payment.metadata ? { metadata: payment.metadata } : {}),
       },
     });
-    return ctx.client.bounties.create({ ...request, payment: paymentMap });
+    // Standard x402 v2: the partially-signed SPL transfer rides in the
+    // PAYMENT-SIGNATURE header; the request body carries NO `payment` field.
+    return ctx.client.bounties.create(request, paymentHeader);
   }
 }
 

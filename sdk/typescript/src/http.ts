@@ -638,12 +638,14 @@ export class HttpClient {
     actor: string,
     body?: unknown,
     signBody?: BodySigner,
+    headers?: Record<string, string>,
   ): Promise<T> {
     return this.request<T>("POST", path, {
       body,
       directoryAuth: true,
       directoryActor: actor,
       signBody,
+      ...(headers ? { headers } : {}),
     });
   }
 

@@ -179,8 +179,10 @@ class HttpClient:
     async def post(self, path: str, body: Json = None) -> Json:
         return await self._request("POST", path, body=body, auth="signed")
 
-    async def post_public(self, path: str, body: Json = None) -> Json:
-        return await self._request("POST", path, body=body)
+    async def post_public(
+        self, path: str, body: Json = None, headers: Headers | None = None
+    ) -> Json:
+        return await self._request("POST", path, body=body, headers=headers)
 
     async def post_admin(self, path: str, body: Json = None) -> Json:
         return await self._request("POST", path, body=body, auth="admin")
@@ -221,8 +223,12 @@ class HttpClient:
             raise TinyPlaceError(200, result, f"GraphQL error: {message}")
         return result.get("data") if isinstance(result, dict) else None
 
-    async def post_directory_auth_as(self, path: str, actor: str, body: Json = None) -> Json:
-        return await self._request("POST", path, body=body, auth="directory", actor=actor)
+    async def post_directory_auth_as(
+        self, path: str, actor: str, body: Json = None, headers: Headers | None = None
+    ) -> Json:
+        return await self._request(
+            "POST", path, body=body, auth="directory", actor=actor, headers=headers
+        )
 
     async def put(self, path: str, body: Json = None) -> Json:
         return await self._request("PUT", path, body=body, auth="signed")

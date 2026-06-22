@@ -536,25 +536,39 @@ describe("agent flows CLI", () => {
     expect(result.code).toBe(0);
     expect(JSON.parse(result.stdout).status).toBe("done");
 
-    // The handle is claimed by re-POSTing /registry/names with the payment map.
+    // The handle is claimed by re-POSTing /registry/names. The gasless delegated
+    // path submits the standard x402 v2 envelope via the PAYMENT-SIGNATURE
+    // header — the request body carries NO `payment` field.
     const registryPosts = requests.filter(
       (request) =>
         request.method === "POST" &&
         new URL(request.url).pathname === "/registry/names",
     );
     expect(registryPosts.length).toBeGreaterThanOrEqual(2);
-    const settled = (await registryPosts.at(-1)!.clone().json()) as {
+    const settledPost = registryPosts.at(-1)!;
+    const settled = (await settledPost.clone().json()) as {
       payment?: Record<string, string>;
     };
-    // The gasless delegated path attaches a facilitator-broadcast transfer under
-    // metadata.delegatedTx — NOT a client-broadcast on-chain signature.
-    expect(typeof settled.payment?.["metadata.delegatedTx"]).toBe("string");
-    expect(settled.payment?.["metadata.delegatedTx"]!.length).toBeGreaterThan(
-      0,
-    );
-    expect(settled.payment?.["metadata.feePayer"]).toBe(
+    // No proprietary metadata.delegatedTx map and no body `payment` at all.
+    expect(settled.payment).toBeUndefined();
+
+    // The payment proof is the standard x402 v2 SVM envelope in PAYMENT-SIGNATURE.
+    const headerValue = settledPost.headers.get("PAYMENT-SIGNATURE");
+    expect(headerValue).toBeTruthy();
+    const envelope = JSON.parse(
+      Buffer.from(headerValue!, "base64").toString("utf8"),
+    ) as {
+      x402Version: number;
+      accepted: { scheme: string; extra: { feePayer: string } };
+      payload: { transaction: string };
+    };
+    expect(envelope.x402Version).toBe(2);
+    expect(envelope.accepted.scheme).toBe("exact");
+    expect(envelope.accepted.extra.feePayer).toBe(
       "11111111111111111111111111111111",
     );
+    expect(envelope.payload.transaction.length).toBeGreaterThan(0);
+    expect(headerValue).not.toContain("delegatedTx");
 
     // Gasless: the client builds + signs but never broadcasts the transfer
     // (the facilitator co-signs as fee payer and submits it).

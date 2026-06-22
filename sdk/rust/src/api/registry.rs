@@ -11,8 +11,8 @@ use crate::crypto::{canonical_payload, crypto_id_to_public_key_base64};
 use crate::error::Result;
 use crate::http::HttpClient;
 use crate::solana::{
-    build_delegated_payment_from_challenge, payment_challenge, ChallengeDelegatedPaymentOptions,
-    RpcRequest,
+    build_delegated_payment_header_from_challenge, payment_challenge,
+    ChallengeDelegatedPaymentOptions, RpcRequest,
 };
 use crate::types::{
     ActorType, AvailabilityResponse, Identity, IdentityClaimRequest, IdentityExport,
@@ -111,19 +111,22 @@ impl RegistryApi {
             .await
     }
 
-    /// Register a name funded via the **delegated (gasless facilitator)** Solana
-    /// settlement path. Mirrors the TS/Python flow: the first call (no `payment`)
-    /// returns the 402 challenge, from which the facilitator fee payer
-    /// (`metadata.feePayer`) and payment terms are read; this builds the
-    /// payer-signed `[ComputeUnitLimit, ComputeUnitPrice, TransferChecked]`
-    /// transaction (fee payer = facilitator, agent = transfer authority), folds
-    /// it into the x402 payment map under `metadata.delegatedTx`, and re-calls
-    /// `register` to settle the registration fee. USDC-only.
+    /// Register a name funded via the **standard x402 sponsored (gasless
+    /// facilitator)** Solana settlement path. Mirrors the TS/Python flow: the
+    /// first call (no payment) returns the 402 challenge, from which the
+    /// facilitator fee payer (`accepts[].extra.feePayer`, surfaced on the parsed
+    /// challenge as `metadata.feePayer`) and payment terms are read; this builds
+    /// the payer-signed `[ComputeUnitLimit, ComputeUnitPrice, TransferChecked]`
+    /// transaction (fee payer = facilitator, agent = transfer authority), wraps
+    /// it in the standard x402 `PaymentPayload` envelope, and re-posts the signed
+    /// registration with the envelope in the `PAYMENT-SIGNATURE` header (no body
+    /// `payment` map) to settle the registration fee. USDC-only.
     pub async fn register_with_solana_payment(
         &self,
         request: RegisterRequest,
         options: SolanaRegistrationPaymentOptions,
     ) -> Result<Identity> {
+        // A signer is required to sign the registration body on the funded call.
         let signer = self.http.signer().ok_or_else(|| {
             crate::error::Error::Signing("a signer is required for a Solana payment".into())
         })?;
@@ -132,8 +135,8 @@ impl RegistryApi {
         if request.public_key.is_none() && !request.crypto_id.is_empty() {
             request.public_key = Some(crypto_id_to_public_key_base64(&request.crypto_id)?);
         }
-        // The registration payload is re-signed on each `register` call, so the
-        // signature must not be carried across the challenge fetch.
+        // The registration payload is re-signed on each call, so the signature
+        // must not be carried across the challenge fetch.
         request.signature = None;
 
         // First call without payment to receive the 402 challenge.
@@ -142,8 +145,8 @@ impl RegistryApi {
             Err(error) => payment_challenge(error)?,
         };
 
-        let payment = build_delegated_payment_from_challenge(
-            signer.as_ref(),
+        // Build the standard PAYMENT-SIGNATURE header from the challenge.
+        let (header_name, header_value) = build_delegated_payment_header_from_challenge(
             &challenge,
             ChallengeDelegatedPaymentOptions {
                 secret_key: options.secret_key,
@@ -153,15 +156,25 @@ impl RegistryApi {
                 mint: options.mint,
                 source_token_account: options.source_token_account,
                 destination_token_account: options.destination_token_account,
-                from: Some(request.crypto_id.clone()),
             },
         )
         .await?;
 
+        // Re-post the signed registration with the payment in the header and NO
+        // body `payment` map.
         let mut funded = request;
-        funded.payment = Some(payment);
-        funded.signature = None;
-        self.register(funded).await
+        funded.payment = None;
+        let payload = registration_signature_payload(&funded);
+        funded.signature = Some(sign_fresh_canonical_payload(signer.as_ref(), &payload).await?);
+
+        let headers: crate::auth::Headers = vec![(header_name, header_value)];
+        self.http
+            .post_public_with_headers::<Identity, RegisterRequest>(
+                "/registry/names",
+                Some(&funded),
+                &headers,
+            )
+            .await
     }
 
     /// Look up a name's availability and (if taken) its identity.

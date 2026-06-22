@@ -7,8 +7,8 @@
 use crate::error::{Error, Result};
 use crate::http::HttpClient;
 use crate::solana::{
-    build_delegated_payment_from_challenge, payment_challenge, ChallengeDelegatedPaymentOptions,
-    RpcRequest,
+    build_delegated_payment_header_from_challenge, payment_challenge,
+    ChallengeDelegatedPaymentOptions, RpcRequest,
 };
 use crate::types::{
     Bounty, BountyComment, BountyCommentCreateRequest, BountyCommentQueryParams,
@@ -78,21 +78,23 @@ impl BountiesApi {
             .await
     }
 
-    /// Create and fund a bounty via the **delegated (gasless facilitator)**
-    /// Solana settlement path. Mirrors the TS/Python flow: the first call (no
-    /// `payment`) returns the 402 challenge, from which the facilitator fee payer
-    /// (`metadata.feePayer`) and payment terms are read; this builds the
-    /// payer-signed `[ComputeUnitLimit, ComputeUnitPrice, TransferChecked]`
-    /// transaction (fee payer = facilitator, agent = transfer authority), folds
-    /// it into the x402 payment map under `metadata.delegatedTx`, and re-calls
-    /// `create` to settle into escrow. USDC-only.
+    /// Create and fund a bounty via the **standard x402 sponsored (gasless
+    /// facilitator)** Solana settlement path. Mirrors the TS/Python flow: the
+    /// first call (no `payment`) returns the 402 challenge, from which the
+    /// facilitator fee payer (`accepts[].extra.feePayer`, surfaced on the parsed
+    /// challenge as `metadata.feePayer`) and payment terms are read; this builds
+    /// the payer-signed `[ComputeUnitLimit, ComputeUnitPrice, TransferChecked]`
+    /// transaction (fee payer = facilitator, agent = transfer authority), wraps
+    /// it in the standard x402 `PaymentPayload` envelope, and re-posts the bounty
+    /// with the envelope in the `PAYMENT-SIGNATURE` header (no body `payment`
+    /// map) to settle into escrow. USDC-only.
     pub async fn create_with_solana_payment(
         &self,
         request: &BountyCreateRequest,
         options: SolanaBountyPaymentOptions,
     ) -> Result<Bounty> {
-        let signer = self
-            .http
+        // A signer is required for the directory-auth on the funded create call.
+        self.http
             .signer()
             .ok_or_else(|| Error::Signing("a signer is required for a Solana payment".into()))?;
         let creator = request.creator.as_deref().unwrap_or("");
@@ -103,8 +105,8 @@ impl BountiesApi {
             Err(error) => payment_challenge(error)?,
         };
 
-        let payment = build_delegated_payment_from_challenge(
-            signer.as_ref(),
+        // Build the standard PAYMENT-SIGNATURE header from the challenge.
+        let (header_name, header_value) = build_delegated_payment_header_from_challenge(
             &challenge,
             ChallengeDelegatedPaymentOptions {
                 secret_key: options.secret_key,
@@ -114,18 +116,17 @@ impl BountiesApi {
                 mint: options.mint,
                 source_token_account: options.source_token_account,
                 destination_token_account: options.destination_token_account,
-                from: request
-                    .creator_crypto_id
-                    .clone()
-                    .or(request.creator.clone()),
             },
         )
         .await?;
 
+        // Re-post the bounty with the payment in the header and NO body
+        // `payment` map.
         let mut funded = request.clone();
-        funded.payment = Some(payment);
+        funded.payment = None;
+        let headers: crate::auth::Headers = vec![(header_name, header_value)];
         self.http
-            .post_directory_auth_as("/bounties", creator, Some(&funded))
+            .post_directory_auth_as_with_headers("/bounties", creator, Some(&funded), &headers)
             .await
     }
 

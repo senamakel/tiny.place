@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import json
 
 import pytest
 from nacl.signing import VerifyKey
@@ -12,7 +13,7 @@ from tinyplace import (
     LocalSigner,
     SOLANA_MAINNET_NETWORK,
     SOLANA_USDC_MINT,
-    build_delegated_x402_payment_map,
+    build_delegated_x402_payment_header,
     build_payer_signed_delegated_tx,
 )
 
@@ -89,39 +90,60 @@ async def test_build_payer_signed_delegated_tx_fee_payer_and_authority_wiring() 
     assert int.from_bytes(transfer_ix.data[1:9], "little") == 1000000
 
 
-async def test_build_delegated_x402_payment_map_carries_delegated_tx() -> None:
+async def test_build_delegated_x402_payment_header_emits_standard_envelope() -> None:
     signer = LocalSigner.from_seed(bytes([41]) * 32)
     payer = signer.agent_id
 
-    payment_map = await build_delegated_x402_payment_map(
-        signer=signer,
+    header = await build_delegated_x402_payment_header(
         rpc_url="https://solana.example.test",
         fee_payer=_FEE_PAYER,
         payment={
             "network": SOLANA_MAINNET_NETWORK,
+            # The challenge may still name the asset by symbol; the envelope must
+            # echo the on-chain SPL mint that the tx was built against.
             "asset": "USDC",
             "amount": "1000000",
             "to": _PAYEE,
-            "metadata": {"purpose": "registration"},
         },
         mint=SOLANA_USDC_MINT,
         decimals=6,
         secret_key=bytes([41]) * 32,
-        from_address=payer,
         rpc_request=_rpc_request(payer),
     )
 
-    # The wire transaction rides under metadata.delegatedTx and is a valid base64
-    # tx whose fee payer is the facilitator.
-    assert payment_map["metadata.delegatedTx"]
-    tx = VersionedTransaction.from_bytes(base64.b64decode(payment_map["metadata.delegatedTx"]))
-    assert list(tx.message.account_keys)[0] == Pubkey.from_string(_FEE_PAYER)
+    # The PAYMENT-SIGNATURE header is standard padded base64 of the UTF-8 JSON of
+    # the canonical x402 v2 PaymentPayload envelope.
+    envelope = json.loads(base64.b64decode(header))
+    assert envelope["x402Version"] == 2
 
-    assert payment_map["from"] == payer
-    assert payment_map["asset"] == "USDC"
-    assert payment_map["amount"] == "1000000"
-    assert payment_map["to"] == _PAYEE
-    assert payment_map["metadata.purpose"] == "registration"
+    accepted = envelope["accepted"]
+    assert accepted["scheme"] == "exact"
+    assert accepted["network"] == SOLANA_MAINNET_NETWORK
+    assert accepted["amount"] == "1000000"
+    # ``asset`` is the on-chain SPL mint (base58), not the "USDC" symbol.
+    assert accepted["asset"] == SOLANA_USDC_MINT
+    assert accepted["payTo"] == _PAYEE
+    assert accepted["maxTimeoutSeconds"] == 60
+    assert accepted["extra"]["feePayer"] == _FEE_PAYER
+
+    # No proprietary metadata.delegatedTx and no body payment map — the proof is
+    # only the standard payload.transaction.
+    assert "metadata.delegatedTx" not in header
+    assert "metadata.delegatedTx" not in json.dumps(envelope)
+    assert "payment" not in envelope
+
+    # payload.transaction is the non-empty partially-signed two-signature legacy
+    # tx: facilitator fee-payer slot zeroed (account 0), agent authority filled.
+    wire = envelope["payload"]["transaction"]
+    assert wire
+    tx = VersionedTransaction.from_bytes(base64.b64decode(wire))
+    keys = list(tx.message.account_keys)
+    assert keys[0] == Pubkey.from_string(_FEE_PAYER)
+    assert keys[1] == Pubkey.from_string(payer)
+    signatures = tx.signatures
+    assert len(signatures) == 2
+    assert all(byte == 0 for byte in bytes(signatures[0]))
+    assert any(byte != 0 for byte in bytes(signatures[1]))
 
 
 async def test_build_payer_signed_delegated_tx_rejects_bad_amount() -> None:

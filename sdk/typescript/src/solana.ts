@@ -1,12 +1,13 @@
 import { ed25519 } from "@noble/curves/ed25519.js";
 
-import type { SigningKey } from "./auth.js";
 import type { X402AuthorizationFields } from "./x402.js";
 import {
   buildX402PaymentMap,
+  encodeX402SvmPaymentHeader,
   type X402PaymentMap,
   type X402PaymentMapOptions,
 } from "./x402.js";
+import type { SigningKey } from "./auth.js";
 
 export const SOLANA_MAINNET_NETWORK =
   "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
@@ -421,8 +422,9 @@ export interface PayerSignedDelegatedTxOptions {
  * facilitator (CDP/PayAI) as fee payer (account 0) and the agent as the transfer
  * authority (a read-only second signer). Only the agent signature is filled; the
  * fee-payer signature slot is left empty (zeroed) for the facilitator to co-sign
- * and broadcast at settle time. Returns the base64 wire transaction to attach as
- * the x402 payment's `metadata.delegatedTx`.
+ * and broadcast at settle time. Returns the base64 wire transaction to carry in
+ * the standard x402 envelope's `payload.transaction` (submitted via the
+ * `PAYMENT-SIGNATURE` header).
  *
  * The payee's destination token account must already exist — the exact scheme
  * forbids ATA creation in the payment transaction.
@@ -565,43 +567,51 @@ function twoSignerFacilitatorMessage(options: {
   );
 }
 
-export interface DelegatedX402PaymentMapOptions
-  extends Omit<PayerSignedDelegatedTxOptions, "payee" | "amount"> {
-  /** The agent identity signer (signs the x402 authorization fields). */
-  signer: SigningKey;
+export interface DelegatedX402PaymentHeaderOptions
+  extends Omit<PayerSignedDelegatedTxOptions, "payee" | "amount" | "feePayer"> {
   /** The payment requirements parsed from the 402 challenge. */
   payment: Pick<
     X402AuthorizationFields,
     "network" | "asset" | "amount" | "to"
   > & { metadata?: Record<string, string> };
-  /** The payer wallet address recorded on the authorization (defaults to the agent id). */
-  from?: string;
+  /**
+   * The facilitator's fee-payer pubkey. Defaults to the challenge's
+   * `payment.metadata.feePayer` (equivalently `accepts[].extra.feePayer`).
+   */
+  feePayer?: string;
 }
 
 /**
- * Convenience wrapper: builds the agent-signed facilitator transfer and folds it
- * into a complete x402 payment map (with the wire transaction under
- * `metadata.delegatedTx`), ready to resubmit to the paid endpoint. The backend
- * routes any payment carrying `metadata.delegatedTx` to the facilitator.
+ * Builds the agent-signed facilitator transfer and encodes it into the standard
+ * x402 v2 SVM "exact" `PAYMENT-SIGNATURE` header value (the partially-signed
+ * transaction in `payload.transaction`, the fee payer in
+ * `accepted.extra.feePayer`). Replaces the proprietary `metadata.delegatedTx`
+ * payment map — the sponsored register/bounty flows attach this header and send
+ * NO `payment` field in the request body. The `asset` echoed in the envelope is
+ * the on-chain SPL mint used to build the transaction.
  */
-export async function buildDelegatedX402PaymentMap(
-  options: DelegatedX402PaymentMapOptions,
-): Promise<X402PaymentMap> {
+export async function buildDelegatedX402PaymentHeader(
+  options: DelegatedX402PaymentHeaderOptions,
+): Promise<string> {
+  const feePayer = options.feePayer ?? options.payment.metadata?.["feePayer"];
+  if (!feePayer) {
+    throw new Error(
+      "delegated payment requires a facilitator fee payer (challenge metadata.feePayer)",
+    );
+  }
   const wire = await buildPayerSignedDelegatedTx({
     ...options,
+    feePayer,
     amount: options.payment.amount,
     payee: options.payment.to,
   });
-  return buildX402PaymentMap(options.signer, {
+  return encodeX402SvmPaymentHeader({
     network: options.payment.network,
-    asset: options.payment.asset,
     amount: options.payment.amount,
-    to: options.payment.to,
-    from: options.from,
-    metadata: {
-      ...options.payment.metadata,
-      delegatedTx: wire,
-    },
+    assetMint: options.mint,
+    payTo: options.payment.to,
+    feePayer,
+    transaction: wire,
   });
 }
 

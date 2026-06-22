@@ -603,6 +603,45 @@ impl HttpClient {
             .await
     }
 
+    /// POST without backend auth, threading `extra_headers` (e.g. the standard
+    /// x402 `PAYMENT-SIGNATURE` payment header) and parsing the response body.
+    pub async fn post_public_with_headers<T: DeserializeOwned, B: Serialize>(
+        &self,
+        path: &str,
+        body: Option<&B>,
+        headers: &Headers,
+    ) -> Result<T> {
+        let body = Self::body_string(body)?;
+        let response = self
+            .execute(Method::POST, path, &[], body, Auth::None, None, headers)
+            .await?;
+        self.parse(response).await
+    }
+
+    /// POST with directory auth as `actor`, threading `extra_headers` (e.g. the
+    /// standard x402 `PAYMENT-SIGNATURE` payment header) and parsing the response.
+    pub async fn post_directory_auth_as_with_headers<T: DeserializeOwned, B: Serialize>(
+        &self,
+        path: &str,
+        actor: &str,
+        body: Option<&B>,
+        headers: &Headers,
+    ) -> Result<T> {
+        let body = Self::body_string(body)?;
+        let response = self
+            .execute(
+                Method::POST,
+                path,
+                &[],
+                body,
+                Auth::Directory,
+                Some(actor),
+                headers,
+            )
+            .await?;
+        self.parse(response).await
+    }
+
     pub async fn post_agent_auth<T: DeserializeOwned, B: Serialize>(
         &self,
         path: &str,

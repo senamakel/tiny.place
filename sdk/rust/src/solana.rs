@@ -16,18 +16,17 @@
 //! the backend to co-sign and broadcast at settle time — the agent never pays
 //! the network fee. Only USDC/CASH-style SPL transfers go through this path.
 
-use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use base64::Engine as _;
 use ed25519_dalek::{Signer as _, SigningKey as DalekSigningKey};
 use serde_json::json;
 
 use crate::crypto::{decode_base58, to_base64};
 use crate::error::{Error, PaymentChallenge, Result};
-use crate::signer::Signer;
-use crate::x402::{build_x402_payment_map, X402PaymentAuthorizationOptions, X402PaymentMap};
+use crate::x402::X402_PAYMENT_HEADER;
 
 /// Canonical mainnet Solana network id (the `solana:<genesis>` form).
 pub const SOLANA_MAINNET_NETWORK: &str = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
@@ -96,8 +95,8 @@ pub struct PayerSignedDelegatedTxOptions {
 /// facilitator as fee payer (account 0) and the agent as the transfer authority
 /// (a read-only second signer). Only the agent signature is filled; the
 /// fee-payer signature slot is left zeroed for the facilitator to co-sign and
-/// broadcast at settle time. Returns the base64 wire transaction to attach as
-/// the x402 payment's `metadata.delegatedTx`.
+/// broadcast at settle time. Returns the base64 wire transaction to carry in the
+/// standard x402 `PaymentPayload` envelope's `payload.transaction`.
 ///
 /// The payee's destination token account must already exist — the exact scheme
 /// forbids ATA creation in the payment transaction.
@@ -157,19 +156,43 @@ pub async fn build_payer_signed_delegated_tx(
     Ok(to_base64(&wire))
 }
 
-/// The payment requirements parsed from a 402 challenge, used to fold a
-/// delegated transaction into a complete x402 payment map.
-#[derive(Debug, Clone, Default)]
-pub struct DelegatedPaymentRequirements {
-    pub network: String,
-    pub asset: String,
-    pub amount: String,
-    pub to: String,
-    pub metadata: Option<HashMap<String, String>>,
+/// Build the standard x402 `PaymentPayload` envelope (`x402Version` 2) for a
+/// sponsored SPL transfer. The partially-signed transaction travels in
+/// `payload.transaction`; the fee payer is advertised in `accepted.extra.feePayer`.
+/// `asset` is the on-chain SPL mint (base58), not a symbol.
+pub fn build_delegated_x402_envelope(
+    network: &str,
+    amount: &str,
+    asset_mint: &str,
+    pay_to: &str,
+    fee_payer: &str,
+    transaction: &str,
+) -> serde_json::Value {
+    json!({
+        "x402Version": 2,
+        "accepted": {
+            "scheme": "exact",
+            "network": network,
+            "amount": amount,
+            "asset": asset_mint,
+            "payTo": pay_to,
+            "maxTimeoutSeconds": 60,
+            "extra": { "feePayer": fee_payer },
+        },
+        "payload": { "transaction": transaction },
+    })
 }
 
-/// Options for [`build_delegated_x402_payment_map`].
-pub struct DelegatedX402PaymentMapOptions {
+/// Encode a standard x402 `PaymentPayload` envelope as the
+/// [`X402_PAYMENT_HEADER`] (`PAYMENT-SIGNATURE`) header value: standard base64
+/// (with padding) of the UTF-8 JSON.
+pub fn encode_delegated_x402_payment_header(envelope: &serde_json::Value) -> String {
+    let raw = serde_json::to_vec(envelope).expect("envelope serialization cannot fail");
+    base64::engine::general_purpose::STANDARD.encode(raw)
+}
+
+/// Options for [`build_delegated_x402_payment_header`].
+pub struct DelegatedX402PaymentHeaderOptions {
     /// The facilitator's fee-payer pubkey (the 402 challenge `metadata.feePayer`).
     pub fee_payer: String,
     /// The SPL mint to transfer.
@@ -184,26 +207,29 @@ pub struct DelegatedX402PaymentMapOptions {
     pub compute_unit_price_micro_lamports: Option<u64>,
     pub recent_blockhash: Option<String>,
     pub rpc: Option<RpcRequest>,
-    /// The payment requirements from the 402 challenge.
-    pub payment: DelegatedPaymentRequirements,
-    /// The payer wallet address recorded on the authorization (defaults to the
-    /// signer's agent id).
-    pub from: Option<String>,
+    /// The x402 network id (`solana:<genesis>`).
+    pub network: String,
+    /// The SPL mint advertised as the envelope `asset` (defaults to `mint`).
+    pub asset: Option<String>,
+    /// Amount in base units (string).
+    pub amount: String,
+    /// The recipient (`payTo`).
+    pub to: String,
 }
 
 /// Convenience wrapper: builds the agent-signed facilitator transfer and folds
-/// it into a complete x402 payment map (with the wire transaction under
-/// `metadata.delegatedTx`), ready to resubmit to the paid endpoint. The backend
-/// routes any payment carrying `metadata.delegatedTx` to the facilitator.
-pub async fn build_delegated_x402_payment_map(
-    signer: &dyn Signer,
-    options: DelegatedX402PaymentMapOptions,
-) -> Result<X402PaymentMap> {
-    let wire = build_payer_signed_delegated_tx(PayerSignedDelegatedTxOptions {
-        fee_payer: options.fee_payer,
-        payee: options.payment.to.clone(),
-        amount: options.payment.amount.clone(),
-        mint: options.mint,
+/// it into the standard x402 `PaymentPayload` envelope, returning the
+/// `(header_name, header_value)` pair to attach to the paid endpoint POST. The
+/// backend reads the standard `PAYMENT-SIGNATURE` header and routes the
+/// transaction to the facilitator; no body `payment` map is sent.
+pub async fn build_delegated_x402_payment_header(
+    options: DelegatedX402PaymentHeaderOptions,
+) -> Result<(String, String)> {
+    let transaction = build_payer_signed_delegated_tx(PayerSignedDelegatedTxOptions {
+        fee_payer: options.fee_payer.clone(),
+        payee: options.to.clone(),
+        amount: options.amount.clone(),
+        mint: options.mint.clone(),
         decimals: options.decimals,
         secret_key: options.secret_key,
         source_token_account: options.source_token_account,
@@ -215,22 +241,19 @@ pub async fn build_delegated_x402_payment_map(
     })
     .await?;
 
-    let mut metadata = options.payment.metadata.unwrap_or_default();
-    metadata.insert("delegatedTx".to_string(), wire);
-
-    build_x402_payment_map(
-        signer,
-        X402PaymentAuthorizationOptions {
-            network: options.payment.network,
-            asset: options.payment.asset,
-            amount: options.payment.amount,
-            to: options.payment.to,
-            from: options.from,
-            metadata: Some(metadata),
-            ..Default::default()
-        },
-    )
-    .await
+    let asset = options.asset.unwrap_or_else(|| options.mint.clone());
+    let envelope = build_delegated_x402_envelope(
+        &options.network,
+        &options.amount,
+        &asset,
+        &options.to,
+        &options.fee_payer,
+        &transaction,
+    );
+    Ok((
+        X402_PAYMENT_HEADER.to_string(),
+        encode_delegated_x402_payment_header(&envelope),
+    ))
 }
 
 /// A direct reqwest-backed [`RpcRequest`] against a Solana JSON-RPC URL. Mirrors
@@ -521,9 +544,10 @@ fn normalized_amount(amount: &str) -> Result<u64> {
     Ok(value)
 }
 
-/// Options bridging a parsed 402 [`PaymentChallenge`] to a delegated payment
-/// map: only the SPL transfer secret + RPC transport are needed, since the fee
-/// payer, amount, recipient, and asset come from the challenge.
+/// Options bridging a parsed 402 [`PaymentChallenge`] to the standard x402
+/// `PAYMENT-SIGNATURE` header: only the SPL transfer secret + RPC transport are
+/// needed, since the fee payer, amount, recipient, asset, and network come from
+/// the challenge.
 pub struct ChallengeDelegatedPaymentOptions {
     /// The agent's Solana secret key (32-byte seed or 64-byte key).
     pub secret_key: Vec<u8>,
@@ -538,21 +562,19 @@ pub struct ChallengeDelegatedPaymentOptions {
     pub mint: Option<String>,
     pub source_token_account: Option<String>,
     pub destination_token_account: Option<String>,
-    /// The payer wallet address recorded on the authorization (defaults to the
-    /// signer's agent id).
-    pub from: Option<String>,
 }
 
-/// Build a delegated (gasless facilitator) x402 payment map from a parsed 402
-/// [`PaymentChallenge`]. Reads the facilitator fee payer from
-/// `metadata.feePayer`, the recipient/amount/asset/network from the challenge,
-/// and signs the SPL `TransferChecked` as the transfer authority. Shared by the
-/// bounty + registry Solana-payment flows.
-pub async fn build_delegated_payment_from_challenge(
-    signer: &dyn Signer,
+/// Build the standard x402 `PAYMENT-SIGNATURE` header `(name, value)` from a
+/// parsed 402 [`PaymentChallenge`]. Reads the facilitator fee payer from
+/// `metadata.feePayer` (equivalently `accepts[].extra.feePayer`), and the
+/// recipient/amount/asset(mint)/network from the challenge; signs the SPL
+/// `TransferChecked` as the transfer authority and wraps the partially-signed
+/// transaction in the standard `PaymentPayload` envelope. No body `payment` map
+/// is produced. Shared by the bounty + registry Solana-payment flows.
+pub async fn build_delegated_payment_header_from_challenge(
     challenge: &PaymentChallenge,
     options: ChallengeDelegatedPaymentOptions,
-) -> Result<X402PaymentMap> {
+) -> Result<(String, String)> {
     let metadata = challenge.metadata.clone().unwrap_or_default();
     let fee_payer = metadata.get("feePayer").cloned().ok_or_else(|| {
         Error::InvalidArgument(
@@ -567,41 +589,39 @@ pub async fn build_delegated_payment_from_challenge(
     let to = challenge.to.clone().ok_or_else(|| {
         Error::InvalidArgument("402 challenge is missing a recipient".to_string())
     })?;
-    let asset = challenge.asset.clone().unwrap_or_default();
     let network = challenge
         .network
         .clone()
         .unwrap_or_else(|| SOLANA_MAINNET_NETWORK.to_string());
-    let mint = options.mint.clone().unwrap_or_else(|| asset.clone());
+    let mint = options
+        .mint
+        .clone()
+        .or_else(|| challenge.asset.clone())
+        .unwrap_or_default();
 
     let rpc = options
         .rpc
         .clone()
-        .or_else(|| options.rpc_url.clone().map(|url| default_rpc_request(url)));
+        .or_else(|| options.rpc_url.clone().map(default_rpc_request));
 
-    build_delegated_x402_payment_map(
-        signer,
-        DelegatedX402PaymentMapOptions {
-            fee_payer,
-            mint,
-            decimals: options.decimals.unwrap_or(6),
-            secret_key: options.secret_key,
-            source_token_account: options.source_token_account,
-            destination_token_account: options.destination_token_account,
-            compute_unit_limit: None,
-            compute_unit_price_micro_lamports: None,
-            recent_blockhash: None,
-            rpc,
-            payment: DelegatedPaymentRequirements {
-                network,
-                asset,
-                amount,
-                to,
-                metadata: Some(metadata),
-            },
-            from: options.from,
-        },
-    )
+    build_delegated_x402_payment_header(DelegatedX402PaymentHeaderOptions {
+        fee_payer,
+        mint: mint.clone(),
+        decimals: options.decimals.unwrap_or(6),
+        secret_key: options.secret_key,
+        source_token_account: options.source_token_account,
+        destination_token_account: options.destination_token_account,
+        compute_unit_limit: None,
+        compute_unit_price_micro_lamports: None,
+        recent_blockhash: None,
+        rpc,
+        network,
+        // The envelope `asset` must be the on-chain SPL mint used to build the
+        // tx, not a symbol.
+        asset: Some(mint),
+        amount,
+        to,
+    })
     .await
 }
 
@@ -656,44 +676,82 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn delegated_payment_map_carries_delegated_tx_and_decodes() {
+    async fn delegated_payment_header_carries_standard_envelope_and_decodes() {
         let signer = test_signer();
         let fee_payer = "GThUX1Atko4tqhN2NaiTazWSeFWMuiUvfFnyJyUghFMJ"; // arbitrary
         let payee = "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM";
         let mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
-        // A valid base58 32-byte blockhash (reuse a pubkey-shaped value).
+        // A valid base58 32-byte blockhash (reuse a pubkey-shaped value),
+        // served by a stub RPC so the build stays offline + deterministic.
         let blockhash = "11111111111111111111111111111111";
+        let rpc: RpcRequest = Arc::new(move |method: String, _params| {
+            Box::pin(async move {
+                assert_eq!(method, "getLatestBlockhash");
+                Ok(json!({ "value": { "blockhash": blockhash } }))
+            })
+                as Pin<Box<dyn Future<Output = Result<serde_json::Value>> + Send>>
+        });
 
-        let map = build_delegated_x402_payment_map(
-            &signer,
-            DelegatedX402PaymentMapOptions {
-                fee_payer: fee_payer.to_string(),
-                mint: mint.to_string(),
-                decimals: 6,
+        // Build the challenge → standard PAYMENT-SIGNATURE header, mirroring the
+        // register/bounty flows. The fee payer is read from metadata.feePayer.
+        let mut metadata = std::collections::HashMap::new();
+        metadata.insert("feePayer".to_string(), fee_payer.to_string());
+        let challenge = PaymentChallenge {
+            network: Some(SOLANA_MAINNET_NETWORK.to_string()),
+            asset: Some(mint.to_string()),
+            amount: Some("1000000".to_string()),
+            to: Some(payee.to_string()),
+            metadata: Some(metadata),
+            ..Default::default()
+        };
+
+        let (header_name, header_value) = build_delegated_payment_header_from_challenge(
+            &challenge,
+            ChallengeDelegatedPaymentOptions {
                 secret_key: signer.seed().to_vec(),
+                decimals: Some(6),
+                rpc: Some(rpc),
+                rpc_url: None,
+                mint: None,
                 source_token_account: None,
                 destination_token_account: None,
-                compute_unit_limit: None,
-                compute_unit_price_micro_lamports: None,
-                recent_blockhash: Some(blockhash.to_string()),
-                rpc: None,
-                payment: DelegatedPaymentRequirements {
-                    network: SOLANA_MAINNET_NETWORK.to_string(),
-                    asset: mint.to_string(),
-                    amount: "1000000".to_string(),
-                    to: payee.to_string(),
-                    metadata: None,
-                },
-                from: None,
             },
         )
         .await
-        .expect("payment map");
+        .expect("payment header");
 
-        // The wire tx travels under metadata.delegatedTx.
-        let wire_b64 = map
-            .get("metadata.delegatedTx")
-            .expect("delegatedTx present");
+        // Submitted via the standard x402 PAYMENT-SIGNATURE header.
+        assert_eq!(header_name, X402_PAYMENT_HEADER);
+        assert_eq!(header_name, "PAYMENT-SIGNATURE");
+
+        // The header is standard padded base64 of the UTF-8 JSON envelope.
+        let envelope_bytes = base64::engine::general_purpose::STANDARD
+            .decode(&header_value)
+            .expect("standard padded base64");
+        let envelope: serde_json::Value =
+            serde_json::from_slice(&envelope_bytes).expect("utf-8 json envelope");
+
+        // The standard PaymentPayload envelope (x402Version 2, exact scheme).
+        assert_eq!(envelope["x402Version"], 2);
+        assert_eq!(envelope["accepted"]["scheme"], "exact");
+        assert_eq!(envelope["accepted"]["network"], SOLANA_MAINNET_NETWORK);
+        assert_eq!(envelope["accepted"]["amount"], "1000000");
+        // `asset` is the on-chain SPL mint, not a symbol.
+        assert_eq!(envelope["accepted"]["asset"], mint);
+        assert_eq!(envelope["accepted"]["payTo"], payee);
+        assert_eq!(envelope["accepted"]["maxTimeoutSeconds"], 60);
+        assert_eq!(envelope["accepted"]["extra"]["feePayer"], fee_payer);
+        // No legacy metadata.delegatedTx transport anywhere in the envelope.
+        assert!(envelope.get("metadata").is_none());
+        assert!(envelope["accepted"]["extra"]
+            .get("delegatedTx")
+            .is_none());
+
+        // The partially-signed tx travels in payload.transaction.
+        let wire_b64 = envelope["payload"]["transaction"]
+            .as_str()
+            .expect("payload.transaction string");
+        assert!(!wire_b64.is_empty(), "payload.transaction must be non-empty");
         let wire = from_base64(wire_b64).expect("base64");
 
         // Wire = shortvec(signatures=2) ++ feePayerSig[64](zero) ++ authoritySig[64] ++ message.
@@ -750,13 +808,5 @@ mod tests {
         assert_eq!(&message[after_acct2..after_acct2 + 4], &[2, 4, 3, 1]);
         let (_data_len2, data2_start) = read_short_vec(message, after_acct2 + 4);
         assert_eq!(message[data2_start], 12);
-
-        // The map echoes the x402 fields.
-        assert_eq!(
-            map.get("network").map(String::as_str),
-            Some(SOLANA_MAINNET_NETWORK)
-        );
-        assert_eq!(map.get("amount").map(String::as_str), Some("1000000"));
-        assert_eq!(map.get("to").map(String::as_str), Some(payee));
     }
 }

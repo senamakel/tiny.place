@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import json
 import re
 from typing import Any, Awaitable, Callable
 
@@ -290,27 +291,72 @@ async def build_payer_signed_delegated_tx(
     return base64.b64encode(wire).decode("ascii")
 
 
-async def build_delegated_x402_payment_map(
+def build_delegated_x402_envelope(
     *,
-    signer: Signer,
+    network: str,
+    amount: str,
+    asset_mint: str,
+    pay_to: str,
+    fee_payer: str,
+    transaction: str,
+    max_timeout_seconds: int = 60,
+) -> dict[str, Any]:
+    """Build the standard x402 v2 ``PaymentPayload`` envelope for a sponsored
+    (gasless SPL) Solana ``exact`` payment.
+
+    The partially-signed wire transaction travels in ``payload.transaction``; the
+    facilitator fee payer is advertised in ``accepted.extra.feePayer``. ``asset``
+    is the on-chain SPL **mint** (base58), not a symbol. This is the standard
+    envelope the backend reads from the ``PAYMENT-SIGNATURE`` header — there is no
+    proprietary ``metadata.delegatedTx``.
+    """
+    return {
+        "x402Version": 2,
+        "accepted": {
+            "scheme": "exact",
+            "network": str(network),
+            "amount": str(amount),
+            "asset": str(asset_mint),
+            "payTo": str(pay_to),
+            "maxTimeoutSeconds": max_timeout_seconds,
+            "extra": {"feePayer": str(fee_payer)},
+        },
+        "payload": {"transaction": str(transaction)},
+    }
+
+
+def encode_delegated_x402_header(envelope: dict[str, Any]) -> str:
+    """Encode a sponsored-payment envelope as the ``PAYMENT-SIGNATURE`` header
+    value: standard base64 (with padding) of the UTF-8 JSON of the envelope.
+    """
+    raw = json.dumps(envelope, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return base64.b64encode(raw).decode("ascii")
+
+
+async def build_delegated_x402_payment_header(
+    *,
     rpc_url: str,
     fee_payer: str,
     payment: dict[str, Any],
     mint: str,
     decimals: int,
     secret_key: str | bytes,
-    from_address: str | None = None,
     source_token_account: str | None = None,
     destination_token_account: str | None = None,
     compute_unit_limit: int = FACILITATOR_COMPUTE_UNIT_LIMIT,
     compute_unit_price_micro_lamports: str = FACILITATOR_COMPUTE_UNIT_PRICE_MICRO_LAMPORTS,
     rpc_request: RpcRequest | None = None,
-) -> dict[str, str]:
-    """Build the agent-signed facilitator transfer and fold it into a complete
-    x402 payment map (with the wire transaction under ``metadata.delegatedTx``),
-    ready to resubmit to the paid endpoint. The backend routes any payment carrying
-    ``metadata.delegatedTx`` to the facilitator. Mirrors the TS SDK's
-    ``buildDelegatedX402PaymentMap``.
+) -> str:
+    """Build the agent-signed facilitator transfer and wrap it into the standard
+    x402 v2 ``PAYMENT-SIGNATURE`` header value.
+
+    Given a parsed 402 ``payment`` challenge (``network``/``asset``/``amount``/
+    ``to``) plus the facilitator ``fee_payer``, the resolved SPL ``mint`` and the
+    payer's ``secret_key``/``rpc_url``, this returns the base64-encoded standard
+    envelope to submit in the :data:`~tinyplace.x402.X402_PAYMENT_HEADER` header,
+    with **no** ``payment`` field in the request body. Replaces the proprietary
+    ``build_delegated_x402_payment_map`` (which carried the tx under
+    ``metadata.delegatedTx``).
     """
     wire = await build_payer_signed_delegated_tx(
         rpc_url=rpc_url,
@@ -326,20 +372,16 @@ async def build_delegated_x402_payment_map(
         compute_unit_price_micro_lamports=compute_unit_price_micro_lamports,
         rpc_request=rpc_request,
     )
-    return await build_x402_payment_map(
-        signer,
-        {
-            "network": payment["network"],
-            "asset": payment["asset"],
-            "amount": payment["amount"],
-            "to": payment["to"],
-            "from": from_address,
-            "metadata": {
-                **(payment.get("metadata") or {}),
-                "delegatedTx": wire,
-            },
-        },
+    envelope = build_delegated_x402_envelope(
+        network=str(payment["network"]),
+        amount=str(payment["amount"]),
+        # The envelope advertises the on-chain SPL mint, not the challenge symbol.
+        asset_mint=mint,
+        pay_to=str(payment["to"]),
+        fee_payer=str(fee_payer),
+        transaction=wire,
     )
+    return encode_delegated_x402_header(envelope)
 
 
 def _two_signer_facilitator_message(
