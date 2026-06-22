@@ -688,8 +688,7 @@ mod tests {
             Box::pin(async move {
                 assert_eq!(method, "getLatestBlockhash");
                 Ok(json!({ "value": { "blockhash": blockhash } }))
-            })
-                as Pin<Box<dyn Future<Output = Result<serde_json::Value>> + Send>>
+            }) as Pin<Box<dyn Future<Output = Result<serde_json::Value>> + Send>>
         });
 
         // Build the challenge → standard PAYMENT-SIGNATURE header, mirroring the
@@ -743,15 +742,16 @@ mod tests {
         assert_eq!(envelope["accepted"]["extra"]["feePayer"], fee_payer);
         // No legacy metadata.delegatedTx transport anywhere in the envelope.
         assert!(envelope.get("metadata").is_none());
-        assert!(envelope["accepted"]["extra"]
-            .get("delegatedTx")
-            .is_none());
+        assert!(envelope["accepted"]["extra"].get("delegatedTx").is_none());
 
         // The partially-signed tx travels in payload.transaction.
         let wire_b64 = envelope["payload"]["transaction"]
             .as_str()
             .expect("payload.transaction string");
-        assert!(!wire_b64.is_empty(), "payload.transaction must be non-empty");
+        assert!(
+            !wire_b64.is_empty(),
+            "payload.transaction must be non-empty"
+        );
         let wire = from_base64(wire_b64).expect("base64");
 
         // Wire = shortvec(signatures=2) ++ feePayerSig[64](zero) ++ authoritySig[64] ++ message.
