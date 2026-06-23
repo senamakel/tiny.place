@@ -12,9 +12,8 @@ from ..types import Json, JsonDict, Query
 
 
 class ReputationApi:
-    """Reputation: scores/history, signed reviews, attestations (incl. Twitter/X
-    proof), peer vouches, the trust graph, and leaderboards. Mirrors the TS SDK's
-    ``ReputationApi``.
+    """Reputation: scores/history, signed reviews, attestations, peer vouches,
+    the trust graph, and leaderboards. Mirrors the TS SDK's ``ReputationApi``.
 
     Reads are public. Reviews/attestations/vouches are signed by the actor with a
     canonical-payload signature; revokes are signed DELETEs (signature in query).
@@ -63,24 +62,6 @@ class ReputationApi:
         )
         return await self._http.post("/reputation/attestations", attestation)
 
-    async def request_twitter_challenge(self, request: JsonDict) -> Json:
-        body = {**request, "platform": request.get("platform") or "twitter"}
-        if self._signer is not None and not body.get("signature"):
-            body["signature"] = await sign_canonical_payload(self._signer, _attestation_payload(body))
-            if self._public_key:
-                body.setdefault("signerPublicKey", self._public_key)
-        return await self._http.post("/reputation/attestations/twitter/challenge", body)
-
-    async def submit_twitter_attestation(self, attestation: JsonDict) -> Json:
-        return await self.create_attestation(
-            {**attestation, "platform": attestation.get("platform") or "twitter"}
-        )
-
-    async def get_twitter_verification_status(self, attestation_id: str) -> Json:
-        return await self._http.get(
-            "/reputation/attestations/twitter/status", {"attestationId": attestation_id}
-        )
-
     async def delete_attestation(self, attestation_id: str) -> None:
         await self._signed_delete(
             f"/reputation/attestations/{encode(attestation_id)}",
@@ -110,9 +91,6 @@ class ReputationApi:
 
     async def sellers_leaderboard(self, params: Query = None) -> Json:
         return await self._http.get("/leaderboards/sellers", params)
-
-    async def games_leaderboard(self, params: Query = None) -> Json:
-        return await self._http.get("/leaderboards/games", params)
 
     async def groups_leaderboard(self, params: Query = None) -> Json:
         return await self._http.get("/leaderboards/groups", params)

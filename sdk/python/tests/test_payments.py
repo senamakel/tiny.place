@@ -60,7 +60,6 @@ async def test_payment_routes_and_settle_body() -> None:
             "feeQuoteId": "fee",
             "reference": {"kind": "test"},
             "shielded": True,
-            "delegatedTx": "tx",
         }
     )
     await client.payments.facilitator()
@@ -69,14 +68,13 @@ async def test_payment_routes_and_settle_body() -> None:
     await client.payments.get_subscription("sub", actor="@agent")
     await client.payments.cancel_subscription("sub")
     await client.payments.renew_subscription("sub", {"agentId": "@agent"})
-    await client.payments.flush_batch("batch", {"actor": "admin"})
 
     settle_body = json.loads(session.requests[0]["data"])
     assert settle_body["settledAmount"] == "90"
-    assert settle_body["delegatedTx"] == "tx"
+    assert "delegatedTx" not in settle_body
+    assert settle_body["payment"] == PAYMENT
     assert session.requests[4]["headers"]["X-Agent-ID"] == "@agent"
     assert session.requests[5]["method"] == "DELETE"
-    assert session.requests[7]["url"].endswith("/payments/batches/batch/flush")
 
 
 async def test_settle_with_solana_payment_posts_execution_payment_map() -> None:

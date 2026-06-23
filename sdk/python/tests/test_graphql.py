@@ -39,31 +39,24 @@ async def test_home_feed_signs_as_agent_and_unwraps() -> None:
 
 
 async def test_public_query_has_no_agent_header_and_unwraps() -> None:
-    jobs = {"count": 0, "jobs": []}
-    session = FakeSession([_gql_ok({"jobs": jobs})])
-    out = await _client(session).graphql.jobs(status="open", limit=5)
+    bounties = [{"bountyId": "b1"}]
+    session = FakeSession([_gql_ok({"bounties": bounties})])
+    out = await _client(session).graphql.bounties(status="open", limit=5)
 
-    assert out == jobs
+    assert out == bounties
     request = session.requests[0]
     assert request["url"].endswith("/graphql")
     assert "X-Agent-ID" not in request["headers"]
 
 
 async def test_variables_are_passed_through() -> None:
-    session = FakeSession([_gql_ok({"products": {"count": 0, "products": []}})])
-    await _client(session).graphql.products(
-        query="bot", category="ai", tags=["x", "y"], min_price="1", limit=3, offset=6
-    )
+    session = FakeSession([_gql_ok({"bounties": []})])
+    await _client(session).graphql.bounties(status="open", creator="@a", limit=3, offset=6)
 
     body = json.loads(session.requests[0]["data"])
     assert body["variables"] == {
-        "query": "bot",
-        "category": "ai",
-        "tags": ["x", "y"],
-        "seller": None,
-        "minPrice": "1",
-        "maxPrice": None,
-        "sortBy": None,
+        "status": "open",
+        "creator": "@a",
         "limit": 3,
         "offset": 6,
     }
@@ -80,21 +73,19 @@ async def test_graphql_errors_raise_sdk_error() -> None:
 async def test_unwraps_inner_objects_for_single_lookups() -> None:
     session = FakeSession(
         [
-            _gql_ok({"job": {"jobId": "j1"}}),
-            _gql_ok({"product": {"productId": "pr1"}}),
+            _gql_ok({"ledgerTransaction": {"txId": "t1"}}),
             _gql_ok({"identity": {"username": "@alice"}}),
             _gql_ok({"bounty": {"bountyId": "b1"}}),
         ]
     )
     client = _client(session)
-    assert await client.graphql.job("j1") == {"jobId": "j1"}
-    assert await client.graphql.product("pr1") == {"productId": "pr1"}
+    assert await client.graphql.ledger_transaction("t1") == {"txId": "t1"}
     assert await client.graphql.identity("@alice") == {"username": "@alice"}
     assert await client.graphql.bounty("b1") == {"bountyId": "b1"}
 
     # The id variable is threaded into each query.
-    assert json.loads(client_request(session, 0))["variables"] == {"id": "j1"}
-    assert json.loads(client_request(session, 2))["variables"] == {"username": "@alice"}
+    assert json.loads(client_request(session, 0))["variables"] == {"id": "t1"}
+    assert json.loads(client_request(session, 1))["variables"] == {"username": "@alice"}
 
 
 async def test_list_and_detail_methods_unwrap_their_keys() -> None:
@@ -108,11 +99,6 @@ async def test_list_and_detail_methods_unwrap_their_keys() -> None:
             _gql_ok({"user": {"cryptoId": "u1"}}),
             _gql_ok({"identities": [{"username": "@a"}]}),
             _gql_ok({"agentCard": {"agentId": "a1"}}),
-            _gql_ok({"identityListings": {"count": 0, "listings": []}}),
-            _gql_ok({"identityListing": {"listingId": "l1"}}),
-            _gql_ok({"identityBids": {"count": 0, "bids": []}}),
-            _gql_ok({"identityOffers": {"count": 0, "offers": []}}),
-            _gql_ok({"identitySales": {"count": 0, "sales": []}}),
             _gql_ok({"ledgerTransactions": {"count": 0, "transactions": []}}),
             _gql_ok({"ledgerTransaction": {"txId": "t1"}}),
         ]
@@ -126,11 +112,6 @@ async def test_list_and_detail_methods_unwrap_their_keys() -> None:
     assert await g.user("u1") == {"cryptoId": "u1"}
     assert await g.identities("u1") == [{"username": "@a"}]
     assert await g.agent_card("a1") == {"agentId": "a1"}
-    assert await g.identity_listings(query="x", tags=["t"]) == {"count": 0, "listings": []}
-    assert await g.identity_listing("l1", bid_limit=2) == {"listingId": "l1"}
-    assert await g.identity_bids("l1", limit=2) == {"count": 0, "bids": []}
-    assert await g.identity_offers(buyer="@b", status="open") == {"count": 0, "offers": []}
-    assert await g.identity_sales("@a", limit=2) == {"count": 0, "sales": []}
     assert await g.ledger_transactions(agent="@a", from_="@a", asset="USDC") == {
         "count": 0,
         "transactions": [],

@@ -53,10 +53,10 @@ async def test_graphql_object_returns_none_when_missing() -> None:
 
 @pytest.mark.asyncio
 async def test_graphql_envelope_returns_none_when_missing() -> None:
-    # An envelope field (`{count, jobs}`) returns None rather than raising when
-    # the backend omits it.
+    # An envelope field (`{count, transactions}`) returns None rather than
+    # raising when the backend omits it.
     client = _client({"data": {}})
-    assert await client.graphql.jobs() is None
+    assert await client.graphql.ledger_transactions() is None
 
 
 def test_safe_accessors_coerce() -> None:

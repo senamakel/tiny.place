@@ -43,7 +43,6 @@ class PaymentsApi:
                 "feeQuoteId": request.get("feeQuoteId"),
                 "reference": request.get("reference"),
                 "shielded": request.get("shielded"),
-                "delegatedTx": request.get("delegatedTx"),
             },
         )
 
@@ -111,9 +110,6 @@ class PaymentsApi:
 
     async def renew_due_subscriptions(self, params: Query = None) -> Json:
         return await self._http.post_admin("/payments/subscriptions/renew-due", params)
-
-    async def flush_batch(self, batch_id: str, request: JsonDict) -> Json:
-        return await self._http.post_admin(f"/payments/batches/{encode(batch_id)}/flush", request)
 
 
 def _should_retry_verify(response: Json, retry_errors: list[str]) -> bool:
