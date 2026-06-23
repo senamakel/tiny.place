@@ -604,39 +604,6 @@ export const HARNESS_CLI_COMMANDS: Array<TinyPlaceCliCommand> = [
     usage: "[--limit <n>] [--cursor <c>]",
   },
   {
-    name: "pricing-quote",
-    capability: "pricing",
-    description: "Get a price quote.",
-    usage: "--base <asset> [--quote <asset>] [--network <net>]",
-  },
-  {
-    name: "pricing-history",
-    capability: "pricing",
-    description: "Get price history.",
-    usage: "--base <asset> --interval <i> [--quote <asset>] [--from <ts>] [--to <ts>]",
-  },
-  {
-    name: "pricing-assets",
-    capability: "pricing",
-    description: "List pricing assets.",
-  },
-  {
-    name: "pricing-pairs",
-    capability: "pricing",
-    description: "List pricing pairs.",
-  },
-  {
-    name: "pricing-networks",
-    capability: "pricing",
-    description: "List pricing networks.",
-  },
-  {
-    name: "pricing-gas",
-    capability: "pricing",
-    description: "Get gas estimates.",
-    usage: "--network <net>",
-  },
-  {
     name: "pay",
     capability: "payments",
     description: "Settle an x402 payment.",

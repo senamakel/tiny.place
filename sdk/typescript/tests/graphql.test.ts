@@ -106,72 +106,6 @@ describe("GraphQLApi", () => {
     );
   });
 
-  it("unwraps paginated product results while sending marketplace filters", async () => {
-    let body: unknown;
-    const client = new TinyPlaceClient({
-      baseUrl: "https://example.test",
-      fetch: async (_input, init) => {
-        body = JSON.parse((init?.body as string) ?? "{}");
-        return Response.json({
-          data: {
-            products: {
-              count: 1,
-              products: [
-                {
-                  productId: "prod-1",
-                  name: "Dataset",
-                  description: "Clean training data",
-                  category: "dataset",
-                  tags: ["vision"],
-                  price: { amount: "1000", asset: "USDC", network: "solana" },
-                  deliveryMethod: "download",
-                  status: "active",
-                  salesCount: 2,
-                  rating: 4.5,
-                  createdAt: "2026-01-01T00:00:00Z",
-                  updatedAt: "2026-01-01T00:00:00Z",
-                  seller: {
-                    handle: "@seller",
-                    cryptoId: "seller-wallet",
-                    displayName: "Seller",
-                    verified: true,
-                  },
-                },
-              ],
-            },
-          },
-        });
-      },
-    });
-
-    const products = await client.graphql.products({
-      query: "data",
-      category: "dataset",
-      tags: ["vision"],
-      seller: "@seller",
-      minPrice: "1",
-      maxPrice: "10",
-      sortBy: "newest",
-      limit: 20,
-      offset: 10,
-    });
-
-    expect(products).toHaveLength(1);
-    expect(products[0]!.seller.handle).toBe("@seller");
-    expect((body as { query: string }).query).toContain("count");
-    expect((body as { variables: Record<string, unknown> }).variables).toMatchObject({
-      query: "data",
-      category: "dataset",
-      tags: ["vision"],
-      seller: "@seller",
-      minPrice: "1",
-      maxPrice: "10",
-      sortBy: "newest",
-      limit: 20,
-      offset: 10,
-    });
-  });
-
   it("queries the agent directory with viewer follow status under agent auth", async () => {
     const signer = await LocalSigner.fromSeed(new Uint8Array(32).fill(7));
     let body: unknown;
@@ -222,7 +156,7 @@ describe("GraphQLApi", () => {
     });
   });
 
-  it("exposes paginated GraphQL reads for posts, identities, jobs, and ledger", async () => {
+  it("exposes paginated GraphQL reads for posts and ledger", async () => {
     const operations: Array<{ query: string; variables: Record<string, unknown> }> = [];
     const client = new TinyPlaceClient({
       baseUrl: "https://example.test",
@@ -234,14 +168,6 @@ describe("GraphQLApi", () => {
         operations.push(payload);
         if (payload.query.includes("query UserPosts")) {
           return Response.json({ data: { posts: { count: 0, posts: [] } } });
-        }
-        if (payload.query.includes("query IdentityListings")) {
-          return Response.json({
-            data: { identityListings: { count: 0, listings: [] } },
-          });
-        }
-        if (payload.query.includes("query Jobs")) {
-          return Response.json({ data: { jobs: { count: 0, jobs: [] } } });
         }
         if (payload.query.includes("query LedgerTransactions")) {
           return Response.json({
@@ -257,20 +183,6 @@ describe("GraphQLApi", () => {
       before: 100,
       viewer: "@bob",
     });
-    await client.graphql.identityListings({
-      q: "ali",
-      tags: ["short"],
-      length: 5,
-      limit: 10,
-      offset: 5,
-    });
-    await client.graphql.jobs({
-      client: "@alice",
-      status: "open",
-      category: "research",
-      skill: "analysis",
-      limit: 10,
-    });
     await client.graphql.ledgerTransactions({
       agent: "@alice",
       type: "PAYMENT",
@@ -282,7 +194,7 @@ describe("GraphQLApi", () => {
       offset: 0,
     });
 
-    expect(operations).toHaveLength(4);
+    expect(operations).toHaveLength(2);
     expect(operations[0]!.variables).toMatchObject({
       handle: "@alice",
       limit: 25,
@@ -290,20 +202,6 @@ describe("GraphQLApi", () => {
       viewer: "@bob",
     });
     expect(operations[1]!.variables).toMatchObject({
-      query: "ali",
-      tags: ["short"],
-      length: 5,
-      limit: 10,
-      offset: 5,
-    });
-    expect(operations[2]!.variables).toMatchObject({
-      client: "@alice",
-      status: "open",
-      category: "research",
-      skill: "analysis",
-      limit: 10,
-    });
-    expect(operations[3]!.variables).toMatchObject({
       agent: "@alice",
       type: "PAYMENT",
       network: "solana",

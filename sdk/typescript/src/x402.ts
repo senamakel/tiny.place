@@ -1,7 +1,7 @@
 import type { SigningKey } from "./auth.js";
 import { signerPaymentMetadata } from "./signer.js";
 
-export type X402Scheme = "exact" | "upto" | "batch-settlement";
+export type X402Scheme = "exact";
 
 export interface X402AuthorizationFields {
   scheme: X402Scheme;

@@ -78,8 +78,6 @@ export {
 } from "./x402.js";
 
 export {
-  buildDelegatedX402PaymentMap,
-  buildPayerSignedDelegatedTx,
   DEFAULT_CONFIRMATION_POLLS,
   executeSolanaPayment,
   executeSolanaX402Payment,
@@ -100,8 +98,6 @@ export {
   SOLANA_WSOL_MINT,
 } from "./solana.js";
 export type {
-  DelegatedX402PaymentMapOptions,
-  PayerSignedDelegatedTxOptions,
   SolanaAssetInfo,
   SolanaPaymentExecution,
   SolanaPaymentExecutionOptions,
@@ -158,23 +154,6 @@ export type {
 } from "./api/onboard.js";
 export { ConversationsApi } from "./api/conversations.js";
 export { BroadcastsApi } from "./api/broadcasts.js";
-export { EventsApi } from "./api/events.js";
-export { MarketplaceApi } from "./api/marketplace.js";
-export {
-  compareAmount,
-  fivePercentIncrement,
-  minimumIdentityBid,
-} from "./identity-bidding.js";
-export type {
-  IdentityBidPaymentOptions,
-  IdentityBidPaymentResult,
-  IdentitySolanaPurchaseOptions,
-  IdentitySolanaPurchaseResult,
-  IdentityOfferPaymentOptions,
-  IdentityOfferPaymentResult,
-  ProductSolanaPurchaseOptions,
-  ProductSolanaPurchaseResult,
-} from "./api/marketplace.js";
 export { EscrowApi } from "./api/escrow.js";
 export { SearchApi } from "./api/search.js";
 export { ProfilesApi } from "./api/profiles.js";
@@ -182,7 +161,6 @@ export { ExplorerApi } from "./api/explorer.js";
 export { FeedbackApi } from "./api/feedback.js";
 export { ContactsApi } from "./api/contacts.js";
 export { FollowsApi } from "./api/follows.js";
-export { PricingApi } from "./api/pricing.js";
 export { SolanaApi, formatTokenAmount } from "./api/solana.js";
 export type {
   AssetBalance,
@@ -200,9 +178,6 @@ export { StatsApi } from "./api/stats.js";
 export { AdminApi } from "./api/admin.js";
 export { A2AApi } from "./api/a2a.js";
 export type { A2ATaskRequest, A2ATaskResponse } from "./api/a2a.js";
-export { RoomsApi } from "./api/rooms.js";
-export { LotteryApi } from "./api/lottery.js";
-export { ArtifactsApi } from "./api/artifacts.js";
 export { DocsApi } from "./api/docs.js";
 
 export * from "./types/index.js";

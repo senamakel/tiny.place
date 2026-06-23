@@ -7,8 +7,6 @@ import {
 } from "../solana.js";
 import type {
   DueRenewalResult,
-  PaymentBatchFlushRequest,
-  PaymentBatchFlushResponse,
   Subscription,
   SubscriptionCreateRequest,
   SubscriptionRenewRequest,
@@ -31,7 +29,7 @@ const DEFAULT_RETRY_ERRORS = [
 
 export interface SolanaSettlementOptions
   extends Omit<SolanaX402PaymentExecutionOptions, "payment" | "signer"> {
-  scheme?: "exact" | "upto" | "batch-settlement";
+  scheme?: "exact";
   network: string;
   asset: string;
   amount: string;
@@ -129,21 +127,19 @@ export class PaymentsApi {
   }
 
   settle(request: X402SettleRequest): Promise<X402SettleResponse> {
-    const { payment, settledAmount, feeQuoteId, reference, shielded, delegatedTx } =
-      request;
+    const { payment, settledAmount, feeQuoteId, reference, shielded } = request;
     return this.http.post<X402SettleResponse>("/payments/settle", {
       payment,
       settledAmount,
       feeQuoteId,
       reference,
       shielded,
-      delegatedTx,
     });
   }
 
   /**
-   * Fetch the facilitator's base58 account, which the client must set as the
-   * fee payer when building a delegated transfer.
+   * Fetch the facilitator's base58 account, which the client sets as the fee
+   * payer when building a payer-signed transfer.
    */
   facilitator(): Promise<{ address: string; network: string }> {
     return this.http.get<{ address: string; network: string }>(
@@ -265,16 +261,6 @@ export class PaymentsApi {
     return this.http.postAdmin<DueRenewalResult>(
       "/payments/subscriptions/renew-due",
       params,
-    );
-  }
-
-  flushBatch(
-    batchId: string,
-    request: PaymentBatchFlushRequest,
-  ): Promise<PaymentBatchFlushResponse> {
-    return this.http.postAdmin<PaymentBatchFlushResponse>(
-      `/payments/batches/${encodeURIComponent(batchId)}/flush`,
-      request,
     );
   }
 }

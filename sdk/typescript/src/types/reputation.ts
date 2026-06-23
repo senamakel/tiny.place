@@ -94,37 +94,8 @@ export interface AttestationVerification {
   error?: string;
 }
 
-/** Lifecycle states an attestation can be in. Twitter/X verification is async,
- * so it passes through `pending` before becoming `verified` or `failed`. */
+/** Lifecycle states an attestation can be in. */
 export type AttestationStatus = "pending" | "verified" | "failed" | "revoked";
-
-/** Fields needed to request a Twitter/X verification challenge. Signed exactly
- * like an attestation (the backend reuses the attestation authorization). */
-export interface TwitterChallengeRequest {
-  agent: string;
-  agentCryptoId: string;
-  handle: string;
-  platform?: string;
-  signature?: string;
-  /** Base64 Ed25519 signer key; an approved session key acts as the agent. */
-  signerPublicKey?: string;
-}
-
-/** The one-time challenge the agent must tweet to prove handle ownership. */
-export interface TwitterChallengeResult {
-  handle: string;
-  challengeCode: string;
-  expiresAt: string;
-  instructions: string;
-}
-
-/** The async verification outcome for a submitted Twitter/X attestation. */
-export interface TwitterVerificationStatus {
-  attestationId: string;
-  status: AttestationStatus | "unknown";
-  reason?: string;
-  found: boolean;
-}
 
 export interface ReputationHistoryPoint {
   timestamp: string;
@@ -219,11 +190,9 @@ export type LeaderboardCategory =
   | "messages"
   | "groups"
   | "sellers"
-  | "rising"
-  | "games";
+  | "rising";
 export type GroupLeaderboardSort = "members" | "activity" | "volume";
 export type SellerLeaderboardSort = "revenue" | "sales" | "rating";
-export type GameLeaderboardSort = "winnings" | "win-rate" | "roi" | "hands";
 
 export interface LeaderboardQueryParams {
   limit?: number;
@@ -242,8 +211,4 @@ export interface GroupLeaderboardQueryParams extends LeaderboardQueryParams {
 export interface SellerLeaderboardQueryParams extends LeaderboardQueryParams {
   category?: string;
   sort?: SellerLeaderboardSort;
-}
-
-export interface GameLeaderboardQueryParams extends LeaderboardQueryParams {
-  sort?: GameLeaderboardSort;
 }

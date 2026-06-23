@@ -17,7 +17,7 @@ import {
 import type { CliContext, Flags, JsonObject } from "./types.js";
 import { idOf, resolveAgentId, settle, summarize } from "./workflows.js";
 import type { PaymentChallenge } from "../http.js";
-import { buildDelegatedX402PaymentMap } from "../solana.js";
+import { executeSolanaX402Payment } from "../solana.js";
 import type { BountyCreateRequest, Identity } from "../types/index.js";
 import type { RegisterRequest } from "../api/registry.js";
 
@@ -378,10 +378,11 @@ export async function postBountyFlow(
 }
 
 /**
- * Creates a bounty, settling its reward through the x402 facilitator. The first
- * create surfaces the 402 funding challenge (no bounty exists until it is
- * funded); we sign a delegated SPL transfer against the facilitator's fee payer
- * and resubmit with the payment map so the bounty opens already funded.
+ * Creates a bounty, settling its reward through the standard x402 exact flow. The
+ * first create surfaces the 402 funding challenge (no bounty exists until it is
+ * funded); we self-broadcast the reward transfer from our wallet, build the
+ * standard signed `exact` payment map referencing that on-chain tx, and resubmit
+ * so the bounty opens already funded.
  */
 async function createAndFundBounty(
   ctx: CliContext,
@@ -396,40 +397,28 @@ async function createAndFundBounty(
       throw error;
     }
     const payment = challenge.payment ?? {};
-    const feePayer = payment.metadata?.feePayer;
-    if (!feePayer) {
-      throw new Error(
-        "bounty funding challenge is missing the facilitator fee payer (metadata.feePayer)",
-      );
-    }
     const secretHex = required(
       ctx.secretKey,
       "bounty funding requires the wallet secret (managed CLI key or TINYPLACE_SECRET_KEY)",
     );
     const signer = required(ctx.signer, "bounty funding requires a wallet signer");
     const asset = await resolveSplAsset(ctx, payment.asset);
-    if (!asset?.mint || asset.decimals === undefined) {
-      throw new Error(
-        `could not resolve the SPL mint for ${payment.asset ?? "the reward asset"} (the facilitator cannot settle native SOL)`,
-      );
-    }
-    const paymentMap = await buildDelegatedX402PaymentMap({
+    const execution = await executeSolanaX402Payment({
       signer,
       secretKey: hexToBytes(secretHex),
       rpcUrl: opts.rpcUrl,
-      feePayer,
-      mint: asset.mint,
-      decimals: asset.decimals,
-      from: opts.creator,
       payment: {
         network: payment.network ?? "",
         asset: payment.asset ?? "",
         amount: payment.amount ?? "",
+        from: opts.creator,
         to: payment.to ?? "",
         ...(payment.metadata ? { metadata: payment.metadata } : {}),
       },
+      ...(asset?.mint ? { mint: asset.mint } : {}),
+      ...(asset?.decimals !== undefined ? { decimals: asset.decimals } : {}),
     });
-    return ctx.client.bounties.create({ ...request, payment: paymentMap });
+    return ctx.client.bounties.create({ ...request, payment: execution.payment });
   }
 }
 

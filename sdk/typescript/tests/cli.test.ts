@@ -30,7 +30,6 @@ describe("tinyplace CLI", () => {
       "inbox",
       "bounties",
       "reputation",
-      "pricing",
       "payments",
       "ledger",
     ]) {
@@ -54,7 +53,6 @@ describe("tinyplace CLI", () => {
         "inbox",
         "bounties",
         "reputation",
-        "pricing-quote",
         "payment-verify",
         "ledger",
         "ledger-tx",
@@ -78,18 +76,6 @@ describe("tinyplace CLI", () => {
     };
     const env = { TINYPLACE_ENDPOINT: "https://example.test" };
 
-    const pricing = await runTinyPlaceCli(
-      [
-        "pricing-quote",
-        "--base",
-        "SOL",
-        "--quote",
-        "USDC",
-        "--network",
-        "solana:local",
-      ],
-      { env, fetch },
-    );
     // `ledger` now reads through the batched GraphQL gateway (POST /graphql).
     const ledger = await runTinyPlaceCli(["ledger", "--recent"], {
       env,
@@ -100,13 +86,8 @@ describe("tinyplace CLI", () => {
       fetch,
     });
 
-    expect([pricing.code, ledger.code, profile.code]).toEqual([0, 0, 0]);
-    expect(JSON.parse(pricing.stdout)).toEqual({ ok: true });
+    expect([ledger.code, profile.code]).toEqual([0, 0]);
     expect(requests.map((request) => [request.method, request.url])).toEqual([
-      [
-        "GET",
-        "https://example.test/pricing/quote?base=SOL&quote=USDC&network=solana%3Alocal",
-      ],
       ["POST", "https://example.test/graphql"],
       ["GET", "https://example.test/registry/names/%40agent"],
     ]);

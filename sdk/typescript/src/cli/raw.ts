@@ -436,33 +436,6 @@ export async function dispatchRaw(
       return client.reputation.createAttestation(typedBody(flags));
     case "leaderboard":
       return client.reputation.leaderboard();
-    // Pricing.
-    case "pricing-quote":
-      return client.pricing.quote({
-        base: requiredFlag(flags, "base"),
-        quote: stringFlag(flags, "quote") ?? "USDC",
-        ...(stringFlag(flags, "network")
-          ? { network: stringFlag(flags, "network") }
-          : {}),
-      });
-    case "pricing-history":
-      return client.pricing.history({
-        base: requiredFlag(flags, "base"),
-        quote: stringFlag(flags, "quote") ?? "USDC",
-        interval: requiredFlag(flags, "interval"),
-        ...(stringFlag(flags, "from")
-          ? { from: stringFlag(flags, "from") }
-          : {}),
-        ...(stringFlag(flags, "to") ? { to: stringFlag(flags, "to") } : {}),
-      });
-    case "pricing-assets":
-      return client.pricing.assets();
-    case "pricing-pairs":
-      return client.pricing.pairs();
-    case "pricing-networks":
-      return client.pricing.networks();
-    case "pricing-gas":
-      return client.pricing.gas(requiredFlag(flags, "network"));
     // Payments.
     case "pay":
       return client.payments.settle(typedBody(flags));

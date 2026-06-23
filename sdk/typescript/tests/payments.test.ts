@@ -361,37 +361,14 @@ describe("PaymentsApi", () => {
       admin: { actor: "operator", role: "operator" },
       fetch: async (input, init) => {
         requests.push(new Request(input, init));
-        if (new Request(input, init).url.includes("/renew-due")) {
-          return Response.json({ renewed: 1, failed: 0, suspended: 0 });
-        }
-        return Response.json({
-          flush: {
-            flushId: "flush_123",
-            batchId: "batch_123",
-            status: "flushed",
-            itemCount: 1,
-            totalAmount: "100",
-            parentLedgerTxId: "ledger_123",
-          },
-          ledgerTx: {
-            txId: "ledger_123",
-            visibility: "unshielded",
-            type: "PAYMENT",
-            network: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
-            timestamp: "2026-06-13T00:00:00.000Z",
-            onChainTx: "tx_123",
-            status: "SETTLED",
-          },
-        });
+        return Response.json({ renewed: 1, failed: 0, suspended: 0 });
       },
     });
 
     await client.payments.renewDueSubscriptions({ limit: 5 });
-    await client.payments.flushBatch("batch_123", { limit: 10 });
 
     expect(requests.map((request) => request.url)).toEqual([
       "https://example.test/payments/subscriptions/renew-due",
-      "https://example.test/payments/batches/batch_123/flush",
     ]);
     for (const request of requests) {
       expect(request.method).toBe("POST");
@@ -403,7 +380,6 @@ describe("PaymentsApi", () => {
       expect(request.headers.get("X-Agent-ID")).toBeNull();
     }
     await expect(requests[0]!.json()).resolves.toEqual({ limit: 5 });
-    await expect(requests[1]!.json()).resolves.toEqual({ limit: 10 });
   });
 
   it("uses directory auth for subscription reads and cancellation", async () => {

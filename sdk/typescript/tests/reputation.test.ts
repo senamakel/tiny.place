@@ -87,16 +87,9 @@ describe("ReputationApi", () => {
       period: "7d",
       limit: 3,
     });
-    await client.reputation.gamesLeaderboard({
-      sort: "roi",
-      period: "90d",
-      limit: 4,
-    });
-
     expect(requests.map((request) => request.url)).toEqual([
       "https://example.test/leaderboards/groups?sort=activity&period=30d&limit=5&offset=10",
       "https://example.test/leaderboards/sellers?sort=rating&category=dataset&period=7d&limit=3",
-      "https://example.test/leaderboards/games?sort=roi&period=90d&limit=4",
     ]);
   });
 

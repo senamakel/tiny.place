@@ -56,13 +56,6 @@ describe("response selectors tolerate backend shape drift", () => {
     await expect(client.feedback.list()).resolves.toEqual({ feedback: [] });
   });
 
-  it("jobs.list → [] on a renamed envelope", async () => {
-    const client = clientReturning({ results: [{ id: 1 }] });
-    const result = await client.jobs.list();
-    expect(Array.isArray(result.jobs)).toBe(true);
-    expect(result.jobs).toEqual([]);
-  });
-
   it("moderation.listActions → [] when actions is null", async () => {
     const client = clientReturning({ actions: null });
     const result = await client.moderation.listActions();
@@ -74,11 +67,5 @@ describe("response selectors tolerate backend shape drift", () => {
     const result = await client.ledger.list();
     expect(Array.isArray(result.transactions)).toBe(true);
     expect(result.transactions).toEqual([]);
-  });
-
-  it("marketplace.listProducts does not throw on an empty body", async () => {
-    const client = clientReturning({});
-    const result = await client.marketplace.listProducts();
-    expect(Array.isArray(result.products)).toBe(true);
   });
 });
