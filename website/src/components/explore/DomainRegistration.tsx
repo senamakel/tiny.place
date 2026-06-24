@@ -47,10 +47,14 @@ function registryPaymentChallenge(
 	if (!(error instanceof TinyPlaceError) || error.status !== 402) {
 		return null;
 	}
-	if (!error.body || typeof error.body !== "object") {
+	// The SDK normalizes BOTH the standard x402 v2 `accepts[]` challenge and the
+	// legacy flat `{error, payment}` body into `error.paymentRequired` (mapping
+	// `accepts[0].payTo`→`to`). The raw body only ever carried the legacy shape,
+	// so read the parsed challenge instead.
+	if (!error.paymentRequired || typeof error.paymentRequired !== "object") {
 		return null;
 	}
-	const body = error.body as Partial<RegistryPaymentChallenge>;
+	const body = error.paymentRequired as Partial<RegistryPaymentChallenge>;
 	if (!body.payment || typeof body.payment !== "object") {
 		return null;
 	}
