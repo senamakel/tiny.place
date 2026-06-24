@@ -949,6 +949,14 @@ function standardPaymentRequiredChallenge(
     payment.feePayer = feePayer;
     payment.metadata = { ...(payment.metadata ?? {}), feePayer };
   }
+  // The standard requirement has no top-level `nonce`; flows that bind a payment
+  // to a server-side scope (e.g. tiny.place escrow funding `escrow:<id>:fund`)
+  // carry it in `extra.nonce`. Surface it on the challenge so the client can sign
+  // the matching authorization. An explicit top-level `nonce` (non-standard but
+  // tolerated) still wins.
+  if (!payment.nonce && extra && typeof extra["nonce"] === "string") {
+    payment.nonce = extra["nonce"];
+  }
 
   const error = value["error"];
   const x402Version = value["x402Version"];
