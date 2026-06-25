@@ -452,6 +452,200 @@ export const FACILITATOR_COMPUTE_UNIT_LIMIT = 40_000;
 /** Default compute unit price in microlamports/CU (well under the 5,000,000 cap). */
 export const FACILITATOR_COMPUTE_UNIT_PRICE_MICRO_LAMPORTS = "1";
 
+/** Inputs to {@link buildExactSvmTransferTransaction}. */
+export interface ExactSvmTransferOptions {
+  /** The payer's Solana secret key (32-byte seed or 64-byte keypair). */
+  secretKey: string | Uint8Array;
+  /** The facilitator/sponsor fee payer (base58), from the challenge `extra.feePayer`. */
+  feePayer: string;
+  /** The recipient wallet (base58), from the challenge `payTo`. */
+  payTo: string;
+  /** The SPL mint (base58), from the challenge `asset`. */
+  mint: string;
+  /** The exact transfer amount in the mint's smallest unit (decimal string). */
+  amount: string;
+  /** The mint's decimals (USDC/CASH = 6). */
+  decimals: number;
+  /** A recent blockhash (base58) the transaction is anchored to. */
+  recentBlockhash: string;
+  /**
+   * The Memo instruction data the exact-SVM scheme requires for tx uniqueness:
+   * the challenge `extra.memo` when present, else a random ≥16-byte hex nonce is
+   * generated. The facilitator rejects a transfer whose memo doesn't match a
+   * server-supplied `extra.memo`.
+   */
+  memo?: string;
+  /** Override the payer's source token account (defaults to its derived ATA). */
+  sourceTokenAccount?: string;
+  /** Compute unit limit (defaults to {@link FACILITATOR_COMPUTE_UNIT_LIMIT}). */
+  computeUnitLimit?: number;
+  /** Compute unit price, microlamports/CU (defaults to the facilitator constant). */
+  computeUnitPriceMicroLamports?: string;
+}
+
+/** Result of {@link buildExactSvmTransferTransaction}. */
+export interface ExactSvmTransfer {
+  /** Base64 of the partially-signed (payer-only) versioned-legacy transaction. */
+  transaction: string;
+  /** The payer (authority) wallet, base58. */
+  from: string;
+  /** The derived source token account (payer's ATA unless overridden). */
+  sourceTokenAccount: string;
+  /** The derived destination ATA (payTo + mint). */
+  destinationTokenAccount: string;
+  /** The Memo string actually embedded (echoed `extra.memo` or generated nonce). */
+  memo: string;
+}
+
+/**
+ * Build the x402 `exact` payment transaction for Solana (SVM), per
+ * `specs/schemes/exact/scheme_exact_svm.md`: a legacy transaction with the static
+ * fast-path instruction layout `[SetComputeUnitLimit, SetComputeUnitPrice,
+ * TransferChecked, Memo]`, fee payer = the facilitator's `extra.feePayer` (account
+ * index 0, left UNSIGNED for the facilitator to co-sign), and the payer signing
+ * only as the transfer authority. The destination is the ATA derived from
+ * `payTo`+`mint` (what the facilitator verifies); the transfer amount equals the
+ * required amount exactly.
+ *
+ * The returned base64 transaction goes into the x402 `PaymentPayload`'s
+ * `payload.transaction`; the client does NOT broadcast it — the facilitator
+ * co-signs as fee payer and submits it.
+ */
+export function buildExactSvmTransferTransaction(
+  options: ExactSvmTransferOptions,
+): ExactSvmTransfer {
+  const amount = normalizedAmount(options.amount);
+  const secretKey = solanaSecretKeyBytes(options.secretKey);
+  const seed = secretKey.slice(0, 32);
+  const authorityKey = ed25519.getPublicKey(seed);
+  if (secretKey.length === 64 && !bytesEqual(authorityKey, secretKey.slice(32))) {
+    throw new Error("Solana secret key public key does not match seed");
+  }
+  const authority = encodeBase58(authorityKey);
+
+  if (authority === options.feePayer) {
+    // Fee-payer isolation: the sponsor must not be the transfer authority/source.
+    throw new Error(
+      "x402 exact-SVM: fee payer must differ from the paying authority",
+    );
+  }
+
+  const sourceTokenAccount =
+    options.sourceTokenAccount ??
+    deriveAssociatedTokenAddress(authority, options.mint);
+  const destinationTokenAccount = deriveAssociatedTokenAddress(
+    options.payTo,
+    options.mint,
+  );
+  const memo = options.memo?.trim() ? options.memo : randomMemoNonce();
+
+  // Account layout (signers first, then writable non-signers, then readonly
+  // non-signers). The fee payer MUST be index 0; the authority is a readonly
+  // signer; the token accounts are writable non-signers; mint + programs are
+  // readonly non-signers.
+  const accountKeys = [
+    options.feePayer, //          0: writable signer (fee payer)
+    authority, //                 1: readonly signer (transfer authority)
+    sourceTokenAccount, //        2: writable non-signer
+    destinationTokenAccount, //   3: writable non-signer
+    options.mint, //              4: readonly non-signer
+    SOLANA_TOKEN_PROGRAM_ID, //   5: readonly non-signer
+    SOLANA_COMPUTE_BUDGET_PROGRAM_ID, // 6: readonly non-signer
+    SOLANA_MEMO_PROGRAM_ID, //    7: readonly non-signer
+  ];
+  // header: 2 required signatures, 1 readonly signed (authority), 4 readonly
+  // unsigned (mint, token, compute-budget, memo programs).
+  const header = new Uint8Array([2, 1, 4]);
+
+  const computeLimitData = new Uint8Array(5);
+  computeLimitData[0] = 2; // SetComputeUnitLimit discriminator
+  writeU32Le(
+    computeLimitData,
+    1,
+    options.computeUnitLimit ?? FACILITATOR_COMPUTE_UNIT_LIMIT,
+  );
+  const computePriceData = new Uint8Array(9);
+  computePriceData[0] = 3; // SetComputeUnitPrice discriminator
+  writeU64Le(
+    computePriceData,
+    1,
+    BigInt(
+      options.computeUnitPriceMicroLamports ??
+        FACILITATOR_COMPUTE_UNIT_PRICE_MICRO_LAMPORTS,
+    ),
+  );
+  const transferData = new Uint8Array(10);
+  transferData[0] = 12; // TransferChecked discriminator
+  writeU64Le(transferData, 1, BigInt(amount));
+  transferData[9] = options.decimals;
+  const memoData = new TextEncoder().encode(memo);
+
+  const message = concatBytes(
+    header,
+    shortVec(accountKeys.length),
+    ...accountKeys.map((key) => decodeBase58(key)),
+    decodeBase58(options.recentBlockhash),
+    shortVec(4),
+    // SetComputeUnitLimit (program 6, no accounts)
+    encodeInstruction(6, [], computeLimitData),
+    // SetComputeUnitPrice (program 6, no accounts)
+    encodeInstruction(6, [], computePriceData),
+    // TransferChecked (program 5): source, mint, destination, authority
+    encodeInstruction(5, [2, 4, 3, 1], transferData),
+    // Memo (program 7, no accounts)
+    encodeInstruction(7, [], memoData),
+  );
+
+  // Sign only as the authority (signatures[1]); leave the fee payer slot
+  // (signatures[0]) zeroed for the facilitator to fill before broadcasting.
+  const authoritySignature = ed25519.sign(message, seed);
+  const emptyFeePayerSignature = new Uint8Array(64);
+  const transaction = concatBytes(
+    shortVec(2),
+    emptyFeePayerSignature,
+    authoritySignature,
+    message,
+  );
+
+  return {
+    transaction: bytesToBase64(transaction),
+    from: authority,
+    sourceTokenAccount,
+    destinationTokenAccount,
+    memo,
+  };
+}
+
+/** Encode one compiled instruction: programIdIndex, account indexes, data. */
+function encodeInstruction(
+  programIdIndex: number,
+  accountIndexes: Array<number>,
+  data: Uint8Array,
+): Uint8Array {
+  return concatBytes(
+    new Uint8Array([programIdIndex]),
+    shortVec(accountIndexes.length),
+    new Uint8Array(accountIndexes),
+    shortVec(data.length),
+    data,
+  );
+}
+
+/** A random ≥16-byte hex memo nonce (the exact-SVM uniqueness requirement). */
+function randomMemoNonce(): string {
+  const random = new Uint8Array(16);
+  globalThis.crypto.getRandomValues(random);
+  return Array.from(random)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function writeU32Le(target: Uint8Array, offset: number, value: number): void {
+  for (let index = 0; index < 4; index += 1) {
+    target[offset + index] = (value >>> (index * 8)) & 0xff;
+  }
+}
+
 
 async function findTokenAccount(options: {
   fetchFn: typeof globalThis.fetch;

@@ -78,7 +78,9 @@ export {
 } from "./x402.js";
 
 export {
+  buildExactSvmTransferTransaction,
   DEFAULT_CONFIRMATION_POLLS,
+  deriveAssociatedTokenAddress,
   executeSolanaPayment,
   executeSolanaX402Payment,
   FACILITATOR_COMPUTE_UNIT_LIMIT,
@@ -86,10 +88,12 @@ export {
   isLikelyMintAddress,
   resolveSolanaAsset,
   solanaAssetSymbol,
+  SOLANA_ASSOCIATED_TOKEN_PROGRAM_ID,
   SOLANA_CASH_DECIMALS,
   SOLANA_CASH_MINT,
   SOLANA_COMPUTE_BUDGET_PROGRAM_ID,
   SOLANA_MAINNET_NETWORK,
+  SOLANA_MEMO_PROGRAM_ID,
   SOLANA_NATIVE_ASSET,
   SOLANA_NATIVE_DECIMALS,
   SOLANA_SYSTEM_PROGRAM_ID,
@@ -98,6 +102,8 @@ export {
   SOLANA_WSOL_MINT,
 } from "./solana.js";
 export type {
+  ExactSvmTransfer,
+  ExactSvmTransferOptions,
   SolanaAssetInfo,
   SolanaPaymentExecution,
   SolanaPaymentExecutionOptions,
