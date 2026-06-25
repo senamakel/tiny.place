@@ -1,4 +1,5 @@
 import { ed25519 } from "@noble/curves/ed25519.js";
+import { sha256 } from "@noble/hashes/sha2.js";
 
 import type { SigningKey } from "./auth.js";
 import type { X402AuthorizationFields } from "./x402.js";
@@ -35,6 +36,67 @@ export const SOLANA_NATIVE_DECIMALS = 9;
 /** Mainnet wrapped-SOL (WSOL) SPL mint. */
 export const SOLANA_WSOL_MINT =
   "So11111111111111111111111111111111111111112";
+/** The SPL Associated Token Account program (derives a wallet's canonical ATA). */
+export const SOLANA_ASSOCIATED_TOKEN_PROGRAM_ID =
+  "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
+/** The SPL Memo program — the exact-SVM scheme requires a Memo for tx uniqueness. */
+export const SOLANA_MEMO_PROGRAM_ID =
+  "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
+
+/**
+ * True when `bytes` (a 32-byte candidate address) lies on the ed25519 curve, i.e.
+ * is a valid public key. Program-Derived Addresses must be OFF the curve, so this
+ * is the rejection test in {@link findProgramAddress}: decoding throws for an
+ * off-curve value, which is exactly what we want a PDA to be.
+ */
+function isOnCurve(bytes: Uint8Array): boolean {
+  try {
+    ed25519.Point.fromBytes(bytes);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const PDA_MARKER = new TextEncoder().encode("ProgramDerivedAddress");
+
+/**
+ * Derive a Program-Derived Address (and bump) from seeds under a program, exactly
+ * as Solana's `findProgramAddress` does: hash `seeds || [bump] || programId ||
+ * "ProgramDerivedAddress"` for bump 255..0 and return the first off-curve result.
+ */
+function findProgramAddress(
+  seeds: Array<Uint8Array>,
+  programId: Uint8Array,
+): { address: Uint8Array; bump: number } {
+  for (let bump = 255; bump >= 0; bump -= 1) {
+    const hash = sha256(
+      concatBytes(...seeds, new Uint8Array([bump]), programId, PDA_MARKER),
+    );
+    if (!isOnCurve(hash)) {
+      return { address: hash, bump };
+    }
+  }
+  throw new Error("unable to find a viable program-derived address (no off-curve bump)");
+}
+
+/**
+ * Derive the canonical Associated Token Account address for `owner` holding
+ * `mint` under `tokenProgram` (defaults to the SPL Token program). This matches
+ * the destination ATA the x402 exact-SVM facilitator derives from `payTo`+`asset`
+ * when verifying, so the client must transfer to exactly this account.
+ */
+export function deriveAssociatedTokenAddress(
+  owner: string,
+  mint: string,
+  tokenProgram: string = SOLANA_TOKEN_PROGRAM_ID,
+): string {
+  const { address } = findProgramAddress(
+    [decodeBase58(owner), decodeBase58(tokenProgram), decodeBase58(mint)],
+    decodeBase58(SOLANA_ASSOCIATED_TOKEN_PROGRAM_ID),
+  );
+  return encodeBase58(address);
+}
 
 /**
  * A Solana settlement asset: its display symbol, on-chain SPL mint (empty for
