@@ -6,8 +6,36 @@ import {
   type AdminSigningOptions,
 } from "./auth.js";
 import { classifyError, type TinyPlaceErrorCode } from "./errors.js";
+import {
+  X402_HEADER_PAYMENT_RESPONSE,
+  X402_HEADER_PAYMENT_SIGNATURE,
+  buildExactSvmPaymentPayload,
+  decodePaymentRequired,
+  decodeSettlementResponse,
+  encodePaymentSignature,
+  type X402SettlementResponse,
+} from "./x402-standard.js";
 
 export type BodySigner<TBody = any> = (body: TBody) => Promise<TBody> | TBody;
+
+/**
+ * Configures automatic settlement of standard x402 v2 (HTTP 402) challenges. When
+ * set on the client, any request that returns 402 with a `PAYMENT-REQUIRED`
+ * header offering a Solana `exact` method is retried once with a `PAYMENT-SIGNATURE`
+ * header carrying a partially-signed `TransferChecked` (the facilitator co-signs as
+ * fee payer and broadcasts). This is the standard transport — no separate
+ * verify/settle calls and no flat signed-message body.
+ */
+export interface X402PayerConfig {
+  /** The payer's Solana secret key (32-byte seed or 64-byte keypair). */
+  secretKey: string | Uint8Array;
+  /** The Solana RPC URL used to fetch a recent blockhash for the transfer. */
+  rpcUrl: string;
+  /** Optional fetch override for the blockhash RPC (defaults to the client's). */
+  fetch?: typeof globalThis.fetch;
+  /** Invoked with each successful settlement (decoded `PAYMENT-RESPONSE`). */
+  onSettled?: (settlement: X402SettlementResponse) => void;
+}
 
 interface RequestOptions {
   body?: unknown;
@@ -20,6 +48,8 @@ interface RequestOptions {
   headers?: Record<string, string>;
   responseType?: "json" | "text" | "raw";
   signBody?: BodySigner;
+  /** Internal: set once an x402 payment has been attached, to bound the retry. */
+  x402Paid?: boolean;
 }
 
 export interface TinyPlaceErrorJSON {
@@ -221,6 +251,12 @@ export interface HttpClientOptions {
    * responses. See {@link RetryOptions}. Pass `{ retries: 0 }` to disable.
    */
   retry?: RetryOptions;
+  /**
+   * Enables automatic settlement of standard x402 (HTTP 402) challenges. See
+   * {@link X402PayerConfig}. When unset, a 402 surfaces as a {@link TinyPlaceError}
+   * for the caller to handle.
+   */
+  x402Payer?: X402PayerConfig;
 }
 
 function buildQuery(params: Record<string, unknown>): string {
@@ -253,6 +289,7 @@ export class HttpClient {
   private readonly onAuthInvalid?: (status: number, body: unknown) => Promise<void> | void;
   private readonly timeoutMs: number;
   private readonly retryOptions: ResolvedRetryOptions;
+  private readonly x402Payer?: X402PayerConfig;
 
   constructor(options: HttpClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/+$/, "");
@@ -265,6 +302,7 @@ export class HttpClient {
     this.onAuthInvalid = options.onAuthInvalid;
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.retryOptions = resolveRetryOptions(options.retry);
+    this.x402Payer = options.x402Payer;
   }
 
   /**
@@ -295,6 +333,12 @@ export class HttpClient {
         body,
       });
     } catch (error) {
+      // Standard x402: a 402 carrying a PAYMENT-REQUIRED challenge is settled
+      // inline by retrying the SAME request once with a PAYMENT-SIGNATURE header.
+      const paid = await this.attachX402Payment(error, { ...options, body });
+      if (paid) {
+        return this.sendWithRetry<T>(method, path, queryString, url, paid);
+      }
       if (!shouldRetryInvalidSignature(error) || !options?.signBody) {
         throw error;
       }
@@ -307,6 +351,49 @@ export class HttpClient {
         body: nextBody,
       });
     }
+  }
+
+  /**
+   * If `error` is a 402 carrying a standard `PAYMENT-REQUIRED` challenge and an
+   * {@link X402PayerConfig} is configured (and we haven't already paid this
+   * request), build the Solana `exact` PaymentPayload and return request options
+   * with the `PAYMENT-SIGNATURE` header attached for a single retry. Returns
+   * undefined when the request is not a payable 402, no payer is configured, or a
+   * payment was already attempted — so the caller falls through to normal error
+   * handling.
+   */
+  private async attachX402Payment(
+    error: unknown,
+    options: RequestOptions,
+  ): Promise<RequestOptions | undefined> {
+    if (
+      !this.x402Payer ||
+      options.x402Paid ||
+      !(error instanceof TinyPlaceError) ||
+      error.status !== 402
+    ) {
+      return undefined;
+    }
+    const challenge = decodePaymentRequired(
+      error.headers?.["payment-required"],
+    );
+    if (!challenge) {
+      return undefined;
+    }
+    const payload = await buildExactSvmPaymentPayload({
+      challenge,
+      secretKey: this.x402Payer.secretKey,
+      rpcUrl: this.x402Payer.rpcUrl,
+      fetch: this.x402Payer.fetch ?? this._fetch,
+    });
+    return {
+      ...options,
+      x402Paid: true,
+      headers: {
+        ...options.headers,
+        [X402_HEADER_PAYMENT_SIGNATURE]: encodePaymentSignature(payload),
+      },
+    };
   }
 
   /**
@@ -447,6 +534,16 @@ export class HttpClient {
           paymentRequired: paymentRequiredFromHeader(response.headers),
         },
       );
+    }
+
+    // Surface a standard x402 settlement (PAYMENT-RESPONSE) to the payer hook.
+    if (this.x402Payer?.onSettled) {
+      const settlement = decodeSettlementResponse(
+        response.headers.get(X402_HEADER_PAYMENT_RESPONSE),
+      );
+      if (settlement) {
+        this.x402Payer.onSettled(settlement);
+      }
     }
 
     if (response.status === 204) {
@@ -872,7 +969,11 @@ function responseHeaders(headers: Headers): Record<string, string> {
 function paymentRequiredFromHeader(
   headers: Headers,
 ): PaymentRequiredChallenge | undefined {
-  const encoded = headers.get("x-payment-required");
+  // Prefer the canonical x402 v2 header (PAYMENT-REQUIRED); fall back to the
+  // legacy tiny.place `x-payment-required` name during the transition. Header
+  // lookups are case-insensitive.
+  const encoded =
+    headers.get("payment-required") ?? headers.get("x-payment-required");
   if (!encoded) return undefined;
 
   try {

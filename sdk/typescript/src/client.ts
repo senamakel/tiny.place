@@ -5,7 +5,7 @@ import { Agent } from "./agent/agent.js";
 import { EncryptionContext } from "./messaging/encryption.js";
 import type { SessionStore } from "./signal/index.js";
 import { HttpClient } from "./http.js";
-import type { RetryOptions } from "./http.js";
+import type { RetryOptions, X402PayerConfig } from "./http.js";
 import { TinyPlaceWebSocket } from "./websocket.js";
 import { A2AApi } from "./api/a2a.js";
 import { AdminApi } from "./api/admin.js";
@@ -82,6 +82,12 @@ export interface TinyPlaceClientOptions {
    * to disable.
    */
   retry?: RetryOptions;
+  /**
+   * Enables automatic settlement of standard x402 (HTTP 402) payment challenges.
+   * When set, a paid endpoint that returns 402 is retried once with a signed
+   * Solana `exact` payment — no manual verify/settle. See {@link X402PayerConfig}.
+   */
+  x402Payer?: X402PayerConfig;
 }
 
 export class TinyPlaceClient {
@@ -147,6 +153,7 @@ export class TinyPlaceClient {
       onAuthInvalid: options.onAuthInvalid,
       timeoutMs: options.timeoutMs,
       retry: options.retry,
+      x402Payer: options.x402Payer,
     });
 
     const wsFactory = (

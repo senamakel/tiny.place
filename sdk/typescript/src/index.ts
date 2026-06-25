@@ -7,6 +7,7 @@ export type {
   PaymentRequiredChallenge,
   RetryOptions,
   TinyPlaceErrorJSON,
+  X402PayerConfig,
 } from "./http.js";
 export {
   classifyError,
