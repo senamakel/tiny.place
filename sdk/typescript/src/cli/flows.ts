@@ -17,7 +17,7 @@ import {
 import type { CliContext, Flags, JsonObject } from "./types.js";
 import { idOf, resolveAgentId, settle, summarize } from "./workflows.js";
 import type { PaymentChallenge } from "../http.js";
-import { buildDelegatedX402PaymentMap } from "../solana.js";
+import { buildDelegatedX402PaymentHeader } from "../solana.js";
 import type { BountyCreateRequest, Identity } from "../types/index.js";
 import type { RegisterRequest } from "../api/registry.js";
 
@@ -122,7 +122,10 @@ export async function registerFlow(
 
 function registrationSuggestions(handle: string): Array<Suggestion> {
   return [
-    suggest(`Make ${handle} your primary identity`, `tinyplace raw set-primary ${handle}`),
+    suggest(
+      `Make ${handle} your primary identity`,
+      `tinyplace raw set-primary ${handle}`,
+    ),
     suggest("Confirm your identity", "tinyplace whoami"),
   ];
 }
@@ -173,17 +176,17 @@ async function performPaidRegistration(
 
   try {
     if (opts.existingTx) {
-      const result = await ctx.client.registry.registerWithExistingSolanaPayment(
-        request,
-        {
+      const result =
+        await ctx.client.registry.registerWithExistingSolanaPayment(request, {
           onChainTx: opts.existingTx,
           ...(opts.challenge?.amount ? { amount: opts.challenge.amount } : {}),
           ...(opts.challenge?.asset ? { asset: opts.challenge.asset } : {}),
-          ...(opts.challenge?.network ? { network: opts.challenge.network } : {}),
+          ...(opts.challenge?.network
+            ? { network: opts.challenge.network }
+            : {}),
           ...(opts.challenge?.to ? { to: opts.challenge.to } : {}),
           ...(opts.challenge?.nonce ? { nonce: opts.challenge.nonce } : {}),
-        },
-      );
+        });
       return { identity: result.identity, onChainTx: result.onChainTx };
     }
 
@@ -197,18 +200,34 @@ async function performPaidRegistration(
       return shortfall;
     }
 
-    const result = await ctx.client.registry.registerWithSolanaPayment(request, {
-      rpcUrl: opts.rpcUrl,
-      secretKey: hexToBytes(secretHex),
-      ...(asset?.mint ? { mint: asset.mint } : {}),
-      ...(asset?.decimals !== undefined ? { decimals: asset.decimals } : {}),
-      ...(opts.challenge?.amount ? { amount: opts.challenge.amount } : {}),
-      ...(opts.challenge?.to ? { to: opts.challenge.to } : {}),
-      ...(opts.challenge?.network ? { network: opts.challenge.network } : {}),
-      ...(opts.challenge?.asset ? { asset: opts.challenge.asset } : {}),
-      ...(opts.challenge?.nonce ? { nonce: opts.challenge.nonce } : {}),
-    });
-    return { identity: result.identity, onChainTx: result.payment.signature };
+    const result = await ctx.client.registry.registerWithSolanaPayment(
+      request,
+      {
+        rpcUrl: opts.rpcUrl,
+        secretKey: hexToBytes(secretHex),
+        ...(ctx.fetch ? { fetch: ctx.fetch } : {}),
+        ...(asset?.mint ? { mint: asset.mint } : {}),
+        ...(asset?.decimals !== undefined ? { decimals: asset.decimals } : {}),
+        ...(opts.challenge?.amount ? { amount: opts.challenge.amount } : {}),
+        ...(opts.challenge?.to ? { to: opts.challenge.to } : {}),
+        ...(opts.challenge?.network ? { network: opts.challenge.network } : {}),
+        ...(opts.challenge?.asset ? { asset: opts.challenge.asset } : {}),
+        ...(opts.challenge?.nonce ? { nonce: opts.challenge.nonce } : {}),
+        // Forward the challenge metadata so the API can read the facilitator
+        // fee payer (metadata.feePayer) and settle USDC gaslessly via the
+        // delegated path rather than the wallet-pays-gas direct path.
+        ...(opts.challenge?.metadata
+          ? { metadata: opts.challenge.metadata }
+          : {}),
+      },
+    );
+    // The gasless delegated path (USDC, the default) has no client-broadcast
+    // signature — the facilitator broadcasts. Surface onChainTx only on the
+    // direct native-SOL path, where the wallet broadcasts the transfer itself.
+    return {
+      identity: result.identity,
+      ...(result.onChainTx ? { onChainTx: result.onChainTx } : {}),
+    };
   } catch (error) {
     const onChainTx = (error as { onChainTx?: string }).onChainTx;
     if (onChainTx) {
@@ -290,7 +309,9 @@ async function resolveSplAsset(
     const match = info.assets.find(
       (entry) =>
         entry.symbol.toUpperCase() === upper ||
-        (entry.address ? entry.address.toLowerCase() === value.toLowerCase() : false),
+        (entry.address
+          ? entry.address.toLowerCase() === value.toLowerCase()
+          : false),
     );
     if (!match) {
       return undefined;
@@ -369,8 +390,14 @@ export async function postBountyFlow(
       const bountyId = idOf(result);
       return bountyId
         ? [
-            suggest("Watch submissions arrive", `tinyplace submissions ${bountyId}`),
-            suggest("Check the bounty's status", `tinyplace raw bounty ${bountyId}`),
+            suggest(
+              "Watch submissions arrive",
+              `tinyplace submissions ${bountyId}`,
+            ),
+            suggest(
+              "Check the bounty's status",
+              `tinyplace raw bounty ${bountyId}`,
+            ),
           ]
         : [];
     },
@@ -406,21 +433,20 @@ async function createAndFundBounty(
       ctx.secretKey,
       "bounty funding requires the wallet secret (managed CLI key or TINYPLACE_SECRET_KEY)",
     );
-    const signer = required(ctx.signer, "bounty funding requires a wallet signer");
+    required(ctx.signer, "bounty funding requires a wallet signer");
     const asset = await resolveSplAsset(ctx, payment.asset);
     if (!asset?.mint || asset.decimals === undefined) {
       throw new Error(
         `could not resolve the SPL mint for ${payment.asset ?? "the reward asset"} (the facilitator cannot settle native SOL)`,
       );
     }
-    const paymentMap = await buildDelegatedX402PaymentMap({
-      signer,
+    const paymentHeader = await buildDelegatedX402PaymentHeader({
       secretKey: hexToBytes(secretHex),
       rpcUrl: opts.rpcUrl,
+      ...(ctx.fetch ? { fetch: ctx.fetch } : {}),
       feePayer,
       mint: asset.mint,
       decimals: asset.decimals,
-      from: opts.creator,
       payment: {
         network: payment.network ?? "",
         asset: payment.asset ?? "",
@@ -429,7 +455,9 @@ async function createAndFundBounty(
         ...(payment.metadata ? { metadata: payment.metadata } : {}),
       },
     });
-    return ctx.client.bounties.create({ ...request, payment: paymentMap });
+    // Standard x402 v2: the partially-signed SPL transfer rides in the
+    // PAYMENT-SIGNATURE header; the request body carries NO `payment` field.
+    return ctx.client.bounties.create(request, paymentHeader);
   }
 }
 
@@ -487,8 +515,12 @@ export async function submitFlow(
       ctx.client.bounties.submit(bountyId, {
         submitter,
         url,
-        ...(stringFlag(flags, "title") ? { title: stringFlag(flags, "title") } : {}),
-        ...(stringFlag(flags, "note") ? { note: stringFlag(flags, "note") } : {}),
+        ...(stringFlag(flags, "title")
+          ? { title: stringFlag(flags, "title") }
+          : {}),
+        ...(stringFlag(flags, "note")
+          ? { note: stringFlag(flags, "note") }
+          : {}),
         ...bodyFlag(flags),
       } as never),
     onSuccess: () => [
@@ -522,7 +554,10 @@ export async function joinGroupFlow(
     command,
     run: () => ctx.client.groups.join(groupId, agentId),
     onSuccess: () => [
-      suggest(`See who else is in ${groupId}`, `tinyplace raw group-members ${groupId}`),
+      suggest(
+        `See who else is in ${groupId}`,
+        `tinyplace raw group-members ${groupId}`,
+      ),
       suggest("Resume your loop", "tinyplace status"),
     ],
   });
@@ -566,8 +601,14 @@ export async function createGroupFlow(
       const groupId = idOf(result);
       return groupId
         ? [
-            suggest(`Create an invite link for ${groupId}`, `tinyplace raw group-invite ${groupId}`),
-            suggest(`View members of ${groupId}`, `tinyplace raw group-members ${groupId}`),
+            suggest(
+              `Create an invite link for ${groupId}`,
+              `tinyplace raw group-invite ${groupId}`,
+            ),
+            suggest(
+              `View members of ${groupId}`,
+              `tinyplace raw group-members ${groupId}`,
+            ),
           ]
         : [];
     },
@@ -583,7 +624,10 @@ export async function followFlow(
   ctx: CliContext,
   positionals: Array<string>,
 ): Promise<unknown> {
-  required(ctx.signer?.agentId, "follow requires a wallet (re-run; the key auto-generates)");
+  required(
+    ctx.signer?.agentId,
+    "follow requires a wallet (re-run; the key auto-generates)",
+  );
   const target = required(positionals[0], "follow <@handle|agentId>");
   const agentId = await resolveAgentId(ctx, target);
   const command = `tinyplace follow ${target}`;
@@ -604,7 +648,10 @@ export async function unfollowFlow(
   ctx: CliContext,
   positionals: Array<string>,
 ): Promise<unknown> {
-  required(ctx.signer?.agentId, "unfollow requires a wallet (re-run; the key auto-generates)");
+  required(
+    ctx.signer?.agentId,
+    "unfollow requires a wallet (re-run; the key auto-generates)",
+  );
   const target = required(positionals[0], "unfollow <@handle|agentId>");
   const agentId = await resolveAgentId(ctx, target);
   const command = `tinyplace unfollow ${target}`;

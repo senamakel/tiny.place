@@ -66,19 +66,28 @@ export type {
   X402PaymentAuthorizationOptions,
   X402PaymentMapOptions,
   X402PaymentMap,
+  X402PaymentEnvelope,
+  X402SvmPaymentEnvelope,
+  X402SvmPaymentEnvelopeOptions,
 } from "./x402.js";
 export {
   buildCanonicalMessage,
   buildX402PaymentAuthorization,
   buildX402PaymentMap,
   buildX402PaymentPayload,
+  buildX402PaymentEnvelope,
+  buildX402SvmPaymentEnvelope,
+  encodeX402PaymentHeader,
+  encodeX402SvmPaymentHeader,
+  X402_PAYMENT_HEADER,
   signX402Authorization,
   x402AuthorizationToPaymentMap,
   generateNonce,
 } from "./x402.js";
+export { SDK_VERSION, SDK_CLIENT, HEADER_SDK_CLIENT } from "./version.js";
 
 export {
-  buildDelegatedX402PaymentMap,
+  buildDelegatedX402PaymentHeader,
   buildPayerSignedDelegatedTx,
   DEFAULT_CONFIRMATION_POLLS,
   executeSolanaPayment,
@@ -100,7 +109,7 @@ export {
   SOLANA_WSOL_MINT,
 } from "./solana.js";
 export type {
-  DelegatedX402PaymentMapOptions,
+  DelegatedX402PaymentHeaderOptions,
   PayerSignedDelegatedTxOptions,
   SolanaAssetInfo,
   SolanaPaymentExecution,
@@ -123,6 +132,7 @@ export {
 } from "./crypto.js";
 
 export type {
+  DelegatedRegistrationPayment,
   RegisterRequest,
   SolanaRegistrationFailure,
   SolanaRegistrationPaymentOptions,

@@ -2,11 +2,13 @@ import { ed25519 } from "@noble/curves/ed25519.js";
 import { describe, expect, it } from "vitest";
 
 import {
-  buildDelegatedX402PaymentMap,
+  buildDelegatedX402PaymentHeader,
   buildPayerSignedDelegatedTx,
   LocalSigner,
   SOLANA_MAINNET_NETWORK,
 } from "../src/index.js";
+
+const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
 // A fee payer of all-"1" base58 decodes to 32 zero bytes, so account index 0 of
 // the assembled message must be 32 zeros — a clean check that the facilitator is
@@ -120,16 +122,15 @@ describe("buildPayerSignedDelegatedTx", () => {
   });
 });
 
-describe("buildDelegatedX402PaymentMap", () => {
-  it("folds the agent-signed wire transaction into the payment map under metadata.delegatedTx", async () => {
+describe("buildDelegatedX402PaymentHeader", () => {
+  it("encodes the agent-signed wire transaction into the standard x402 v2 SVM PAYMENT-SIGNATURE envelope", async () => {
     const { secretKey, signer } = await createSigner();
 
-    const payment = await buildDelegatedX402PaymentMap({
+    const header = await buildDelegatedX402PaymentHeader({
       rpcUrl: "https://solana.example.test",
-      signer,
       secretKey,
       feePayer: ZERO_FEE_PAYER,
-      mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      mint: USDC_MINT,
       decimals: 6,
       payment: {
         network: SOLANA_MAINNET_NETWORK,
@@ -141,16 +142,54 @@ describe("buildDelegatedX402PaymentMap", () => {
       fetch: mockFetch([]),
     });
 
-    expect(payment).toMatchObject({
-      network: SOLANA_MAINNET_NETWORK,
-      asset: "USDC",
-      amount: "1000000",
-      to: PAYEE,
-      "metadata.identity": "@agent",
-      "metadata.purpose": "registration",
-    });
-    expect(typeof payment["metadata.delegatedTx"]).toBe("string");
-    expect(payment["metadata.delegatedTx"]!.length).toBeGreaterThan(0);
-    expect(payment["signature"]).toBeTruthy();
+    // The header value is standard base64 (with padding) of the envelope JSON.
+    const envelope = JSON.parse(
+      Buffer.from(header, "base64").toString("utf8"),
+    ) as {
+      x402Version: number;
+      accepted: {
+        scheme: string;
+        network: string;
+        amount: string;
+        asset: string;
+        payTo: string;
+        maxTimeoutSeconds: number;
+        extra: { feePayer: string };
+      };
+      payload: { transaction: string };
+      // The proprietary delegatedTx map transport must be gone.
+      metadata?: Record<string, string>;
+    };
+
+    expect(envelope.x402Version).toBe(2);
+    expect(envelope.accepted.scheme).toBe("exact");
+    expect(envelope.accepted.network).toBe(SOLANA_MAINNET_NETWORK);
+    expect(envelope.accepted.amount).toBe("1000000");
+    // `asset` is the on-chain SPL mint (base58), NOT a symbol like "USDC".
+    expect(envelope.accepted.asset).toBe(USDC_MINT);
+    expect(envelope.accepted.payTo).toBe(PAYEE);
+    expect(envelope.accepted.maxTimeoutSeconds).toBe(60);
+    expect(envelope.accepted.extra.feePayer).toBe(ZERO_FEE_PAYER);
+
+    // No proprietary metadata.delegatedTx transport anywhere on the envelope.
+    expect(envelope.metadata).toBeUndefined();
+    expect(JSON.stringify(envelope)).not.toContain("delegatedTx");
+
+    // payload.transaction is a non-empty base64 tx that decodes to a 2-signature
+    // legacy tx: the fee-payer slot is zeroed, the authority slot is filled.
+    expect(typeof envelope.payload.transaction).toBe("string");
+    expect(envelope.payload.transaction.length).toBeGreaterThan(0);
+
+    const tx = new Uint8Array(
+      Buffer.from(envelope.payload.transaction, "base64"),
+    );
+    expect(tx[0]).toBe(2); // two signature slots
+    const feePayerSignature = tx.slice(1, 65);
+    const authoritySignature = tx.slice(65, 129);
+    const message = tx.slice(129);
+    expect(feePayerSignature.every((b) => b === 0)).toBe(true);
+    expect(ed25519.verify(authoritySignature, message, signer.publicKey)).toBe(
+      true,
+    );
   });
 });
