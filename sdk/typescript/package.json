@@ -9,10 +9,12 @@
   },
   "files": [
     "dist",
-    "AGENTS.md"
+    "AGENTS.md",
+    "scripts"
   ],
   "bin": {
-    "tinyplace": "./dist/cli.js"
+    "tinyplace": "./dist/cli.js",
+    "tinyverse": "./dist/cli.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -36,12 +38,16 @@
   },
   "scripts": {
     "build": "tsc",
+    "cli:ts": "node --no-warnings --import 'data:text/javascript,import { register } from \"node:module\"; import { pathToFileURL } from \"node:url\"; register(\"ts-node/esm\", pathToFileURL(\"./\"));' src/cli.ts",
     "lint": "tsc --noEmit",
+    "postinstall": "node scripts/fix-node-pty.mjs",
     "test": "vitest run",
     "test:staging": "RUN_STAGING=1 vitest run tests/staging.test.ts"
   },
   "devDependencies": {
+    "@types/blessed": "0.1.27",
     "@types/node": "^24.13.1",
+    "ts-node": "10.9.2",
     "typescript": "^5.9.3",
     "vitest": "4.0.15"
   },
@@ -49,6 +55,9 @@
     "@noble/curves": "^2.2.0",
     "@noble/hashes": "^2.2.0",
     "@opentui/core": "0.4.2",
-    "@sentry/node": "^10.58.0"
+    "@sentry/node": "^10.58.0",
+    "blessed": "0.1.81",
+    "node-pty": "1.1.0",
+    "term.js": "0.0.7"
   }
 }

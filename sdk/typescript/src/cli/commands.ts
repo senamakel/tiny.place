@@ -189,6 +189,18 @@ export const HARNESS_CLI_COMMANDS: Array<TinyPlaceCliCommand> = [
       "Run Codex through a tiny.place terminal proxy and stream TUI input/output into time-bucketed envelopes.",
     usage: "[--tinyplace-out <dir>] [--tinyplace-scope folder|session] [--tinyplace-bucket minute|hour|day] [--] <codex-args...>",
   },
+  {
+    name: "claude",
+    capability: "workflow",
+    description: "Open the tinyverse Claude proxy TUI with tiny.place session tracking.",
+  },
+  {
+    name: "tui",
+    capability: "workflow",
+    description:
+      "Open the tinyverse proxy TUI for Codex or Claude.",
+    usage: "[codex|claude]",
+  },
   // ── Raw SDK commands. ──
   {
     name: "onboard",

@@ -2,7 +2,11 @@ import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { HARNESS_CLI_COMMANDS, runTinyPlaceCli } from "../src/cli.js";
+import {
+  HARNESS_CLI_COMMANDS,
+  normalizeTinyVerseArgv,
+  runTinyPlaceCli,
+} from "../src/cli.js";
 import {
   LocalSigner,
   generatePreKeys,
@@ -48,6 +52,8 @@ describe("tinyplace CLI", () => {
         "register",
         "search",
         "feed",
+        "tui",
+        "claude",
         "broadcasts",
         "send",
         "inbox",
@@ -58,6 +64,58 @@ describe("tinyplace CLI", () => {
         "ledger-tx",
       ]),
     );
+  });
+
+  it("renders the Blessed welcome snapshot when not attached to a TTY", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "tinyplace-tui-"));
+    const result = await runTinyPlaceCli(["tui"], {
+      env: {
+        TINYPLACE_CONFIG: join(dir, "config.json"),
+        TINYPLACE_ENDPOINT: "https://example.test",
+      },
+    });
+
+    expect(result.code).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(result.stdout).toContain("welcome to tiny.place");
+    expect(result.stdout).toContain("codex: codex");
+    expect(result.stdout).toContain("OpenHuman: disconnected");
+    expect(result.stdout).toContain("[ Launch Codex automatically in 2.5s ]");
+    expect(result.stdout).toContain("[ Connect with OpenHuman ]");
+    expect(result.stdout).toContain("[ Settings ]");
+    expect(result.stdout).toContain("Move selection to cancel auto-launch");
+    expect(result.stdout).toContain("Connected to tiny.place - Chat id: none");
+  });
+
+  it("renders the Claude tinyverse welcome snapshot when requested", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "tinyplace-claude-tui-"));
+    const result = await runTinyPlaceCli(["tui", "claude"], {
+      env: {
+        TINYPLACE_CONFIG: join(dir, "config.json"),
+        TINYPLACE_ENDPOINT: "https://example.test",
+      },
+    });
+
+    expect(result.code).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(result.stdout).toContain(
+      "Claude runs inside this shell while tiny.place tracks the active Claude session.",
+    );
+    expect(result.stdout).toContain("claude: claude");
+    expect(result.stdout).toContain("[ Launch Claude automatically in 2.5s ]");
+  });
+
+  it("maps the tinyverse binary agent shortcuts into the TUI command", () => {
+    expect(normalizeTinyVerseArgv(["codex"], "tinyverse")).toEqual([
+      "tui",
+      "codex",
+    ]);
+    expect(normalizeTinyVerseArgv(["claude", "--debug"], "tinyverse")).toEqual([
+      "tui",
+      "claude",
+      "--debug",
+    ]);
+    expect(normalizeTinyVerseArgv(["codex"], "tinyplace")).toEqual(["codex"]);
   });
 
   it("dispatches representative commands through the SDK routes and prints JSON", async () => {

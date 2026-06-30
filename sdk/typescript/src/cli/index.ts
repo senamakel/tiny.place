@@ -38,6 +38,7 @@ import {
   flushCliSentry,
   initCliSentry,
 } from "./sentry.js";
+import { parseTinyVerseAgentKind, runTinyPlaceTui } from "./tui.js";
 import { updateNotice } from "./update-notice.js";
 import type {
   CliContext,
@@ -79,6 +80,8 @@ const NOTICE_SKIP_COMMANDS = new Set([
   "upgrade",
   "help",
   "codex",
+  "claude",
+  "tui",
   "--help",
   "-v",
   "--version",
@@ -155,6 +158,16 @@ async function dispatchCli(
 
   try {
     const ctx = await makeContext(options);
+    if (parsed.command === "tui") {
+      return await runTinyPlaceTui(
+        ctx,
+        options,
+        parseTinyVerseAgentKind(parsed.positionals[0]),
+      );
+    }
+    if (parsed.command === "claude") {
+      return await runTinyPlaceTui(ctx, options, "claude");
+    }
     const result = await dispatchTop(ctx, parsed);
     const format = resolveFormat(parsed.flags);
     const raw = boolFlag(parsed.flags, "raw");

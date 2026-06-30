@@ -2,6 +2,7 @@
 // Thin executable entry. All CLI logic lives in the `./cli/` module so it can be
 // split into richer tools over time; this file only wires the bin + re-exports.
 import { realpathSync } from "node:fs";
+import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { runTinyPlaceCli } from "./cli/index.js";
@@ -14,6 +15,20 @@ export type {
   TinyPlaceCliOptions,
   TinyPlaceCliResult,
 } from "./cli/types.js";
+
+export function normalizeTinyVerseArgv(
+  argv: Array<string>,
+  binName: string | undefined,
+): Array<string> {
+  if (basename(binName ?? "") !== "tinyverse") {
+    return argv;
+  }
+  const [command, ...rest] = argv;
+  if (command === "codex" || command === "claude") {
+    return ["tui", command, ...rest];
+  }
+  return argv;
+}
 
 // Run the CLI only when this file is the process entry point. We compare the
 // real (symlink-resolved) path of argv[1] against this module's own path so the
@@ -33,7 +48,7 @@ function isCliEntryPoint(): boolean {
 }
 
 if (isCliEntryPoint()) {
-  runTinyPlaceCli(process.argv.slice(2)).then((result) => {
+  runTinyPlaceCli(normalizeTinyVerseArgv(process.argv.slice(2), process.argv[1])).then((result) => {
     if (result.stdout) {
       process.stdout.write(result.stdout);
     }
